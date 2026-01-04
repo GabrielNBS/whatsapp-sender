@@ -42,28 +42,15 @@ export default function ContactsPage() {
      }
   };
 
-  // Helper to format phone number as user types: +55 (11) 99999-9999
   const formatPhoneNumber = (value: string) => {
-    // 1. Remove non-digits
     const digits = value.replace(/\D/g, '');
-    
-    // 2. Limit to likely max length (13 digits: 55 + 2 area + 9 phone)
     const limited = digits.substring(0, 13);
     
-    // 3. Apply mask based on length
-    // If empty
     if (!limited) return '';
-    
-    // if < 2 digits, just return digits
     if (limited.length <= 2) return `+${limited}`;
-    
-    // if < 4 digits: +55 (XX
     if (limited.length <= 4) return `+${limited.substring(0, 2)} (${limited.substring(2)}`;
-    
-    // if < 9 digits: +55 (XX) XXXXX
     if (limited.length <= 9) return `+${limited.substring(0, 2)} (${limited.substring(2, 4)}) ${limited.substring(4)}`;
     
-    // if 13 digits (mobile w/ 9 digits): +55 (XX) XXXXX-XXXX
     return `+${limited.substring(0, 2)} (${limited.substring(2, 4)}) ${limited.substring(4, 9)}-${limited.substring(9)}`;
   };
   
@@ -78,22 +65,14 @@ export default function ContactsPage() {
       Papa.parse(file, {
         header: true,
         complete: (results) => {
-           // Expect CSV with "name", "number"
            const parsed = (results.data as any[]).map((row) => {
               const rawNumber = row.number || '';
-              // Simple cleanup: keep only digits
               const cleanNumber = rawNumber.replace(/\D/g, '');
               
-              // Basic validation: ignore if too short
               if (cleanNumber.length < 10) return null;
 
               return {
                  name: row.name || 'Unknown',
-                 // Store formatted if we wanted, or raw. Let's store raw digits for CSV or apply mask?
-                 // Let's store raw for CSV to be safe, or just the input.
-                 // Actually the app seems to treat 'number' as the string to send to.
-                 // let's just keep digits + prepending 55 if missing?
-                 // Let's just keep digits.
                  number: cleanNumber,
                  groupIds: ['default']
               };
@@ -112,7 +91,7 @@ export default function ContactsPage() {
       </div>
 
       <Tabs defaultValue="contacts" className="w-full">
-        <TabsList>
+        <TabsList >
           <TabsTrigger value="contacts">Todos os Contatos</TabsTrigger>
           <TabsTrigger value="groups">Grupos</TabsTrigger>
         </TabsList>
@@ -216,8 +195,6 @@ export default function ContactsPage() {
     </div>
   );
 }
-
-
 
 function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDelete: (id: string) => void }) {
    const { groups, updateContactGroups } = useAppStore();
