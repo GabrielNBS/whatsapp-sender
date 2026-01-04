@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,7 +23,16 @@ interface LogEntry {
 }
 
 export default function SendPage() {
-  const { groups, contacts, getContactsByGroup } = useAppStore();
+  const { groups: storeGroups, contacts: storeContacts, getContactsByGroup: storeGetContacts } = useAppStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const groups = mounted ? storeGroups : [{ id: 'default', name: 'Geral', description: 'Lista Padrão' }];
+  const contacts = mounted ? storeContacts : [];
+  const getContactsByGroup = mounted ? storeGetContacts : () => [];
   
   const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
   const [message, setMessage] = useState('');
