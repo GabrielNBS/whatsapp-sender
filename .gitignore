@@ -43,3 +43,5 @@ next-env.d.ts
 # whatsapp-web.js
 .wwebjs_auth
 .wwebjs_cache
+
+/src/generated/prisma

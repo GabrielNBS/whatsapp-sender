@@ -15,8 +15,8 @@ export default function DashboardPage() {
     fetch('/api/qr')
       .then(res => res.json())
       .then(data => {
-         if (data.status?.isAuthenticated) setStatus('Conectado');
-         else setStatus('Desconectado');
+        if (data.status?.isAuthenticated) setStatus('Conectado');
+        else setStatus('Desconectado');
       })
       .catch(() => setStatus('Erro ao verificar status'));
   }, []);
@@ -33,7 +33,7 @@ export default function DashboardPage() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{status}</div>
+            <div className="text-2xl font-bold text-success">{status}</div>
             <p className="text-xs text-muted-foreground">
               WhatsApp Client Service
             </p>
@@ -47,7 +47,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{contacts.length}</div>
+            <div className="text-2xl font-bold text-info">{contacts.length}</div>
             <p className="text-xs text-muted-foreground">
               Em {groups.length} grupos
             </p>
@@ -56,31 +56,31 @@ export default function DashboardPage() {
 
         {/* Action Card */}
         <Card>
-           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-             <CardTitle className="text-sm font-medium">Envio Rápido</CardTitle>
-             <MessageSquare className="h-4 w-4 text-muted-foreground" />
-           </CardHeader>
-           <CardContent>
-              <Link href="/dashboard/send">
-                 <Button className="w-full mt-1 " size="sm">
-                    Nova Campanha <ExternalLink className="ml-2 h-3 w-3" />
-                 </Button>
-              </Link>
-           </CardContent>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Envio Rápido</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/send">
+              <Button className="w-full mt-1 " size="sm">
+                Nova Campanha <ExternalLink className="ml-2 h-3 w-3" />
+              </Button>
+            </Link>
+          </CardContent>
         </Card>
       </div>
 
-      <div className="mt-8 bg-white shadow-md">
-         <Card className="bg-slate-900 text-white border-none">
-            <CardHeader>
-               <CardTitle className='text-slate-900'>Bem-vindo ao WhatsApp Sender</CardTitle>
-               <CardDescription className="text-slate-400">
-                  Sistema de disparos em massa e gerenciamento de contatos <br />
-                  Utilize o menu lateral para gerenciar seus grupos de contatos ou iniciar um novo envio de mensagens. 
-                  Lembre-se de manter o WhatsApp conectado no dispositivo servidor.
-               </CardDescription>
-            </CardHeader>
-         </Card>
+      <div className="mt-8 bg-card shadow-md">
+        <Card className="bg-card text-card-foreground border-none">
+          <CardHeader>
+            <CardTitle className='text-foreground'>Bem-vindo ao WhatsApp Sender</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Sistema de disparos em massa e gerenciamento de contatos <br />
+              Utilize o menu lateral para gerenciar seus grupos de contatos ou iniciar um novo envio de mensagens.
+              Lembre-se de manter o WhatsApp conectado no dispositivo servidor.
+            </CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     </div>
   );
