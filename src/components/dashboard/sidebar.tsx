@@ -11,7 +11,6 @@ import {
   Settings,
   LogOut,
   FileText,
-  Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -20,7 +19,6 @@ const navItems = [
   { href: '/dashboard/contacts', label: 'Contatos', icon: Users },
   { href: '/dashboard/send', label: 'Envios', icon: Send },
   { href: '/dashboard/templates', label: 'Modelos', icon: FileText },
-  { href: '/dashboard/schedule', label: 'Agendamentos', icon: Calendar },
   { href: '/dashboard/settings', label: 'Configurações', icon: Settings },
 ];
 
