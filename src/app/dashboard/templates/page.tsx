@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Trash2, FileText } from 'lucide-react';
+import { Plus, Trash2, FileText, Image as ImageIcon } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
@@ -179,16 +180,27 @@ export default function TemplatesPage() {
                                 <Label>Imagem (Opcional)</Label>
                                 <Input type="file" accept="image/*" onChange={handleFileChange} />
                                 {selectedFile && (
-                                    <div className="flex items-center justify-between text-xs bg-muted/30 p-2 rounded border">
-                                        <span className="text-success truncate max-w-[200px]">{selectedFile.filename}</span>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-6 w-6 p-0"
-                                            onClick={() => setSelectedFile(null)}
-                                        >
-                                            <Trash2 className="w-3 h-3 text-destructive" />
-                                        </Button>
+                                    <div className="space-y-2 mt-2">
+                                        <div className="relative w-full h-32 bg-muted/30 rounded-lg overflow-hidden border flex items-center justify-center">
+                                            <Image 
+                                                src={`data:${selectedFile.mimetype};base64,${selectedFile.data}`} 
+                                                alt="Preview" 
+                                                fill
+                                                className="object-contain"
+                                                unoptimized
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs bg-muted/30 p-2 rounded border">
+                                            <span className="text-success truncate max-w-[200px]">{selectedFile.filename}</span>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 w-6 p-0"
+                                                onClick={() => setSelectedFile(null)}
+                                            >
+                                                <Trash2 className="w-3 h-3 text-destructive" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -221,15 +233,40 @@ export default function TemplatesPage() {
                             </div>
                         </CardHeader>
                         <CardContent>
+                            {template.media && (() => {
+                                try {
+                                    const media = JSON.parse(template.media);
+                                    return (
+                                        <div className="mb-3 space-y-1">
+                                            <div className="relative w-full flex items-center justify-center">
+                                                <Image 
+                                                    src={`data:${media.mimetype};base64,${media.data}`} 
+                                                    alt="Media" 
+                                                    width={0}
+                                                    height={0}
+                                                    sizes="100vw"
+                                                    className="w-full h-auto max-h-48 object-contain rounded-md"
+                                                    unoptimized
+                                                />
+                                            </div>
+                                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                                <ImageIcon className="w-3 h-3" />
+                                                <span className="truncate">{media.filename || 'Imagem anexada'}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                } catch (e) {
+                                    return (
+                                        <div className="mb-3 text-xs text-info flex items-center gap-1">
+                                            <FileText className="w-3 h-3" />
+                                            <span>Contém imagem (erro ao carregar preview)</span>
+                                        </div>
+                                    )
+                                }
+                            })()}
                             <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4">
                                 {template.content}
                             </p>
-                            {template.media && (
-                                <div className="mt-2 text-xs text-info flex items-center gap-1">
-                                    <FileText className="w-3 h-3" />
-                                    <span>Contém imagem</span>
-                                </div>
-                            )}
                         </CardContent>
                     </Card>
                 ))}
