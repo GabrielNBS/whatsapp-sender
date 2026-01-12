@@ -4,13 +4,13 @@ import whatsappService from '@/lib/whatsapp';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { number, message, media } = body;
+    const { number, message, media, name } = body;
     
     if (!number || (!message && !media)) {
       return NextResponse.json({ error: 'Número ou conteúdo ausente' }, { status: 400 });
     }
 
-    const response = await whatsappService.sendMessage(number, message || '', media);
+    const response = await whatsappService.sendMessage(number, message || '', media, { fallbackName: name });
     const stats = whatsappService.getStatus().stats;
 
     return NextResponse.json({ success: true, response, stats });

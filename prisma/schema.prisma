@@ -45,4 +45,7 @@ model ScheduledMessage {
   updatedAt DateTime @updatedAt
   Contact   Contact? @relation(fields: [contactId], references: [id])
   contactId String?
+
+  batchId   String?  // UUID of the broadcast batch
+  batchName String?  // Optional name for grouping
 }
