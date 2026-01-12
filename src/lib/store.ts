@@ -1,20 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
-
-export interface Group {
-  id: string;
-  name: string;
-  description?: string;
-  color?: string;
-}
-
-export interface Contact {
-  id: string;
-  name: string;
-  number: string;
-  groupIds: string[];
-}
+import { Group, Contact, LogEntry, Campaign } from './types';
 
 interface AppState {
   groups: Group[];
@@ -28,8 +15,25 @@ interface AppState {
   updateContactGroups: (contactId: string, groupIds: string[]) => void;
   deleteContact: (id: string) => void;
   
-  // Helpers
   getContactsByGroup: (groupId: string) => Contact[];
+
+  // Persistent Logs & Status
+  logs: LogEntry[];
+  addLog: (entry: LogEntry) => void;
+  cleanupLogs: () => void;
+  clearLogs: () => void;
+  
+  sendingStatus: {
+     isSending: boolean;
+     progress: number;
+     currentContactIndex: number;
+     statusMessage: string | null;
+  };
+  setSendingStatus: (status: Partial<AppState['sendingStatus']>) => void;
+
+  // History
+  history: Campaign[];
+  addCampaign: (campaign: Campaign) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -40,14 +44,23 @@ export const useAppStore = create<AppState>()(
       ],
       contacts: [],
 
+      // Logs & Status Initial State
+      logs: [],
+      sendingStatus: {
+          isSending: false,
+          progress: 0,
+          currentContactIndex: 0,
+          statusMessage: null
+      },
+      
+      history: [],
+
       addGroup: (name, description) => set((state) => ({
         groups: [...state.groups, { id: nanoid(), name, description }]
       })),
 
       deleteGroup: (id) => set((state) => ({
         groups: state.groups.filter((g) => g.id !== id),
-        // Remove group from contacts? Or keep them group-less?
-        // Let's remove the groupId from contacts
         contacts: state.contacts.map(c => ({
            ...c,
            groupIds: c.groupIds.filter(gid => gid !== id)
@@ -76,7 +89,28 @@ export const useAppStore = create<AppState>()(
       getContactsByGroup: (groupId) => {
          const { contacts } = get();
          return contacts.filter(c => c.groupIds.includes(groupId));
-      }
+      },
+
+      addLog: (entry) => set((state) => ({
+          logs: [entry, ...state.logs].slice(0, 100) // Keep last 100 logs
+      })),
+
+      cleanupLogs: () => set((state) => {
+          const now = Date.now();
+          return {
+              logs: state.logs.filter(log => !log.expiresAt || log.expiresAt > now)
+          };
+      }),
+
+      clearLogs: () => set({ logs: [] }),
+
+      setSendingStatus: (status) => set((state) => ({
+          sendingStatus: { ...state.sendingStatus, ...status }
+      })),
+
+      addCampaign: (campaign) => set((state) => ({
+          history: [campaign, ...state.history].slice(0, 50) // Keep last 50 campaigns
+      }))
     }),
     {
       name: 'whatsapp-sender-storage',

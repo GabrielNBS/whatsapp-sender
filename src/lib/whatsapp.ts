@@ -30,6 +30,7 @@ export class WhatsAppService {
     this.status = 'INITIALIZING';
     this.client.initialize().catch(err => {
         console.error("Initialization error:", err);
+        this.status = 'DISCONNECTED';
     });
   }
 
@@ -109,7 +110,7 @@ export class WhatsAppService {
     };
   }
 
-  public async sendMessage(to: string, message: string, mediaData?: { mimetype: string, data: string, filename?: string }) {
+  public async sendMessage(to: string, message: string, mediaData?: { mimetype: string, data: string, filename?: string }, options?: { fallbackName?: string }) {
     if (!this.isReady) throw new Error('Cliente WhatsApp não está pronto');
     
     // Safety check reset
@@ -129,11 +130,9 @@ export class WhatsAppService {
     } else {
        // Validate number and get the correct ID
        try {
-          console.log('Verifying number with WhatsApp...');
           const validContact = await this.client.getNumberId(candidateId);
           
           if (validContact && validContact._serialized) {
-            console.log('Number verified, ID:', validContact._serialized);
             finalId = validContact._serialized;
           } else {
             console.warn(`Number ${number} not found on WhatsApp.`);
@@ -144,15 +143,39 @@ export class WhatsAppService {
           throw new Error(`Falha ao validar número: ${e.message}`);
        }
     }
+
+    // Smart Variable Substitution
+    let finalMessage = message;
+    
+    // Replace {{phone}} locally first
+    finalMessage = finalMessage.replace(/{{phone}}/g, number);
+
+    if (finalMessage.includes('{{name}}') || finalMessage.includes('{{nome}}')) {
+        try {
+            const contact = await this.client.getContactById(finalId);
+            // pushname: what the user set for themselves
+            // name: what I saved them as (if synced) or sometimes same as pushname
+            // options.fallbackName: what we have in our local DB
+            
+            const bestName = contact.pushname || contact.name || options?.fallbackName || 'Cliente';
+            console.log(`Smart Substitution: Using '${bestName}' for contact ${finalId} (Push: ${contact.pushname}, Name: ${contact.name}, Fallback: ${options?.fallbackName})`);
+            
+            finalMessage = finalMessage.replace(/{{name}}/g, bestName).replace(/{{nome}}/g, bestName);
+        } catch (error) {
+            console.warn('Failed to fetch contact details for substitution, using fallback.', error);
+            const fallback = options?.fallbackName || 'Cliente';
+            finalMessage = finalMessage.replace(/{{name}}/g, fallback).replace(/{{nome}}/g, fallback);
+        }
+    }
     
     console.log(`Sending to final ID: ${finalId}`);
 
     try {
         if (mediaData) {
             const media = new MessageMedia(mediaData.mimetype, mediaData.data, mediaData.filename);
-            await this.client.sendMessage(finalId, media, { caption: message });
+            await this.client.sendMessage(finalId, media, { caption: finalMessage });
         } else {
-            await this.client.sendMessage(finalId, message);
+            await this.client.sendMessage(finalId, finalMessage);
         }
     } catch (sendError: any) {
         console.error('Error in client.sendMessage:', sendError);
