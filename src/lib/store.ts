@@ -59,26 +59,37 @@ export const useAppStore = create<AppState>()(
         groups: [...state.groups, { id: nanoid(), name, description }]
       })),
 
-      deleteGroup: (id) => set((state) => ({
-        groups: state.groups.filter((g) => g.id !== id),
-        contacts: state.contacts.map(c => ({
-           ...c,
-           groupIds: c.groupIds.filter(gid => gid !== id)
-        }))
-      })),
+      deleteGroup: (id) => set((state) => {
+        if (id === 'default') return {}; // Prevent deleting default group
+        
+        return {
+           groups: state.groups.filter((g) => g.id !== id),
+           contacts: state.contacts.map(c => {
+              const newGroupIds = c.groupIds.filter(gid => gid !== id);
+              return {
+                 ...c,
+                 groupIds: newGroupIds.length > 0 ? newGroupIds : ['default']
+              };
+           })
+        };
+      }),
 
       addContact: (name, number, groupIds = ['default']) => set((state) => ({
-        contacts: [...state.contacts, { id: nanoid(), name, number, groupIds }]
+        contacts: [...state.contacts, { id: nanoid(), name, number, groupIds: groupIds.length ? groupIds : ['default'] }]
       })),
 
       importContacts: (newContacts) => set((state) => {
-         const withIds = newContacts.map(c => ({ ...c, id: nanoid() }));
+         const withIds = newContacts.map(c => ({ 
+             ...c, 
+             id: nanoid(),
+             groupIds: c.groupIds && c.groupIds.length > 0 ? c.groupIds : ['default']
+         }));
          return { contacts: [...state.contacts, ...withIds] };
       }),
 
       updateContactGroups: (contactId, groupIds) => set((state) => ({
          contacts: state.contacts.map((c) => 
-            c.id === contactId ? { ...c, groupIds } : c
+            c.id === contactId ? { ...c, groupIds: groupIds.length > 0 ? groupIds : ['default'] } : c
          )
       })),
 
@@ -117,3 +128,5 @@ export const useAppStore = create<AppState>()(
     }
   )
 );
+
+export type { Contact, Group };
