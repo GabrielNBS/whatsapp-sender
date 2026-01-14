@@ -18,15 +18,12 @@ export function ScheduleItem({ batch, onCancel }: ScheduleItemProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
 
-    // Calculate progress percentage
-    // If total is 0 (shouldn't happen for active), default to 0.
     const progress = batch.total > 0 ? Math.round((batch.sent / batch.total) * 100) : 0;
-    const isCompleted = batch.count === 0 && batch.total > 0;
 
     const handleCancel = async () => {
         if (!confirm('Tem certeza que deseja cancelar este agendamento?')) return;
         setIsCancelling(true);
-        await onCancel(batch.batchId); // Use batchId, not id
+        await onCancel(batch.batchId);
         setIsCancelling(false);
     };
 
@@ -105,13 +102,13 @@ export function ScheduleItem({ batch, onCancel }: ScheduleItemProps) {
                                         <DialogTitle>Lista de Agendamento</DialogTitle>
                                     </DialogHeader>
                                     <div className="max-h-[300px] overflow-y-auto space-y-2">
-                                        {batch.contacts.map(c => (
-                                            <div key={c.id} className="flex justify-between items-center p-2 border rounded bg-card">
+                                        {batch.contacts.map(contact => (
+                                            <div key={contact.id} className="flex justify-between items-center p-2 border rounded bg-card">
                                                 <div>
-                                                    <p className="font-medium">{c.name}</p>
-                                                    <p className="text-xs text-muted-foreground">{c.phone}</p>
+                                                    <p className="font-medium">{contact.name}</p>
+                                                    <p className="text-xs text-muted-foreground">{contact.phone}</p>
                                                 </div>
-                                                <Badge variant="outline">{c.status}</Badge>
+                                                <Badge variant="outline">{contact.status}</Badge>
                                             </div>
                                         ))}
                                     </div>
@@ -120,10 +117,10 @@ export function ScheduleItem({ batch, onCancel }: ScheduleItemProps) {
                         </div>
                         
                         <div className="space-y-1">
-                            {batch.contacts.slice(0, 3).map(c => (
-                                <div key={c.id} className="flex justify-between items-center text-xs text-muted-foreground px-2 py-1 rounded hover:bg-muted">
-                                    <span>{c.name}</span>
-                                    <span>{c.phone}</span>
+                            {batch.contacts.slice(0, 3).map(contact => (
+                                <div key={contact.id} className="flex justify-between items-center text-xs text-muted-foreground px-2 py-1 rounded hover:bg-muted">
+                                    <span>{contact.name}</span>
+                                    <span>{contact.phone}</span>
                                 </div>
                             ))}
                             {batch.contacts.length > 3 && (

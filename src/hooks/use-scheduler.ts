@@ -29,24 +29,35 @@ export function useScheduler() {
             if (res.ok) {
                 const data: ScheduledBatch[] = await res.json();
                 
-                // Detection of completed batches
-                const currentBatchIds = new Set(data.map(b => b.batchId));
+                // Filter for UI display (only show active/pending batches)
+                const pendingBatches = data.filter(b => b.count > 0);
                 
-                // Check if any batch from previous fetch is MISSING now (meaning it completed, since API only returns active)
-                // Note: Our modified API returns batches that have at least 1 pending. 
-                // So if it disappears, it means it has 0 pending = Completed.
+                // Detect completion by checking batches that were pending and are now zero-pending (completed)
+                // OR batches that purely disappeared (fallback, though API now returns recent completed)
+                const currentPendingIds = new Set(pendingBatches.map(b => b.batchId));
                 
-                prevBatchesRef.current.forEach(prevId => {
-                    if (!currentBatchIds.has(prevId)) {
-                        // Batch ID prevId disappeared -> Completed!
-                        // We don't have the Name here easily unless we stored it. 
-                        // For simplicity, just log generic or we could improve this by storing map.
-                        addLog(`Um agendamento foi concluído!`, 'success', Date.now() + 3 * 60 * 60 * 1000); // 3 hours
+                // Check for batches that finished in this tick (present in data but count == 0)
+                data.forEach(batch => {
+                    if (batch.count === 0 && prevBatchesRef.current.has(batch.batchId)) {
+                        // Was pending, now done
+                        if (batch.failed > 0) {
+                            addLog(`Agendamento concluído com ${batch.failed} falha(s).`, 'error');
+                        } else {
+                            addLog(`Agendamento concluído com sucesso!`, 'success');
+                        }
                     }
                 });
 
-                prevBatchesRef.current = currentBatchIds;
-                setActiveSchedules(data);
+                // Check for disappeared batches (fallback for edges)
+                prevBatchesRef.current.forEach(prevId => {
+                    if (!data.find(b => b.batchId === prevId)) {
+                        // Completely gone from API (older than 10m?)
+                         addLog(`Agendamento finalizado.`, 'info');
+                    }
+                });
+
+                prevBatchesRef.current = currentPendingIds;
+                setActiveSchedules(pendingBatches);
             }
         } catch (error) {
             console.error("Failed to fetch schedules", error);

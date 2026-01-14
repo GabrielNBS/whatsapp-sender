@@ -7,7 +7,12 @@ export async function GET() {
     try {
         // 1. Find batchIDs that have at least one PENDING message
         const pendingBatches = await prisma.scheduledMessage.findMany({
-            where: { status: 'PENDING' },
+            where: {
+                OR: [
+                    { status: 'PENDING' },
+                    { scheduledFor: { gte: new Date(Date.now() - 10 * 60 * 1000) } } // Fetch recent batches (last 10m) to detect completion/failure
+                ]
+            },
             select: { batchId: true },
             distinct: ['batchId']
         });

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
+import { Template } from '@/lib/types';
 import { nanoid } from 'nanoid';
 import { StaleBatchDialog } from '@/components/send/stale-batch-dialog';
 import { useScheduler } from '@/hooks/use-scheduler';
@@ -15,12 +16,10 @@ import {
     CheckCircle, 
     Trash2, 
     Clock, 
-    FileText, 
     Image as ImageIcon,
     Bold,
     Italic,
-    Smile,
-    History
+    Smile
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -75,7 +74,7 @@ export default function SendPage() {
    const [scheduleDate, setScheduleDate] = useState('');
    
    // Templates State
-   const [templates, setTemplates] = useState<any[]>([]);
+   const [templates, setTemplates] = useState<Template[]>([]);
    const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
    useEffect(() => {
@@ -537,7 +536,7 @@ export default function SendPage() {
                                                 <div className="min-w-0">
                                                     <p className="text-sm font-semibold text-slate-800 truncate">{schedule.batchName}</p>
                                                     <p className="text-xs text-slate-500 mt-0.5 truncate">
-                                                        {new Date(schedule.scheduledFor).toLocaleString('pt-BR')} • {schedule.recipients?.length || 0} contatos
+                                                        {new Date(schedule.scheduledFor).toLocaleString('pt-BR')} • {schedule.contacts?.length || 0} contatos
                                                     </p>
                                                 </div>
                                             </div>

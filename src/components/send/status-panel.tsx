@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -36,25 +36,33 @@ export function StatusPanel({
 }: StatusPanelProps) {
   
   const [showCompletion, setShowCompletion] = useState(false);
+  const prevIsSending = useRef(isSending);
 
-  // Manage completion state
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
+const completionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    if (isSending) {
-        setShowCompletion(false);
-    } else if (!isSending && progress === 100 && totalRecipients > 0) {
-        // Just finished
-        setShowCompletion(true);
-        timer = setTimeout(() => {
-            setShowCompletion(false);
-        }, 5 * 60 * 1000); // 5 minutes
+useEffect(() => {
+    // ... lógica de verificação ...
+    if (prevIsSending.current && !isSending && progress === 100 && totalRecipients > 0) {
+        
+        // Evita update síncrono
+        setTimeout(() => {
+            setShowCompletion(true);
+
+            // Limpa timer anterior se existir
+            if (completionTimerRef.current) clearTimeout(completionTimerRef.current);
+
+            // Define o novo timer para esconder
+            completionTimerRef.current = setTimeout(() => {
+                setShowCompletion(false);
+            }, 5 * 60 * 1000);
+        }, 0);
     }
 
+    // Cleanup function: roda quando o componente morre
     return () => {
-        if (timer) clearTimeout(timer);
+        if (completionTimerRef.current) clearTimeout(completionTimerRef.current);
     };
-  }, [isSending, progress, totalRecipients]);
+}, [isSending, progress, totalRecipients]);
 
   return (
     <Card className="flex flex-col h-full border-border bg-muted/30 shadow-inner">
@@ -112,12 +120,12 @@ export function StatusPanel({
                  />
             )}
             
-            <div className="flex justify-between text-sm font-medium text-muted-foreground">
-              <span className="flex items-center gap-2">
+            <div className="flex justify-between items-end text-sm font-medium text-muted-foreground mb-2">
+              <span className="flex items-center gap-2 leading-none">
                   {showCompletion ? 'Concluído com Sucesso!' : 'Progresso Total'}
                   {showCompletion && <PartyPopper className="w-4 h-4 text-success animate-bounce" />}
               </span>
-              <span>{showCompletion ? totalRecipients : currentContactIndex} / {totalRecipients}</span>
+              <span className="leading-none">{showCompletion ? totalRecipients : currentContactIndex} / {totalRecipients}</span>
             </div>
             
             <Progress 
@@ -169,11 +177,13 @@ export function StatusPanel({
                   {log.type === 'error' && <XCircle className="w-4 h-4" />}
                   {log.type === 'info' && <Info className="w-4 h-4" />}
                 </div>
-                <div className="flex-1">
-                  <p className="font-medium">{log.message}</p>
-                  <p className="text-[10px] opacity-70 mt-1">
-                    {new Date(log.timestamp).toLocaleTimeString()}
-                  </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start gap-4">
+                    <p className="font-medium text-sm leading-snug">{log.message}</p>
+                    <span className="text-[10px] opacity-70 shrink-0 whitespace-nowrap pt-0.5">
+                      {new Date(log.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
                 </div>
               </motion.div>
             ))}
