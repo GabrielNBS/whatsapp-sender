@@ -55,7 +55,10 @@ export function useSender() {
                 })
             });
 
-            if (!res.ok) throw new Error('Falha ao enviar');
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Falha ao enviar');
+            }
 
             addLog(`Enviado para ${contact.name}`, 'success');
 

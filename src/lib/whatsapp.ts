@@ -11,7 +11,7 @@ export class WhatsAppService {
   private isAuthenticated: boolean = false;
   private isReady: boolean = false;
   private status: 'DISCONNECTED' | 'INITIALIZING' | 'QR_READY' | 'AUTHENTICATED' | 'READY' = 'DISCONNECTED';
-  
+
   // Safety Handling
   private dailyCount: number = 0;
   private lastReset: Date = new Date();
@@ -112,10 +112,10 @@ export class WhatsAppService {
 
   public async sendMessage(to: string, message: string, mediaData?: { mimetype: string, data: string, filename?: string }, options?: { fallbackName?: string }) {
     if (!this.isReady) throw new Error('Cliente WhatsApp não está pronto');
-    
+
     // Safety check reset
     this.checkReset();
-    
+
     // Format number to be digits only initially
     const number = to.replace(/\D/g, '');
     const candidateId = `${number}@c.us`;
@@ -131,22 +131,23 @@ export class WhatsAppService {
        // Validate number and get the correct ID
        try {
           const validContact = await this.client.getNumberId(candidateId);
-          
+
           if (validContact && validContact._serialized) {
             finalId = validContact._serialized;
           } else {
             console.warn(`Number ${number} not found on WhatsApp.`);
             throw new Error(`O número ${number} não está registrado no WhatsApp.`);
           }
-       } catch (e: any) {
+       } catch (e: unknown) {
+          const errorMessage = e instanceof Error ? e.message : 'Unknown error';
           console.error("Error validating number:", e);
-          throw new Error(`Falha ao validar número: ${e.message}`);
+          throw new Error(`Falha ao validar número: ${errorMessage}`);
        }
     }
 
     // Smart Variable Substitution
     let finalMessage = message;
-    
+
     // Replace {{phone}} locally first
     finalMessage = finalMessage.replace(/{{phone}}/g, number);
 
@@ -156,10 +157,10 @@ export class WhatsAppService {
             // pushname: what the user set for themselves
             // name: what I saved them as (if synced) or sometimes same as pushname
             // options.fallbackName: what we have in our local DB
-            
+
             const bestName = contact.pushname || contact.name || options?.fallbackName || 'Cliente';
             console.log(`Smart Substitution: Using '${bestName}' for contact ${finalId} (Push: ${contact.pushname}, Name: ${contact.name}, Fallback: ${options?.fallbackName})`);
-            
+
             finalMessage = finalMessage.replace(/{{name}}/g, bestName).replace(/{{nome}}/g, bestName);
         } catch (error) {
             console.warn('Failed to fetch contact details for substitution, using fallback.', error);
@@ -167,25 +168,33 @@ export class WhatsAppService {
             finalMessage = finalMessage.replace(/{{name}}/g, fallback).replace(/{{nome}}/g, fallback);
         }
     }
-    
+
     console.log(`Sending to final ID: ${finalId}`);
 
     try {
+        // WORKAROUND for markedUnread bug: Send text and media separately
+        // This avoids the internal WhatsApp Web error when rendering captions
         if (mediaData) {
+            // 1. Send Text first (if there's a message)
+            if (finalMessage && finalMessage.trim().length > 0) {
+                await this.client.sendMessage(finalId, finalMessage);
+            }
+            // 2. Send Media separately (no caption)
             const media = new MessageMedia(mediaData.mimetype, mediaData.data, mediaData.filename);
-            await this.client.sendMessage(finalId, media, { caption: finalMessage });
+            await this.client.sendMessage(finalId, media);
         } else {
             await this.client.sendMessage(finalId, finalMessage);
         }
-    } catch (sendError: any) {
+    } catch (sendError: unknown) {
+        const errorMessage = sendError instanceof Error ? sendError.message : 'Unknown error';
         console.error('Error in client.sendMessage:', sendError);
-        throw new Error(`Falha ao enviar mensagem: ${sendError.message}`);
+        throw new Error(`Falha ao enviar mensagem: ${errorMessage}`);
     }
-    
+
     this.incrementDailyCount();
     return { success: true };
   }
-  
+
   public async logout() {
       await this.client.logout();
       this.isAuthenticated = false;
@@ -193,7 +202,7 @@ export class WhatsAppService {
       this.qrCode = null;
       this.status = 'DISCONNECTED';
       // Re-initialize to allow new login
-      this.client.initialize(); 
+      this.client.initialize();
   }
 }
 

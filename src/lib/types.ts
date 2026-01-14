@@ -47,6 +47,7 @@ export interface ScheduledBatch {
     sent: number; // Sent messages in batch
     failed: number; // Failed messages
     contacts: MessageStatus[];
+    sampleTemplate?: string; // Sample message template for display
 }
 
 export interface Campaign {

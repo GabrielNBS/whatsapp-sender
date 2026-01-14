@@ -22,7 +22,7 @@ interface SendFormProps {
   handleTemplateSelect: (id: string) => void;
   message: string;
   setMessage: (msg: string) => void;
-  selectedFile: { filename: string } | null;
+  selectedFile: { data?: string, mimetype?: string, filename: string } | null;
   handleFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
   isScheduleMode: boolean;
   setIsScheduleMode: (mode: boolean) => void;
