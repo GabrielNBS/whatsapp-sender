@@ -1,16 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { useAppStore, Contact } from '@/lib/store';
+import { useAppStore, Contact, Group } from '@/lib/store';
+import { GroupManagementDialog } from '@/components/contacts/group-management-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Upload, Users, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, Upload, Users, Pencil, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
 
 export default function ContactsPage() {
@@ -23,6 +25,8 @@ export default function ContactsPage() {
 
    const [newGroupName, setNewGroupName] = useState('');
    const [isGroupOpen, setIsGroupOpen] = useState(false);
+   const [managingGroup, setManagingGroup] = useState<Group | null>(null);
+   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
 
    const handleAddContact = () => {
       if (newContactName && newContactNumber) {
@@ -40,6 +44,22 @@ export default function ContactsPage() {
          setNewGroupName('');
          setIsGroupOpen(false);
       }
+   };
+
+   const handleDeleteGroupClick = (group: Group) => {
+       const groupContactsCount = contacts.filter(contact => contact.groupIds.includes(group.id)).length;
+       if (groupContactsCount > 0) {
+           setDeletingGroup(group);
+       } else {
+           deleteGroup(group.id);
+       }
+   };
+
+   const confirmDeleteGroup = () => {
+       if (deletingGroup) {
+           deleteGroup(deletingGroup.id);
+           setDeletingGroup(null);
+       }
    };
 
    const formatPhoneNumber = (value: string) => {
@@ -182,9 +202,16 @@ export default function ContactsPage() {
                      <Card key={group.id}>
                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                            <CardTitle className="text-sm font-medium">{group.name}</CardTitle>
-                           <Button variant="ghost" size="icon" onClick={() => deleteGroup(group.id)}>
-                              <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                           </Button>
+                           <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => setManagingGroup(group)}>
+                                 <Settings className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                              </Button>
+                              {group.id !== 'default' && (
+                                 <Button variant="ghost" size="icon" onClick={() => handleDeleteGroupClick(group)}>
+                                    <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                                 </Button>
+                              )}
+                           </div>
                         </CardHeader>
                         <CardContent>
                            <div className="text-2xl font-bold">
@@ -195,6 +222,31 @@ export default function ContactsPage() {
                      </Card>
                   ))}
                </div>
+
+               <GroupManagementDialog 
+                  group={managingGroup} 
+                  isOpen={!!managingGroup} 
+                  onClose={() => setManagingGroup(null)} 
+               />
+
+               <AlertDialog open={!!deletingGroup} onOpenChange={(open) => !open && setDeletingGroup(null)}>
+                  <AlertDialogContent>
+                     <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir Grupo</AlertDialogTitle>
+                        <AlertDialogDescription>
+                           O grupo <strong>{deletingGroup?.name}</strong> possui contatos associados. 
+                           Ao excluir, esses contatos serão movidos para o grupo &quot;Geral&quot; caso não pertençam a outros grupos.
+                           Deseja continuar?
+                        </AlertDialogDescription>
+                     </AlertDialogHeader>
+                     <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDeleteGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                           Excluir
+                        </AlertDialogAction>
+                     </AlertDialogFooter>
+                  </AlertDialogContent>
+               </AlertDialog>
             </TabsContent>
          </Tabs>
       </div>
