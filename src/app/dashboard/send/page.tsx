@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Template } from '@/lib/types';
 import { nanoid } from 'nanoid';
@@ -19,7 +19,11 @@ import {
     Image as ImageIcon,
     Bold,
     Italic,
-    Smile
+    Smile,
+    Search,
+    X,
+    User,
+    Check
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -67,11 +71,23 @@ export default function SendPage() {
 
     // Local State (UI)
     const [mounted, setMounted] = useState(false);
-    const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
+
+    // NEW: Unified Selection State
+    const [recipientConfig, setRecipientConfig] = useState<{
+        type: 'group' | 'contact';
+        id: string;
+        name: string;
+    }>({ type: 'group', id: 'all', name: 'Todos os Contatos' });
+
     const [message, setMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState<{ data: string, mimetype: string, filename: string } | null>(null);
     const [isScheduleMode, setIsScheduleMode] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
+
+    // Search/Dropdown State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const searchRef = useRef<HTMLDivElement>(null);
 
     // Templates State
     const [templates, setTemplates] = useState<Template[]>([]);
@@ -80,6 +96,15 @@ export default function SendPage() {
     useEffect(() => {
         setMounted(true);
         fetchTemplates();
+
+        // Close dropdown when clicking outside
+        const handleClickOutside = (event: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+                setIsSearchOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const fetchTemplates = async () => {
@@ -101,9 +126,19 @@ export default function SendPage() {
 
     const isSending = mounted ? sendingStatus.isSending : false;
 
-    const recipients = selectedGroupId === 'all'
-        ? contacts
-        : getContactsByGroup(selectedGroupId);
+    // Logic to calculate actual recipients based on selection type
+    const recipients = recipientConfig.type === 'group'
+        ? (recipientConfig.id === 'all' ? contacts : getContactsByGroup(recipientConfig.id))
+        : contacts.filter(c => c.id === recipientConfig.id);
+
+    // Filter Logic for Search
+    const filteredGroups = groups.filter(g =>
+        g.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    const filteredContacts = contacts.filter(c =>
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.number.includes(searchTerm)
+    );
 
     // Estimate: 20s per contact is conservative default from store/logic
     const estimatedTime = Math.ceil((recipients.length) * 20 / 60);
@@ -175,7 +210,9 @@ export default function SendPage() {
                     message,
                     media: selectedFile,
                     scheduledFor: scheduleDate,
-                    batchName: `Campanha para ${recipients.length} contatos`,
+                    batchName: recipientConfig.type === 'contact'
+                        ? `Envio para ${recipientConfig.name}`
+                        : `Campanha para ${recipients.length} contatos`,
                     templateId: selectedTemplateId
                 })
             });
@@ -199,7 +236,7 @@ export default function SendPage() {
 
     const handleAction = async () => {
         if (recipients.length === 0) {
-            toast.error("Selecione destinatários para enviar.");
+            toast.error("Nenhum destinatário encontrado.");
             return;
         }
         if (!message && !selectedFile) {
@@ -219,8 +256,7 @@ export default function SendPage() {
         return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
 
-    // Filter logs for relevant display
-    const recentLogs = logs.slice(0, 50); // Increased log count for the new scrollable view
+    const recentLogs = logs.slice(0, 50);
 
     return (
         <div className="flex flex-col h-[calc(100vh-2rem)] bg-slate-50/50 -m-6 p-6 overflow-hidden">
@@ -248,27 +284,121 @@ export default function SendPage() {
 
                 {/* LEFT COL: CONFIGURATION (Span 3) */}
                 <div className="col-span-12 lg:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1">
-                    {/* Setup Card */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
+
+                    {/* Unified Selector Card */}
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4 relative z-50">
                         <h2 className="text-sm font-semibold flex items-center gap-2 text-slate-800">
                             <Users className="w-4 h-4 text-indigo-500" />
                             Destinatários
                         </h2>
-                        <div className="space-y-1">
-                            <label className="text-xs font-medium text-slate-500">Lista de Contatos</label>
-                            <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                                <SelectTrigger className="w-full h-9 text-sm">
-                                    <SelectValue placeholder="Selecione..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos ({contacts.length})</SelectItem>
-                                    {groups.map(group => (
-                                        <SelectItem key={group.id} value={group.id}>
-                                            {group.name} ({getContactsByGroup(group.id).length})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                        <div className="space-y-1 relative" ref={searchRef}>
+                            <label className="text-xs font-medium text-slate-500">Buscar Grupo ou Contato</label>
+
+                            {/* Custom Trigger */}
+                            <div
+                                onClick={() => setIsSearchOpen(!isSearchOpen)}
+                                className={cn(
+                                    "flex items-center justify-between w-full h-9 px-3 py-2 text-sm bg-white border rounded-md shadow-sm cursor-pointer hover:bg-slate-50",
+                                    isSearchOpen ? "border-indigo-500 ring-1 ring-indigo-500" : "border-slate-200"
+                                )}
+                            >
+                                <span className={cn("truncate block", !recipientConfig.name && "text-slate-400")}>
+                                    {recipientConfig.name}
+                                </span>
+                                <Search className="w-3.5 h-3.5 text-slate-400" />
+                            </div>
+
+                            {/* Dropdown Menu */}
+                            {isSearchOpen && (
+                                <div className="absolute top-full left-0 w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-hidden flex flex-col z-[100]">
+                                    <div className="p-2 border-b border-slate-100 relative">
+                                        <Search className="w-3.5 h-3.5 absolute left-3 top-3 text-slate-400" />
+                                        <input
+                                            autoFocus
+                                            type="text"
+                                            placeholder="Filtrar..."
+                                            className="w-full pl-7 pr-2 py-1 text-xs border-0 focus:ring-0 placeholder:text-slate-400"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="overflow-y-auto flex-1 p-1">
+                                        {/* ALL OPTION */}
+                                        <div
+                                            className="px-2 py-1.5 text-sm hover:bg-indigo-50 rounded cursor-pointer flex items-center justify-between group"
+                                            onClick={() => {
+                                                setRecipientConfig({ type: 'group', id: 'all', name: 'Todos os Contatos' });
+                                                setIsSearchOpen(false);
+                                                setSearchTerm('');
+                                            }}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Users className="w-3.5 h-3.5 text-slate-400" />
+                                                <span>Todos os Contatos</span>
+                                            </div>
+                                            {recipientConfig.id === 'all' && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                                        </div>
+
+                                        {/* GROUPS */}
+                                        {filteredGroups.length > 0 && (
+                                            <>
+                                                <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">Grupos</div>
+                                                {filteredGroups.map(group => (
+                                                    <div
+                                                        key={group.id}
+                                                        className="px-2 py-1.5 text-sm hover:bg-indigo-50 rounded cursor-pointer flex items-center justify-between"
+                                                        onClick={() => {
+                                                            setRecipientConfig({ type: 'group', id: group.id, name: group.name });
+                                                            setIsSearchOpen(false);
+                                                            setSearchTerm('');
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <Users className="w-3.5 h-3.5 text-slate-400" />
+                                                            <span>{group.name}</span>
+                                                            <span className="text-xs text-slate-400">({getContactsByGroup(group.id).length})</span>
+                                                        </div>
+                                                        {recipientConfig.id === group.id && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                                                    </div>
+                                                ))}
+                                            </>
+                                        )}
+
+                                        {/* CONTACTS */}
+                                        {filteredContacts.length > 0 && (
+                                            <>
+                                                <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">Contatos</div>
+                                                {filteredContacts.map(contact => (
+                                                    <div
+                                                        key={contact.id}
+                                                        className="px-2 py-1.5 text-sm hover:bg-indigo-50 rounded cursor-pointer flex items-center justify-between"
+                                                        onClick={() => {
+                                                            setRecipientConfig({ type: 'contact', id: contact.id, name: contact.name });
+                                                            setIsSearchOpen(false);
+                                                            setSearchTerm('');
+                                                        }}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <User className="w-3.5 h-3.5 text-slate-400" />
+                                                            <div className="flex flex-col">
+                                                                <span>{contact.name}</span>
+                                                                <span className="text-[10px] text-slate-400">{contact.number}</span>
+                                                            </div>
+                                                        </div>
+                                                        {recipientConfig.id === contact.id && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                                                    </div>
+                                                ))}
+                                            </>
+                                        )}
+
+                                        {filteredGroups.length === 0 && filteredContacts.length === 0 && (
+                                            <div className="px-2 py-4 text-center text-xs text-slate-400">
+                                                Nenhum resultado encontrado.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -406,6 +536,17 @@ export default function SendPage() {
                             <div className="flex items-baseline gap-2">
                                 <span className="text-3xl font-bold">{recipients.length}</span>
                                 <span className="text-sm text-slate-400">destinatários</span>
+                            </div>
+                            {/* Current Selection Badges */}
+                            <div className="mt-2 text-xs">
+                                <span className={cn(
+                                    "px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                                    recipientConfig.type === 'group'
+                                        ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
+                                        : "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                                )}>
+                                    {recipientConfig.type === 'group' ? 'GRUPO' : 'CONTATO'}
+                                </span>
                             </div>
                         </div>
 
