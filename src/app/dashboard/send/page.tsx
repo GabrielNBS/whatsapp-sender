@@ -256,10 +256,37 @@ export default function SendPage() {
         return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
 
+    const formatPhoneNumber = (phone: string) => {
+        // Strip non-numeric characters
+        const cleaned = phone.replace(/\D/g, '');
+
+        // Check if it starts with 55 (Brazil DDI) and remove it for display if preferred, 
+        // or just handle the 10/11 digits. 
+        // Assuming standard storage might include 55.
+        // If length is 12 or 13, it likely has DDI.
+        let match = cleaned;
+        if (cleaned.length > 11 && cleaned.startsWith('55')) {
+            match = cleaned.substring(2);
+        }
+
+        // Apply masking (11 digits: (XX) X XXXX-XXXX)
+        if (match.length === 11) {
+            return match.replace(/(\d{2})(\d{1})(\d{4})(\d{4})/, '($1) $2 $3-$4');
+        }
+        // Apply masking (10 digits: (XX) XXXX-XXXX)
+        if (match.length === 10) {
+            return match.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+        }
+
+        // Return original if pattern doesn't match
+        return phone;
+    };
+
     const recentLogs = logs.slice(0, 50);
 
     return (
         <div className="flex flex-col h-[calc(100vh-2rem)] bg-slate-50/50 -m-6 p-6 overflow-hidden">
+
             <StaleBatchDialog
                 staleBatch={staleBatch}
                 onAction={handleConfirmStale}
@@ -382,7 +409,7 @@ export default function SendPage() {
                                                             <User className="w-3.5 h-3.5 text-slate-400" />
                                                             <div className="flex flex-col">
                                                                 <span>{contact.name}</span>
-                                                                <span className="text-[10px] text-slate-400">{contact.number}</span>
+                                                                <span className="text-[10px] text-slate-400">{formatPhoneNumber(contact.number)}</span>
                                                             </div>
                                                         </div>
                                                         {recipientConfig.id === contact.id && <Check className="w-3.5 h-3.5 text-indigo-600" />}
