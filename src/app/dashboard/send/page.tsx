@@ -67,7 +67,7 @@ export default function SendPage() {
         handleConfirmStale
     } = useScheduler();
 
-    const { handleSend } = useSender();
+    const { handleSend, handleStop } = useSender();
 
     // Local State (UI)
     const [mounted, setMounted] = useState(false);
@@ -589,18 +589,21 @@ export default function SendPage() {
                         </div>
 
                         <Button
-                            onClick={handleAction}
-                            disabled={isSending}
+                            onClick={isSending ? handleStop : handleAction}
                             className={cn(
                                 "w-full h-11 text-sm font-semibold shadow transition-all mt-1",
-                                isScheduleMode
-                                    ? "bg-indigo-500 hover:bg-indigo-600 text-white"
-                                    : "bg-emerald-500 hover:bg-emerald-600 text-white",
-                                isSending && "opacity-80"
+                                isSending
+                                    ? "bg-red-500 hover:bg-red-600 text-white animate-in fade-in"
+                                    : isScheduleMode
+                                        ? "bg-indigo-500 hover:bg-indigo-600 text-white"
+                                        : "bg-emerald-500 hover:bg-emerald-600 text-white"
                             )}
                         >
                             {isSending ? (
-                                <>Enviando...</>
+                                <>
+                                    <X className="w-4 h-4 mr-2" />
+                                    Parar Envio
+                                </>
                             ) : (
                                 <>
                                     <Send className="w-4 h-4 mr-2" />

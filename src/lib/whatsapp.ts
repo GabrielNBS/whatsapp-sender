@@ -179,7 +179,17 @@ export class WhatsAppService {
           sendSeen: false
         });
       } else {
-        await this.client.sendMessage(finalId, finalMessage);
+        // Try to get chat object first - fixes "markedUnread" error
+        // Adding options to match media sending behavior and avoid crashes
+        const sendOptions = { linkPreview: false, sendSeen: false };
+
+        try {
+          const chat = await this.client.getChatById(finalId);
+          await chat.sendMessage(finalMessage, sendOptions);
+        } catch (chatError) {
+          console.warn('Could not get chat object, falling back to client.sendMessage', chatError);
+          await this.client.sendMessage(finalId, finalMessage, sendOptions);
+        }
       }
     } catch (sendError: unknown) {
       const errorMessage = sendError instanceof Error ? sendError.message : 'Unknown error';
