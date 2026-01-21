@@ -11,9 +11,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Upload, Users, Pencil, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { Plus, Trash2, Upload, Users, Pencil, ChevronLeft, ChevronRight, Settings, FileSpreadsheet } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
+import { nanoid } from 'nanoid';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const formatPhoneNumber = (value: string) => {
    // Strip non-numeric characters
@@ -53,6 +56,13 @@ export default function ContactsPage() {
    const [isGroupOpen, setIsGroupOpen] = useState(false);
    const [managingGroup, setManagingGroup] = useState<Group | null>(null);
    const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
+
+   // Import State
+   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+   const [importedContacts, setImportedContacts] = useState<Omit<Contact, 'id'>[]>([]);
+   const [importTargetType, setImportTargetType] = useState<'default' | 'existing' | 'new'>('default');
+   const [importTargetGroupId, setImportTargetGroupId] = useState<string>('');
+   const [importNewGroupName, setImportNewGroupName] = useState('');
 
    const handleAddContact = () => {
       if (newContactName && newContactNumber) {
@@ -108,14 +118,43 @@ export default function ContactsPage() {
                   return {
                      name: row.name || 'Unknown',
                      number: cleanNumber,
-                     groupIds: ['default']
+                     groupIds: [] as string[] // Explicitly cast to string[]
                   };
                }).filter((c): c is Omit<Contact, 'id'> => c !== null);
 
-               importContacts(parsed);
+               setImportedContacts(parsed);
+               setIsImportModalOpen(true);
+               // Reset input
+               e.target.value = '';
             }
          });
       }
+   };
+
+   const handleConfirmImport = () => {
+      let targetGroupId = 'default';
+
+      if (importTargetType === 'existing' && importTargetGroupId) {
+         targetGroupId = importTargetGroupId;
+      } else if (importTargetType === 'new' && importNewGroupName) {
+         const newId = nanoid();
+         addGroup(importNewGroupName, 'Criado via importação', newId);
+         targetGroupId = newId;
+      }
+
+      const contactsToImport = importedContacts.map(c => ({
+         ...c,
+         groupIds: [targetGroupId]
+      }));
+
+      importContacts(contactsToImport);
+
+      // Cleanup
+      setIsImportModalOpen(false);
+      setImportedContacts([]);
+      setImportTargetType('default');
+      setImportTargetGroupId('');
+      setImportNewGroupName('');
    };
 
    return (
@@ -264,6 +303,75 @@ export default function ContactsPage() {
                </AlertDialog>
             </TabsContent>
          </Tabs>
+
+         <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+               <DialogHeader>
+                  <DialogTitle>Importar Contatos</DialogTitle>
+               </DialogHeader>
+               <div className="py-4 space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg text-sm text-slate-600">
+                     <FileSpreadsheet className="w-4 h-4" />
+                     <span>{importedContacts.length} contatos encontrados no arquivo.</span>
+                  </div>
+
+                  <div className="space-y-3">
+                     <Label>Destino dos contatos</Label>
+                     <RadioGroup value={importTargetType} onValueChange={(v: any) => setImportTargetType(v)}>
+                        <div className="flex items-center space-x-2">
+                           <RadioGroupItem value="default" id="r1" />
+                           <Label htmlFor="r1">Adicionar ao grupo Geral (Padrão)</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                           <RadioGroupItem value="existing" id="r2" />
+                           <Label htmlFor="r2">Adicionar a um grupo existente</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                           <RadioGroupItem value="new" id="r3" />
+                           <Label htmlFor="r3">Criar um novo grupo</Label>
+                        </div>
+                     </RadioGroup>
+                  </div>
+
+                  {importTargetType === 'existing' && (
+                     <div className="space-y-2 pl-6 border-l-2 border-slate-100">
+                        <Label>Selecione o grupo</Label>
+                        <Select value={importTargetGroupId} onValueChange={setImportTargetGroupId}>
+                           <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                           </SelectTrigger>
+                           <SelectContent>
+                              {groups.map(g => (
+                                 <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                              ))}
+                           </SelectContent>
+                        </Select>
+                     </div>
+                  )}
+
+                  {importTargetType === 'new' && (
+                     <div className="space-y-2 pl-6 border-l-2 border-slate-100">
+                        <Label>Nome do novo grupo</Label>
+                        <Input
+                           placeholder="Ex: Clientes VIP"
+                           value={importNewGroupName}
+                           onChange={e => setImportNewGroupName(e.target.value)}
+                        />
+                     </div>
+                  )}
+
+                  <div className="pt-2 flex justify-end gap-2">
+                     <Button variant="outline" onClick={() => setIsImportModalOpen(false)}>Cancelar</Button>
+                     <Button onClick={handleConfirmImport} disabled={
+                        (importTargetType === 'existing' && !importTargetGroupId) ||
+                        (importTargetType === 'new' && !importNewGroupName)
+                     }>
+                        Importar Contatos
+                     </Button>
+                  </div>
+               </div>
+            </DialogContent>
+         </Dialog>
       </div>
    );
 }
