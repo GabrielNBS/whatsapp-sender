@@ -11,9 +11,38 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Upload, Users, Pencil, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { Plus, Trash2, Upload, Users, Pencil, ChevronLeft, ChevronRight, Settings, FileSpreadsheet } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
+import { nanoid } from 'nanoid';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
+const formatPhoneNumber = (value: string) => {
+   // Strip non-numeric characters
+   const cleaned = value.replace(/\D/g, '');
+
+   // Check if it starts with 55 (Brazil DDI) and remove it for display if preferred, 
+   // or just handle the 10/11 digits. 
+   // Assuming standard storage might include 55.
+   // If length is 12 or 13, it likely has DDI.
+   let match = cleaned;
+   if (cleaned.length > 11 && cleaned.startsWith('55')) {
+      match = cleaned.substring(2);
+   }
+
+   // Apply masking (11 digits: (XX) X XXXX-XXXX)
+   if (match.length === 11) {
+      return match.replace(/(\d{2})(\d{1})(\d{4})(\d{4})/, '($1) $2 $3-$4');
+   }
+   // Apply masking (10 digits: (XX) XXXX-XXXX)
+   if (match.length === 10) {
+      return match.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+   }
+
+   // Return original if pattern doesn't match
+   return value;
+};
 
 export default function ContactsPage() {
    const { groups, contacts, addContact, deleteContact, addGroup, deleteGroup, importContacts } = useAppStore();
@@ -27,6 +56,13 @@ export default function ContactsPage() {
    const [isGroupOpen, setIsGroupOpen] = useState(false);
    const [managingGroup, setManagingGroup] = useState<Group | null>(null);
    const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
+
+   // Import State
+   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+   const [importedContacts, setImportedContacts] = useState<Omit<Contact, 'id'>[]>([]);
+   const [importTargetType, setImportTargetType] = useState<'default' | 'existing' | 'new'>('default');
+   const [importTargetGroupId, setImportTargetGroupId] = useState<string>('');
+   const [importNewGroupName, setImportNewGroupName] = useState('');
 
    const handleAddContact = () => {
       if (newContactName && newContactNumber) {
@@ -47,31 +83,19 @@ export default function ContactsPage() {
    };
 
    const handleDeleteGroupClick = (group: Group) => {
-       const groupContactsCount = contacts.filter(contact => contact.groupIds.includes(group.id)).length;
-       if (groupContactsCount > 0) {
-           setDeletingGroup(group);
-       } else {
-           deleteGroup(group.id);
-       }
+      const groupContactsCount = contacts.filter(contact => contact.groupIds.includes(group.id)).length;
+      if (groupContactsCount > 0) {
+         setDeletingGroup(group);
+      } else {
+         deleteGroup(group.id);
+      }
    };
 
    const confirmDeleteGroup = () => {
-       if (deletingGroup) {
-           deleteGroup(deletingGroup.id);
-           setDeletingGroup(null);
-       }
-   };
-
-   const formatPhoneNumber = (value: string) => {
-      const digits = value.replace(/\D/g, '');
-      const limited = digits.substring(0, 13);
-
-      if (!limited) return '';
-      if (limited.length <= 2) return `+${limited}`;
-      if (limited.length <= 4) return `+${limited.substring(0, 2)} (${limited.substring(2)}`;
-      if (limited.length <= 9) return `+${limited.substring(0, 2)} (${limited.substring(2, 4)}) ${limited.substring(4)}`;
-
-      return `+${limited.substring(0, 2)} (${limited.substring(2, 4)}) ${limited.substring(4, 9)}-${limited.substring(9)}`;
+      if (deletingGroup) {
+         deleteGroup(deletingGroup.id);
+         setDeletingGroup(null);
+      }
    };
 
    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,96 +118,126 @@ export default function ContactsPage() {
                   return {
                      name: row.name || 'Unknown',
                      number: cleanNumber,
-                     groupIds: ['default']
+                     groupIds: [] as string[] // Explicitly cast to string[]
                   };
                }).filter((c): c is Omit<Contact, 'id'> => c !== null);
 
-               importContacts(parsed);
+               setImportedContacts(parsed);
+               setIsImportModalOpen(true);
+               // Reset input
+               e.target.value = '';
             }
          });
       }
    };
 
+   const handleConfirmImport = () => {
+      let targetGroupId = 'default';
+
+      if (importTargetType === 'existing' && importTargetGroupId) {
+         targetGroupId = importTargetGroupId;
+      } else if (importTargetType === 'new' && importNewGroupName) {
+         const newId = nanoid();
+         addGroup(importNewGroupName, 'Criado via importação', newId);
+         targetGroupId = newId;
+      }
+
+      const contactsToImport = importedContacts.map(c => ({
+         ...c,
+         groupIds: [targetGroupId]
+      }));
+
+      importContacts(contactsToImport);
+
+      // Cleanup
+      setIsImportModalOpen(false);
+      setImportedContacts([]);
+      setImportTargetType('default');
+      setImportTargetGroupId('');
+      setImportNewGroupName('');
+   };
+
    return (
-      <div className="space-y-6">
-         <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold tracking-tight">Contatos & Grupos</h1>
+      <div className="flex flex-col h-[calc(100vh-2rem)] -m-6 p-6 space-y-4 overflow-hidden">
+         <div className="flex justify-between items-center shrink-0">
+            <h1 className="text-xl font-bold tracking-tight">Contatos & Grupos</h1>
+            <div className="text-sm text-muted-foreground">
+               Total: {contacts.length}
+            </div>
          </div>
 
-         <Tabs defaultValue="contacts" className="w-full">
-            <TabsList >
-               <TabsTrigger value="contacts">Todos os Contatos</TabsTrigger>
-               <TabsTrigger value="groups">Grupos</TabsTrigger>
-            </TabsList>
+         <Tabs defaultValue="contacts" className="flex-1 flex flex-col min-h-0">
+            <div className="flex justify-between items-center mb-4 shrink-0">
+               <TabsList>
+                  <TabsTrigger value="contacts">Todos os Contatos</TabsTrigger>
+                  <TabsTrigger value="groups">Grupos</TabsTrigger>
+               </TabsList>
 
-            <TabsContent value="contacts" className="space-y-4">
-               <div className="flex justify-between">
-                  <div className="flex gap-2">
-                     <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                        <DialogTrigger asChild>
-                           <Button><Plus className="w-4 h-4 mr-2 cursor-pointer" /> Adicionar Contato</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                           <DialogHeader>
-                              <DialogTitle>Novo Contato</DialogTitle>
-                           </DialogHeader>
-                           <div className="grid gap-4 py-4">
-                              <div className="grid gap-2">
+               {/* Actions that depend on tab could go here or inside tab content, keeping basic Add Contact reachable */}
+               <div className="flex gap-2">
+                  <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                     <DialogTrigger asChild>
+                        <Button size="sm"><Plus className="w-4 h-4 mr-2" /> Adicionar Contato</Button>
+                     </DialogTrigger>
+                     <DialogContent>
+                        <DialogHeader>
+                           <DialogTitle>Novo Contato</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                           <div className="grid gap-2">
+                              <Input
+                                 placeholder="Nome"
+                                 value={newContactName}
+                                 onChange={e => setNewContactName(e.target.value)}
+                              />
+                              <div className="space-y-1">
                                  <Input
-                                    placeholder="Nome"
-                                    value={newContactName}
-                                    onChange={e => setNewContactName(e.target.value)}
+                                    placeholder="(11) 9 9999-9999"
+                                    value={newContactNumber}
+                                    onChange={handlePhoneChange}
+                                    maxLength={16}
                                  />
-                                 <div className="space-y-1">
-                                    <Input
-                                       placeholder="+55 (11) 99999-9999"
-                                       value={newContactNumber}
-                                       onChange={handlePhoneChange}
-                                       maxLength={19}
-                                    />
-                                    <p className="text-[10px] text-muted-foreground pl-1">
-                                       Formato: +55 (DDD) Número
-                                    </p>
-                                 </div>
-                                 <Select value={newContactGroupId} onValueChange={setNewContactGroupId}>
-                                    <SelectTrigger>
-                                       <SelectValue placeholder="Selecione um grupo" />
-                                    </SelectTrigger>
-                                    <SelectContent className="max-h-[200px]">
-                                       {groups.map(group => (
-                                          <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
-                                       ))}
-                                    </SelectContent>
-                                 </Select>
+                                 <p className="text-[10px] text-muted-foreground pl-1">
+                                    Formato: (DDD) 9 0000-0000
+                                 </p>
                               </div>
-                              <Button onClick={handleAddContact}>Salvar</Button>
+                              <Select value={newContactGroupId} onValueChange={setNewContactGroupId}>
+                                 <SelectTrigger>
+                                    <SelectValue placeholder="Selecione um grupo" />
+                                 </SelectTrigger>
+                                 <SelectContent className="max-h-[200px]">
+                                    {groups.map(group => (
+                                       <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
+                                    ))}
+                                 </SelectContent>
+                              </Select>
                            </div>
-                        </DialogContent>
-                     </Dialog>
+                           <Button onClick={handleAddContact}>Salvar</Button>
+                        </div>
+                     </DialogContent>
+                  </Dialog>
 
-                     <div className="relative">
-                        <input
-                           type="file"
-                           accept=".csv"
-                           className="absolute inset-0 opacity-0 cursor-pointer"
-                           onChange={handleFileUpload}
-                        />
-                        <Button variant="outline"><Upload className="w-4 h-4 mr-2" /> Importar CSV</Button>
-                     </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground self-center">
-                     Total: {contacts.length}
+                  <div className="relative">
+                     <input
+                        type="file"
+                        accept=".csv"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={handleFileUpload}
+                     />
+                     <Button variant="outline" size="sm"><Upload className="w-4 h-4 mr-2" /> Importar CSV</Button>
                   </div>
                </div>
+            </div>
 
+            <TabsContent value="contacts" className="flex-1 flex flex-col min-h-0 data-[state=inactive]:hidden border rounded-lg bg-white overflow-hidden">
                <ValidContactTable contacts={contacts} onDelete={deleteContact} />
             </TabsContent>
 
-            <TabsContent value="groups" className="space-y-4">
-               <div className="flex justify-start">
+            <TabsContent value="groups" className="flex-1 overflow-y-auto min-h-0 data-[state=inactive]:hidden pr-2">
+               <div className="flex justify-start mb-4">
                   <Dialog open={isGroupOpen} onOpenChange={setIsGroupOpen}>
                      <DialogTrigger asChild>
-                        <Button><Users className="w-4 h-4 mr-2" /> Criar Grupo</Button>
+                        <Button variant="secondary" size="sm"><Users className="w-4 h-4 mr-2" /> Criar Grupo</Button>
                      </DialogTrigger>
                      <DialogContent>
                         <DialogHeader>
@@ -223,10 +277,10 @@ export default function ContactsPage() {
                   ))}
                </div>
 
-               <GroupManagementDialog 
-                  group={managingGroup} 
-                  isOpen={!!managingGroup} 
-                  onClose={() => setManagingGroup(null)} 
+               <GroupManagementDialog
+                  group={managingGroup}
+                  isOpen={!!managingGroup}
+                  onClose={() => setManagingGroup(null)}
                />
 
                <AlertDialog open={!!deletingGroup} onOpenChange={(open) => !open && setDeletingGroup(null)}>
@@ -234,7 +288,7 @@ export default function ContactsPage() {
                      <AlertDialogHeader>
                         <AlertDialogTitle>Excluir Grupo</AlertDialogTitle>
                         <AlertDialogDescription>
-                           O grupo <strong>{deletingGroup?.name}</strong> possui contatos associados. 
+                           O grupo <strong>{deletingGroup?.name}</strong> possui contatos associados.
                            Ao excluir, esses contatos serão movidos para o grupo &quot;Geral&quot; caso não pertençam a outros grupos.
                            Deseja continuar?
                         </AlertDialogDescription>
@@ -249,6 +303,75 @@ export default function ContactsPage() {
                </AlertDialog>
             </TabsContent>
          </Tabs>
+
+         <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+               <DialogHeader>
+                  <DialogTitle>Importar Contatos</DialogTitle>
+               </DialogHeader>
+               <div className="py-4 space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-lg text-sm text-slate-600">
+                     <FileSpreadsheet className="w-4 h-4" />
+                     <span>{importedContacts.length} contatos encontrados no arquivo.</span>
+                  </div>
+
+                  <div className="space-y-3">
+                     <Label>Destino dos contatos</Label>
+                     <RadioGroup value={importTargetType} onValueChange={(v: any) => setImportTargetType(v)}>
+                        <div className="flex items-center space-x-2">
+                           <RadioGroupItem value="default" id="r1" />
+                           <Label htmlFor="r1">Adicionar ao grupo Geral (Padrão)</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                           <RadioGroupItem value="existing" id="r2" />
+                           <Label htmlFor="r2">Adicionar a um grupo existente</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                           <RadioGroupItem value="new" id="r3" />
+                           <Label htmlFor="r3">Criar um novo grupo</Label>
+                        </div>
+                     </RadioGroup>
+                  </div>
+
+                  {importTargetType === 'existing' && (
+                     <div className="space-y-2 pl-6 border-l-2 border-slate-100">
+                        <Label>Selecione o grupo</Label>
+                        <Select value={importTargetGroupId} onValueChange={setImportTargetGroupId}>
+                           <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                           </SelectTrigger>
+                           <SelectContent>
+                              {groups.map(g => (
+                                 <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                              ))}
+                           </SelectContent>
+                        </Select>
+                     </div>
+                  )}
+
+                  {importTargetType === 'new' && (
+                     <div className="space-y-2 pl-6 border-l-2 border-slate-100">
+                        <Label>Nome do novo grupo</Label>
+                        <Input
+                           placeholder="Ex: Clientes VIP"
+                           value={importNewGroupName}
+                           onChange={e => setImportNewGroupName(e.target.value)}
+                        />
+                     </div>
+                  )}
+
+                  <div className="pt-2 flex justify-end gap-2">
+                     <Button variant="outline" onClick={() => setIsImportModalOpen(false)}>Cancelar</Button>
+                     <Button onClick={handleConfirmImport} disabled={
+                        (importTargetType === 'existing' && !importTargetGroupId) ||
+                        (importTargetType === 'new' && !importNewGroupName)
+                     }>
+                        Importar Contatos
+                     </Button>
+                  </div>
+               </div>
+            </DialogContent>
+         </Dialog>
       </div>
    );
 }
@@ -268,14 +391,6 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
    const endIndex = startIndex + itemsPerPage;
    const paginatedContacts = contacts.slice(startIndex, endIndex);
 
-   if (contacts.length === 0) {
-      return (
-         <div className="text-center py-10 text-muted-foreground border rounded-lg bg-muted/20">
-            Nenhum contato encontrado. Adicione manualmente ou importe um CSV.
-         </div>
-      );
-   }
-
    const handleEditClick = (contact: Contact) => {
       setEditingContact(contact);
       setSelectedGroup(contact.groupIds[0] || 'default');
@@ -288,29 +403,37 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
       }
    };
 
+   if (contacts.length === 0) {
+      return (
+         <div className="flex items-center justify-center h-full text-muted-foreground bg-slate-50">
+            Nenhum contato encontrado.
+         </div>
+      );
+   }
+
    return (
-      <div className="space-y-4">
-         <div className="rounded-md border max-h-[500px] overflow-y-auto">
-            <Table>
-               <TableHeader>
+      <div className="flex flex-col h-full bg-white rounded-lg border border-slate-200 overflow-hidden">
+         <div className="flex-1 overflow-auto relative">
+            <table className="w-full caption-bottom text-sm text-left">
+               <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">
                   <TableRow>
-                     <TableHead>Nome</TableHead>
-                     <TableHead>Número</TableHead>
-                     <TableHead>Grupos</TableHead>
-                     <TableHead className="text-center w-[120px]">Ações</TableHead>
+                     <TableHead className="font-semibold text-slate-600">Nome</TableHead>
+                     <TableHead className="font-semibold text-slate-600">Número</TableHead>
+                     <TableHead className="font-semibold text-slate-600">Grupos</TableHead>
+                     <TableHead className="text-center w-[120px] font-semibold text-slate-600">Ações</TableHead>
                   </TableRow>
                </TableHeader>
                <TableBody>
                   {paginatedContacts.map((contact) => (
-                     <TableRow key={contact.id}>
-                        <TableCell className="font-medium">{contact.name}</TableCell>
-                        <TableCell>{contact.number}</TableCell>
+                     <TableRow key={contact.id} className="hover:bg-slate-50/50">
+                        <TableCell className="font-medium text-slate-700">{contact.name}</TableCell>
+                        <TableCell className="text-slate-600">{formatPhoneNumber(contact.number)}</TableCell>
                         <TableCell>
-                           <div className="flex gap-1">
+                           <div className="flex gap-1 flex-wrap">
                               {contact.groupIds.map((gid: string) => {
                                  const gName = groups.find(g => g.id === gid)?.name || 'Geral';
                                  return (
-                                    <Badge key={gid} variant="secondary" className="text-xs">
+                                    <Badge key={gid} variant="secondary" className="text-xs bg-slate-100 text-slate-600 border-slate-200">
                                        {gName}
                                     </Badge>
                                  );
@@ -319,49 +442,47 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
                         </TableCell>
                         <TableCell className="text-center">
                            <div className="flex justify-center gap-1">
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditClick(contact)}>
-                                 <Pencil className="w-4 h-4 text-muted-foreground" />
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => handleEditClick(contact)}>
+                                 <Pencil className="w-4 h-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(contact.id)}>
-                                 <Trash2 className="w-4 h-4 text-destructive" />
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={() => onDelete(contact.id)}>
+                                 <Trash2 className="w-4 h-4" />
                               </Button>
                            </div>
                         </TableCell>
                      </TableRow>
                   ))}
                </TableBody>
-            </Table>
+            </table>
          </div>
 
-         {/* Pagination Controls */}
-         {totalPages > 1 && (
-            <div className="flex items-center justify-between px-2">
-               <span className="text-sm text-muted-foreground">
-                  Mostrando {startIndex + 1}-{Math.min(endIndex, contacts.length)} de {contacts.length}
+         {/* Pagination Controls - Fixed at bottom */}
+         <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-white shrink-0">
+            <span className="text-sm text-muted-foreground">
+               Mostrando {startIndex + 1}-{Math.min(endIndex, contacts.length)} de {contacts.length}
+            </span>
+            <div className="flex items-center gap-2">
+               <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+               >
+                  <ChevronLeft className="w-4 h-4" />
+               </Button>
+               <span className="text-sm font-medium min-w-[3rem] text-center">
+                  {currentPage} / {totalPages}
                </span>
-               <div className="flex items-center gap-2">
-                  <Button
-                     variant="outline"
-                     size="sm"
-                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                     disabled={currentPage === 1}
-                  >
-                     <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <span className="text-sm font-medium">
-                     {currentPage} / {totalPages}
-                  </span>
-                  <Button
-                     variant="outline"
-                     size="sm"
-                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                     disabled={currentPage === totalPages}
-                  >
-                     <ChevronRight className="w-4 h-4" />
-                  </Button>
-               </div>
+               <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+               >
+                  <ChevronRight className="w-4 h-4" />
+               </Button>
             </div>
-         )}
+         </div>
 
          <Dialog open={!!editingContact} onOpenChange={(open) => !open && setEditingContact(null)}>
             <DialogContent>

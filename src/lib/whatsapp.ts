@@ -29,8 +29,8 @@ export class WhatsAppService {
     this.initializeEvents();
     this.status = 'INITIALIZING';
     this.client.initialize().catch(err => {
-        console.error("Initialization error:", err);
-        this.status = 'DISCONNECTED';
+      console.error("Initialization error:", err);
+      this.status = 'DISCONNECTED';
     });
   }
 
@@ -126,23 +126,23 @@ export class WhatsAppService {
 
     // specific check for group IDs or if it's already properly formatted
     if (to.includes('@g.us')) {
-       finalId = to;
+      finalId = to;
     } else {
-       // Validate number and get the correct ID
-       try {
-          const validContact = await this.client.getNumberId(candidateId);
+      // Validate number and get the correct ID
+      try {
+        const validContact = await this.client.getNumberId(candidateId);
 
-          if (validContact && validContact._serialized) {
-            finalId = validContact._serialized;
-          } else {
-            console.warn(`Number ${number} not found on WhatsApp.`);
-            throw new Error(`O número ${number} não está registrado no WhatsApp.`);
-          }
-       } catch (e: unknown) {
-          const errorMessage = e instanceof Error ? e.message : 'Unknown error';
-          console.error("Error validating number:", e);
-          throw new Error(`Falha ao validar número: ${errorMessage}`);
-       }
+        if (validContact && validContact._serialized) {
+          finalId = validContact._serialized;
+        } else {
+          console.warn(`Number ${number} not found on WhatsApp.`);
+          throw new Error(`O número ${number} não está registrado no WhatsApp.`);
+        }
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+        console.error("Error validating number:", e);
+        throw new Error(`Falha ao validar número: ${errorMessage}`);
+      }
     }
 
     // Smart Variable Substitution
@@ -152,43 +152,49 @@ export class WhatsAppService {
     finalMessage = finalMessage.replace(/{{phone}}/g, number);
 
     if (finalMessage.includes('{{name}}') || finalMessage.includes('{{nome}}')) {
-        try {
-            const contact = await this.client.getContactById(finalId);
-            // pushname: what the user set for themselves
-            // name: what I saved them as (if synced) or sometimes same as pushname
-            // options.fallbackName: what we have in our local DB
+      try {
+        const contact = await this.client.getContactById(finalId);
+        // pushname: what the user set for themselves
+        // name: what I saved them as (if synced) or sometimes same as pushname
+        // options.fallbackName: what we have in our local DB
 
-            const bestName = contact.pushname || contact.name || options?.fallbackName || 'Cliente';
-            console.log(`Smart Substitution: Using '${bestName}' for contact ${finalId} (Push: ${contact.pushname}, Name: ${contact.name}, Fallback: ${options?.fallbackName})`);
+        const bestName = contact.pushname || contact.name || options?.fallbackName || 'Cliente';
+        console.log(`Smart Substitution: Using '${bestName}' for contact ${finalId} (Push: ${contact.pushname}, Name: ${contact.name}, Fallback: ${options?.fallbackName})`);
 
-            finalMessage = finalMessage.replace(/{{name}}/g, bestName).replace(/{{nome}}/g, bestName);
-        } catch (error) {
-            console.warn('Failed to fetch contact details for substitution, using fallback.', error);
-            const fallback = options?.fallbackName || 'Cliente';
-            finalMessage = finalMessage.replace(/{{name}}/g, fallback).replace(/{{nome}}/g, fallback);
-        }
+        finalMessage = finalMessage.replace(/{{name}}/g, bestName).replace(/{{nome}}/g, bestName);
+      } catch (error) {
+        console.warn('Failed to fetch contact details for substitution, using fallback.', error);
+        const fallback = options?.fallbackName || 'Cliente';
+        finalMessage = finalMessage.replace(/{{name}}/g, fallback).replace(/{{nome}}/g, fallback);
+      }
     }
 
     console.log(`Sending to final ID: ${finalId}`);
 
     try {
-        // WORKAROUND for markedUnread bug: Send text and media separately
-        // This avoids the internal WhatsApp Web error when rendering captions
-        if (mediaData) {
-            // 1. Send Text first (if there's a message)
-            if (finalMessage && finalMessage.trim().length > 0) {
-                await this.client.sendMessage(finalId, finalMessage);
-            }
-            // 2. Send Media separately (no caption)
-            const media = new MessageMedia(mediaData.mimetype, mediaData.data, mediaData.filename);
-            await this.client.sendMessage(finalId, media);
-        } else {
-            await this.client.sendMessage(finalId, finalMessage);
+      if (mediaData) {
+        const media = new MessageMedia(mediaData.mimetype, mediaData.data, mediaData.filename);
+        await this.client.sendMessage(finalId, media, {
+          caption: finalMessage,
+          sendSeen: false
+        });
+      } else {
+        // Try to get chat object first - fixes "markedUnread" error
+        // Adding options to match media sending behavior and avoid crashes
+        const sendOptions = { linkPreview: false, sendSeen: false };
+
+        try {
+          const chat = await this.client.getChatById(finalId);
+          await chat.sendMessage(finalMessage, sendOptions);
+        } catch (chatError) {
+          console.warn('Could not get chat object, falling back to client.sendMessage', chatError);
+          await this.client.sendMessage(finalId, finalMessage, sendOptions);
         }
+      }
     } catch (sendError: unknown) {
-        const errorMessage = sendError instanceof Error ? sendError.message : 'Unknown error';
-        console.error('Error in client.sendMessage:', sendError);
-        throw new Error(`Falha ao enviar mensagem: ${errorMessage}`);
+      const errorMessage = sendError instanceof Error ? sendError.message : 'Unknown error';
+      console.error('Error in client.sendMessage:', sendError);
+      throw new Error(`Falha ao enviar mensagem: ${errorMessage}`);
     }
 
     this.incrementDailyCount();
@@ -196,13 +202,13 @@ export class WhatsAppService {
   }
 
   public async logout() {
-      await this.client.logout();
-      this.isAuthenticated = false;
-      this.isReady = false;
-      this.qrCode = null;
-      this.status = 'DISCONNECTED';
-      // Re-initialize to allow new login
-      this.client.initialize();
+    await this.client.logout();
+    this.isAuthenticated = false;
+    this.isReady = false;
+    this.qrCode = null;
+    this.status = 'DISCONNECTED';
+    // Re-initialize to allow new login
+    this.client.initialize();
   }
 }
 
