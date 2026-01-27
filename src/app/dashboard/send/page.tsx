@@ -21,6 +21,16 @@ import { toast } from "sonner";
 // UI Components
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { Input } from "@/components/ui/input";
 import { RecipientSelector } from '@/components/send/recipient-selector';
@@ -73,7 +83,9 @@ export default function SendPage() {
     const [message, setMessage] = useState('');
     const [selectedFile, setSelectedFile] = useState<{ data: string, mimetype: string, filename: string } | null>(null);
     const [isScheduleMode, setIsScheduleMode] = useState(false);
+
     const [scheduleDate, setScheduleDate] = useState('');
+    const [showStopConfirmation, setShowStopConfirmation] = useState(false);
 
 
 
@@ -315,7 +327,7 @@ export default function SendPage() {
                         isSending={isSending}
                         isScheduleMode={isScheduleMode}
                         onAction={handleAction}
-                        onStop={handleStop}
+                        onStop={() => setShowStopConfirmation(true)}
                     />
 
                     {/* Live Logs Panel - Fills remaining height */}
@@ -369,6 +381,30 @@ export default function SendPage() {
                     </div>
                 </div>
             </div>
+            {/* Stop Confirmation Dialog */}
+            <AlertDialog open={showStopConfirmation} onOpenChange={setShowStopConfirmation}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Parar Envio?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Tem certeza que deseja interromper o envio em massa?
+                            Isso irá parar o processo imediatamente e a lista ficará incompleta.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Continuar Enviando</AlertDialogCancel>
+                        <AlertDialogAction 
+                            onClick={() => {
+                                handleStop();
+                                setShowStopConfirmation(false);
+                            }} 
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Parar Envio
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
