@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from "sonner";
 import { useAppStore, Contact, Group } from '@/lib/store';
+import { formatPhoneNumber } from '@/lib/utils';
 import { GroupManagementDialog } from '@/components/contacts/group-management-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,31 +20,7 @@ import { nanoid } from 'nanoid';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
-const formatPhoneNumber = (value: string) => {
-   // Strip non-numeric characters
-   const cleaned = value.replace(/\D/g, '');
 
-   // Check if it starts with 55 (Brazil DDI) and remove it for display if preferred, 
-   // or just handle the 10/11 digits. 
-   // Assuming standard storage might include 55.
-   // If length is 12 or 13, it likely has DDI.
-   let match = cleaned;
-   if (cleaned.length > 11 && cleaned.startsWith('55')) {
-      match = cleaned.substring(2);
-   }
-
-   // Apply masking (11 digits: (XX) X XXXX-XXXX)
-   if (match.length === 11) {
-      return match.replace(/(\d{2})(\d{1})(\d{4})(\d{4})/, '($1) $2 $3-$4');
-   }
-   // Apply masking (10 digits: (XX) XXXX-XXXX)
-   if (match.length === 10) {
-      return match.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-   }
-
-   // Return original if pattern doesn't match
-   return value;
-};
 
 export default function ContactsPage() {
    const { groups, contacts, addContact, deleteContact, addGroup, deleteGroup, importContacts } = useAppStore();
@@ -201,6 +179,8 @@ export default function ContactsPage() {
                                     Formato: (DDD) 9 0000-0000
                                  </p>
                               </div>
+
+                              <span className="text-sm font-medium">Selecione um grupo</span>
                               <Select value={newContactGroupId} onValueChange={setNewContactGroupId}>
                                  <SelectTrigger>
                                     <SelectValue placeholder="Selecione um grupo" />
@@ -295,7 +275,7 @@ export default function ContactsPage() {
                      </AlertDialogHeader>
                      <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDeleteGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        <AlertDialogAction onClick={confirmDeleteGroup} className="bg-destructive text-info-foreground hover:bg-destructive/90">
                            Excluir
                         </AlertDialogAction>
                      </AlertDialogFooter>
@@ -380,6 +360,8 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
    const { groups, updateContactGroups } = useAppStore();
    const [editingContact, setEditingContact] = useState<Contact | null>(null);
    const [selectedGroup, setSelectedGroup] = useState<string>('');
+   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
+   const [confirmingSave, setConfirmingSave] = useState(false);
 
    // Pagination state
    const [currentPage, setCurrentPage] = useState(1);
@@ -396,10 +378,28 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
       setSelectedGroup(contact.groupIds[0] || 'default');
    };
 
-   const handleSaveEdit = () => {
+   const initiateSaveEdit = () => {
+      setConfirmingSave(true);
+   };
+
+   const executeSaveEdit = () => {
       if (editingContact) {
          updateContactGroups(editingContact.id, [selectedGroup]);
          setEditingContact(null);
+         setConfirmingSave(false);
+         toast.success("Contato atualizado com sucesso");
+      }
+   };
+
+   const initiateDelete = (contact: Contact) => {
+      setDeletingContact(contact);
+   };
+
+   const executeDelete = () => {
+      if (deletingContact) {
+         onDelete(deletingContact.id);
+         setDeletingContact(null);
+         toast.success("Contato excluído com sucesso");
       }
    };
 
@@ -445,7 +445,7 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => handleEditClick(contact)}>
                                  <Pencil className="w-4 h-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={() => onDelete(contact.id)}>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50" onClick={() => initiateDelete(contact)}>
                                  <Trash2 className="w-4 h-4" />
                               </Button>
                            </div>
@@ -470,7 +470,7 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
                >
                   <ChevronLeft className="w-4 h-4" />
                </Button>
-               <span className="text-sm font-medium min-w-[3rem] text-center">
+               <span className="text-sm font-medium min-w-12 text-center">
                   {currentPage} / {totalPages}
                </span>
                <Button
@@ -507,10 +507,47 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
                         </SelectContent>
                      </Select>
                   </div>
-                  <Button onClick={handleSaveEdit}>Salvar Alterações</Button>
+                  <Button onClick={initiateSaveEdit}>Salvar Alterações</Button>
                </div>
             </DialogContent>
          </Dialog>
+
+         {/* Delete Confirmation */}
+         <AlertDialog open={!!deletingContact} onOpenChange={(open) => !open && setDeletingContact(null)}>
+            <AlertDialogContent>
+               <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir Contato</AlertDialogTitle>
+                  <AlertDialogDescription>
+                     Tem certeza que deseja excluir o contato <strong>{deletingContact?.name}</strong>?
+                     Esta ação não pode ser desfeita.
+                  </AlertDialogDescription>
+               </AlertDialogHeader>
+               <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={executeDelete} className="bg-destructive text-info-foreground hover:bg-destructive/90">
+                     Excluir
+                  </AlertDialogAction>
+               </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
+
+         {/* Save Confirmation */}
+         <AlertDialog open={confirmingSave} onOpenChange={setConfirmingSave}>
+            <AlertDialogContent>
+               <AlertDialogHeader>
+                  <AlertDialogTitle>Salvar Alterações</AlertDialogTitle>
+                  <AlertDialogDescription>
+                     Deseja confirmar a alteração do grupo para o contato <strong>{editingContact?.name}</strong>?
+                  </AlertDialogDescription>
+               </AlertDialogHeader>
+               <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={executeSaveEdit} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                     Confirmar
+                  </AlertDialogAction>
+               </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
       </div>
    );
 }
