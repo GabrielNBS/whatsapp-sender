@@ -66,6 +66,31 @@ export class WhatsAppService {
       this.isReady = false;
       this.status = 'DISCONNECTED';
     });
+
+    this.client.on('message_ack', async (msg, ack) => {
+        // ack: 1 (sent), 2 (delivered), 3 (read)
+        if (ack === 3) {
+            const phone = msg.to.replace('@c.us', '');
+            try {
+                // Dynamic import to avoid initialization issues
+                const { prisma } = await import('@/lib/db');
+                await prisma.contactAnalytics.upsert({
+                    where: { phone },
+                    create: {
+                        phone,
+                        readCount: 1,
+                        lastReadAt: new Date()
+                    },
+                    update: {
+                        readCount: { increment: 1 },
+                        lastReadAt: new Date()
+                    }
+                });
+            } catch (e) {
+                console.error('Failed to update read analytics', e);
+            }
+        }
+    });
   }
 
   private checkReset() {
@@ -198,6 +223,28 @@ export class WhatsAppService {
     }
 
     this.incrementDailyCount();
+
+    // Track Analytics
+    try {
+        const phone = to.replace('@c.us', '');
+        // Dynamic import
+        const { prisma } = await import('@/lib/db');
+        await prisma.contactAnalytics.upsert({
+            where: { phone },
+            create: {
+                phone,
+                sentCount: 1,
+                lastSentAt: new Date()
+            },
+            update: {
+                sentCount: { increment: 1 },
+                lastSentAt: new Date()
+            }
+        });
+    } catch (e) {
+        console.error('Failed to update sent analytics', e);
+    }
+
     return { success: true };
   }
 

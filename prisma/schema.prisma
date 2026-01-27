@@ -49,3 +49,12 @@ model ScheduledMessage {
   batchId   String?  // UUID of the broadcast batch
   batchName String?  // Optional name for grouping
 }
+
+model ContactAnalytics {
+  phone       String   @id
+  sentCount   Int      @default(0)
+  readCount   Int      @default(0)
+  lastReadAt  DateTime?
+  lastSentAt  DateTime?
+  updatedAt   DateTime @updatedAt
+}

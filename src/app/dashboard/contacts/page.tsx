@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useAppStore, Contact, Group } from '@/lib/store';
 import { formatPhoneNumber } from '@/lib/utils';
@@ -13,7 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Upload, Users, Pencil, ChevronLeft, ChevronRight, Settings, FileSpreadsheet } from 'lucide-react';
+import { Plus, Trash2, Upload, Users, Pencil, ChevronLeft, ChevronRight, Settings, FileSpreadsheet, BarChart3 } from 'lucide-react';
+import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
 import { nanoid } from 'nanoid';
@@ -361,7 +363,24 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
    const [editingContact, setEditingContact] = useState<Contact | null>(null);
    const [selectedGroup, setSelectedGroup] = useState<string>('');
    const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
+
    const [confirmingSave, setConfirmingSave] = useState(false);
+   const [analytics, setAnalytics] = useState<Record<string, { sentCount: number, readCount: number }>>({});
+
+   useEffect(() => {
+      fetch('/api/analytics')
+         .then(res => res.json())
+         .then(data => {
+            if (Array.isArray(data)) {
+               const map: Record<string, any> = {};
+               data.forEach((item: any) => {
+                  map[item.phone] = item;
+               });
+               setAnalytics(map);
+            }
+         })
+         .catch(err => console.error('Failed to load analytics', err));
+   }, []);
 
    // Pagination state
    const [currentPage, setCurrentPage] = useState(1);
@@ -420,6 +439,7 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
                      <TableHead className="font-semibold text-slate-600">Nome</TableHead>
                      <TableHead className="font-semibold text-slate-600">Número</TableHead>
                      <TableHead className="font-semibold text-slate-600">Grupos</TableHead>
+                     <TableHead className="font-semibold text-slate-600 text-center">Engajamento</TableHead>
                      <TableHead className="text-center w-[120px] font-semibold text-slate-600">Ações</TableHead>
                   </TableRow>
                </TableHeader>
@@ -439,6 +459,28 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
                                  );
                               })}
                            </div>
+                        </TableCell>
+                        <TableCell>
+                           {(() => {
+                              const stats = analytics[contact.number] || { sentCount: 0, readCount: 0 };
+                              const rate = stats.sentCount > 0 ? Math.round((stats.readCount / stats.sentCount) * 100) : 0;
+                              return (
+                                 <TooltipProvider>
+                                    <Tooltip>
+                                       <TooltipTrigger asChild>
+                                          <div className="flex items-center gap-2 cursor-help">
+                                             <Progress value={rate} className="h-2 w-16" />
+                                             <span className="text-xs font-medium text-slate-600">{rate}%</span>
+                                          </div>
+                                       </TooltipTrigger>
+                                       <TooltipContent>
+                                          <p>Enviadas: {stats.sentCount}</p>
+                                          <p>Lidas: {stats.readCount}</p>
+                                       </TooltipContent>
+                                    </Tooltip>
+                                 </TooltipProvider>
+                              );
+                           })()}
                         </TableCell>
                         <TableCell className="text-center">
                            <div className="flex justify-center gap-1">
