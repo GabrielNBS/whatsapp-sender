@@ -257,17 +257,24 @@ export class WhatsAppService {
         `[ACK DEBUG] Message to ${phone} status update: ${ack} (${MessageAckStatus.READ}=Read, ${MessageAckStatus.DELIVERED}=Delivered, ${MessageAckStatus.SENT}=Sent)`,
       );
       
+      // CORREÇÃO: Só processar ACKs de mensagens enviadas pelo nosso sistema
+      // Isso evita contabilizar leituras de mensagens manuais do celular
+      const isOurMessage = this.pendingMessages.has(msg.id._serialized);
+      
+      if (!isOurMessage) {
+        console.log(`[ACK DEBUG] Ignoring ACK for message not sent by app: ${msg.id._serialized}`);
+        return;
+      }
+      
       // Remove from polling queue if we got an event
-      if (this.pendingMessages.has(msg.id._serialized)) {
-        /**
-         * MUDANÇA: Comparação usa enum ao invés de magic number
-         * ANTES: if (ack >= 3)
-         * DEPOIS: if (ack >= MessageAckStatus.READ)
-         */
-        // Cast ack to number because whatsapp-web.js uses MessageAck enum
-        if ((ack as number) >= MessageAckStatus.READ) {
-          this.pendingMessages.delete(msg.id._serialized);
-        }
+      /**
+       * MUDANÇA: Comparação usa enum ao invés de magic number
+       * ANTES: if (ack >= 3)
+       * DEPOIS: if (ack >= MessageAckStatus.READ)
+       */
+      // Cast ack to number because whatsapp-web.js uses MessageAck enum
+      if ((ack as number) >= MessageAckStatus.READ) {
+        this.pendingMessages.delete(msg.id._serialized);
       }
 
       /**
