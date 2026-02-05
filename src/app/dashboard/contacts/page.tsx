@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useAppStore, Contact, Group } from '@/lib/store';
-import { formatPhoneNumber } from '@/lib/utils';
+import { formatPhoneNumber, findAnalyticsForPhone } from '@/lib/utils';
 import { GroupManagementDialog } from '@/components/contacts/group-management-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,14 +13,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Upload, Users, Pencil, ChevronLeft, ChevronRight, Settings, FileSpreadsheet, BarChart3 } from 'lucide-react';
-import { Progress } from "@/components/ui/progress";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ChevronLeft, ChevronRight, Settings, FileSpreadsheet, BarChart3, Plus, Trash2, Upload, Users, Pencil } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
 import { nanoid } from 'nanoid';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { ContactEngagement } from '@/components/contacts/contact-engagement';
 
 
 
@@ -365,21 +364,35 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
    const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
 
    const [confirmingSave, setConfirmingSave] = useState(false);
-   const [analytics, setAnalytics] = useState<Record<string, { sentCount: number, readCount: number }>>({});
+   const [analytics, setAnalytics] = useState<Record<string, { sentCount: number, readCount: number, lastSentAt?: string | null, lastReadAt?: string | null }>>({});
 
    useEffect(() => {
-      fetch('/api/analytics')
-         .then(res => res.json())
-         .then(data => {
-            if (Array.isArray(data)) {
-               const map: Record<string, any> = {};
-               data.forEach((item: any) => {
-                  map[item.phone] = item;
-               });
-               setAnalytics(map);
-            }
-         })
-         .catch(err => console.error('Failed to load analytics', err));
+      const loadAnalytics = () => {
+         console.log('Polling analytics...');
+         fetch('/api/analytics', { cache: 'no-store', next: { revalidate: 0 } })
+           .then(res => res.json())
+           .then(data => {
+              console.log('Received analytics data:', data.length, 'records');
+              if (Array.isArray(data)) {
+                 const map: Record<string, any> = {};
+                 data.forEach((item: any) => {
+                    map[item.phone] = item;
+                 });
+                 setAnalytics(map);
+                 // Optional: Log specific test number to see if it updates
+                 const testVal = map['11999999999'];
+                 if (testVal) console.log('Test Contact Status:', testVal);
+              }
+           })
+           .catch(err => console.error('Failed to load analytics', err));
+      };
+
+      loadAnalytics(); // Initial load
+
+      // Poll every 5 seconds
+      const interval = setInterval(loadAnalytics, 5000);
+
+      return () => clearInterval(interval);
    }, []);
 
    // Pagination state
@@ -460,28 +473,9 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
                               })}
                            </div>
                         </TableCell>
-                        <TableCell>
-                           {(() => {
-                              const stats = analytics[contact.number] || { sentCount: 0, readCount: 0 };
-                              const rate = stats.sentCount > 0 ? Math.round((stats.readCount / stats.sentCount) * 100) : 0;
-                              return (
-                                 <TooltipProvider>
-                                    <Tooltip>
-                                       <TooltipTrigger asChild>
-                                          <div className="flex items-center gap-2 cursor-help">
-                                             <Progress value={rate} className="h-2 w-16" />
-                                             <span className="text-xs font-medium text-slate-600">{rate}%</span>
-                                          </div>
-                                       </TooltipTrigger>
-                                       <TooltipContent>
-                                          <p>Enviadas: {stats.sentCount}</p>
-                                          <p>Lidas: {stats.readCount}</p>
-                                       </TooltipContent>
-                                    </Tooltip>
-                                 </TooltipProvider>
-                              );
-                           })()}
-                        </TableCell>
+                           <TableCell>
+                              <ContactEngagement stats={findAnalyticsForPhone(contact.number, analytics)} />
+                           </TableCell>
                         <TableCell className="text-center">
                            <div className="flex justify-center gap-1">
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => handleEditClick(contact)}>
