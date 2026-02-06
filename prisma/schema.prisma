@@ -58,3 +58,57 @@ model ContactAnalytics {
   lastSentAt  DateTime?
   updatedAt   DateTime @updatedAt
 }
+
+// ============================================
+// CAMPAIGN & REPORT MODELS
+// ============================================
+
+model Campaign {
+  id            String   @id @default(cuid())
+  name          String   // Ex: "Promo Sexta" ou "Campanha para 150 contatos"
+  templateName  String?  // Nome do template usado
+  
+  // Timing
+  startedAt     DateTime @default(now())
+  completedAt   DateTime?
+  
+  // Metrics (immediate)
+  totalContacts Int
+  sentCount     Int      @default(0)
+  failedCount   Int      @default(0)
+  
+  // Engagement (updated by polling)
+  readCount     Int      @default(0)
+  responseCount Int      @default(0)
+  
+  // Report status
+  immediateReportSentAt   DateTime?
+  engagementReportSentAt  DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model ReportConfig {
+  id                  String   @id @default("default")
+  sendImmediate       Boolean  @default(true)
+  sendEngagement      Boolean  @default(true)
+  engagementDelayMins Int      @default(240) // 4 horas
+  engagementTimeFixed String?  // Ex: "23:00"
+  
+  recipients          ReportRecipient[]
+  
+  updatedAt           DateTime @updatedAt
+}
+
+model ReportRecipient {
+  id        String   @id @default(cuid())
+  name      String   // Nome do gestor
+  phone     String   // WhatsApp (formato: 5511999999999)
+  isActive  Boolean  @default(true)
+  
+  configId  String   @default("default")
+  config    ReportConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+}
