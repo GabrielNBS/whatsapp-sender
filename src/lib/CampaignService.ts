@@ -150,7 +150,7 @@ export class CampaignService implements ICampaignService {
 // SINGLETON FACTORY
 // ============================================
 
-import { prisma } from './prisma';
+import { prisma } from './db';
 
 let campaignServiceInstance: CampaignService | null = null;
 
