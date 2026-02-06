@@ -50,7 +50,8 @@ export function useSender() {
 
         setSendingStatus({
             isSending: false,
-            statusMessage: null
+            statusMessage: null,
+            totalContacts: 0
         });
         addLog('Envio interrompido pelo usuário.', 'warning');
     };
@@ -147,7 +148,7 @@ export function useSender() {
         abortRef.current = false;
         cleanup();
 
-        setSendingStatus({ isSending: true, statusMessage: 'Iniciando transmissão...', progress: 0, currentContactIndex: 0 });
+        setSendingStatus({ isSending: true, statusMessage: 'Iniciando transmissão...', progress: 0, currentContactIndex: 0, totalContacts: recipients.length });
         processQueue(0, recipients, message, selectedFile);
     };
 

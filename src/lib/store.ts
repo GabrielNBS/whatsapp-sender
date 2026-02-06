@@ -27,6 +27,7 @@ interface AppState {
     isSending: boolean;
     progress: number;
     currentContactIndex: number;
+    totalContacts: number;
     statusMessage: string | null;
   };
   setSendingStatus: (status: Partial<AppState['sendingStatus']>) => void;
@@ -50,6 +51,7 @@ export const useAppStore = create<AppState>()(
         isSending: false,
         progress: 0,
         currentContactIndex: 0,
+        totalContacts: 0,
         statusMessage: null
       },
 

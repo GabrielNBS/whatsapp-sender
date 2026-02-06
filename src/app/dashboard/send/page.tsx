@@ -328,6 +328,10 @@ export default function SendPage() {
                         isScheduleMode={isScheduleMode}
                         onAction={handleAction}
                         onStop={() => setShowStopConfirmation(true)}
+                        sendProgress={isSending ? {
+                            current: sendingStatus.currentContactIndex,
+                            total: sendingStatus.totalContacts
+                        } : undefined}
                     />
 
                     {/* Live Logs Panel - Fills remaining height */}

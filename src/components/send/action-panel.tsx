@@ -10,6 +10,11 @@ interface ActionPanelProps {
   isScheduleMode: boolean;
   onAction: () => void;
   onStop: () => void;
+  /** Current send progress */
+  sendProgress?: {
+    current: number;
+    total: number;
+  };
 }
 
 export function ActionPanel({
@@ -20,30 +25,57 @@ export function ActionPanel({
   isScheduleMode,
   onAction,
   onStop,
+  sendProgress,
 }: ActionPanelProps) {
+  const showProgress = isSending && sendProgress && sendProgress.total > 0;
+  
   return (
     <div className="bg-primary text-primary-foreground rounded-xl shadow-lg p-5 shrink-0 flex flex-col gap-4">
       <div>
         <p className="text-primary-foreground/70 text-xs font-medium uppercase tracking-wider mb-1">
-          Resumo Total
+          {showProgress ? "Progresso do Envio" : "Resumo Total"}
         </p>
-        <div className="flex items-baseline gap-2">
-          <span className="text-3xl font-bold">{recipientCount}</span>
-          <span className="text-sm text-primary-foreground/70">destinatários</span>
-        </div>
-        {/* Current Selection Badges */}
-        <div className="mt-2 text-xs">
-          <span
-            className={cn(
-              "px-1.5 py-0.5 rounded text-[10px] font-medium border",
-              recipientType === "group"
-                ? "bg-secondary text-secondary-foreground border-secondary-foreground/20"
-                : "bg-success/20 text-success border-success/30"
-            )}
-          >
-            {recipientType === "group" ? "GRUPO" : "CONTATO"}
-          </span>
-        </div>
+        
+        {showProgress ? (
+          <div className="space-y-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold">{sendProgress.current + 1}</span>
+              <span className="text-lg text-primary-foreground/70">/ {sendProgress.total}</span>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="w-full h-2 bg-primary-foreground/20 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-success transition-all duration-300 ease-out rounded-full"
+                style={{ width: `${((sendProgress.current + 1) / sendProgress.total) * 100}%` }}
+              />
+            </div>
+            
+            <p className="text-xs text-primary-foreground/60">
+              {sendProgress.total - sendProgress.current - 1} restantes
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold">{recipientCount}</span>
+              <span className="text-sm text-primary-foreground/70">destinatários</span>
+            </div>
+            {/* Current Selection Badges */}
+            <div className="mt-2 text-xs">
+              <span
+                className={cn(
+                  "px-1.5 py-0.5 rounded text-[10px] font-medium border",
+                  recipientType === "group"
+                    ? "bg-secondary text-secondary-foreground border-secondary-foreground/20"
+                    : "bg-success/20 text-success border-success/30"
+                )}
+              >
+                {recipientType === "group" ? "GRUPO" : "CONTATO"}
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="space-y-2 pt-2 border-t border-primary-foreground/10">
