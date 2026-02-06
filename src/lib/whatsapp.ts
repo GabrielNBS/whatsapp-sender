@@ -117,6 +117,9 @@ export class WhatsAppService {
   private dailyCount: number = 0;
   private lastReset: Date = new Date();
   
+  // Connection tracking for uptime
+  private connectionStartTime: Date | null = null;
+  
   // Polling Queue
   private pendingMessages: Map<string, PendingMessageData> = new Map();
   private pollingInterval: NodeJS.Timeout | null = null;
@@ -204,6 +207,7 @@ export class WhatsAppService {
       this.isReady = true;
       this.status = ConnectionStatus.READY;
       this.qrCode = null;
+      this.connectionStartTime = new Date();
     });
 
     this.client.on("authenticated", () => {
@@ -462,6 +466,23 @@ export class WhatsAppService {
     return {
       ...this.metrics,
       currentPendingCount: this.pendingMessages.size,
+    };
+  }
+
+  /**
+   * Retorna informações de uptime da conexão
+   */
+  public getUptime(): { uptimeSeconds: number | null; connectedSince: Date | null } {
+    if (!this.connectionStartTime || !this.isReady) {
+      return { uptimeSeconds: null, connectedSince: null };
+    }
+    
+    const now = new Date();
+    const uptimeMs = now.getTime() - this.connectionStartTime.getTime();
+    
+    return {
+      uptimeSeconds: Math.floor(uptimeMs / 1000),
+      connectedSince: this.connectionStartTime,
     };
   }
 
@@ -795,5 +816,12 @@ if (!global.whatsappClientInstance) {
 }
 
 const service = global.whatsappClientInstance;
+
+/**
+ * Retorna a instância do WhatsAppService para uso em outros módulos
+ */
+export function getWhatsAppInstance(): WhatsAppService | undefined {
+  return global.whatsappClientInstance;
+}
 
 export default service;
