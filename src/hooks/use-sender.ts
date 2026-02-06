@@ -4,8 +4,14 @@ import { calculateSafetyDelay } from '@/lib/utils';
 import { nanoid } from 'nanoid';
 import { Contact, LogType } from '@/lib/types';
 
+import { useRef, useCallback } from 'react';
 
-import { useRef } from 'react';
+// Campaign tracking
+interface CampaignMetrics {
+    campaignId: string | null;
+    sentCount: number;
+    failedCount: number;
+}
 
 export function useSender() {
     const { setSendingStatus, addLog: storeAddLog } = useAppStore();
@@ -14,13 +20,15 @@ export function useSender() {
     const abortRef = useRef(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    
+    // Campaign tracking ref
+    const metricsRef = useRef<CampaignMetrics>({
+        campaignId: null,
+        sentCount: 0,
+        failedCount: 0,
+    });
 
     const addLog = (message: string, type: LogType = 'info') => {
-        // Expiration Logic:
-        // Success: 10 mins
-        // Others (Error/Warning usually important): Keep default (or maybe 3h?)
-        // Let's set 10m for success, undefined (forever) for others unless specified.
-
         let expiresAt = undefined;
         if (type === 'success') {
             expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
@@ -42,6 +50,67 @@ export function useSender() {
         intervalRef.current = null;
     };
 
+    // Create campaign at start
+    const createCampaign = useCallback(async (name: string, totalContacts: number): Promise<string | null> => {
+        try {
+            console.log('[useSender] Creating campaign:', name);
+            const res = await fetch('/api/campaigns', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    totalContacts,
+                }),
+            });
+
+            if (res.ok) {
+                const campaign = await res.json();
+                console.log('[useSender] Campaign created:', campaign.id);
+                return campaign.id;
+            } else {
+                console.error('[useSender] Failed to create campaign');
+                return null;
+            }
+        } catch (error) {
+            console.error('[useSender] Error creating campaign:', error);
+            return null;
+        }
+    }, []);
+
+    // Complete campaign and trigger report
+    const completeCampaign = useCallback(async () => {
+        const { campaignId, sentCount, failedCount } = metricsRef.current;
+        
+        if (!campaignId) {
+            console.log('[useSender] No campaign to complete');
+            return;
+        }
+
+        try {
+            console.log('[useSender] Completing campaign:', campaignId, { sentCount, failedCount });
+            const res = await fetch(`/api/campaigns/${campaignId}/complete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sentCount, failedCount }),
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                console.log('[useSender] Campaign completed, report sent:', result.reportSent);
+                if (result.reportSent) {
+                    addLog('📊 Relatório enviado para gestores!', 'success');
+                }
+            } else {
+                console.error('[useSender] Failed to complete campaign');
+            }
+        } catch (error) {
+            console.error('[useSender] Error completing campaign:', error);
+        } finally {
+            // Reset metrics for next campaign
+            metricsRef.current = { campaignId: null, sentCount: 0, failedCount: 0 };
+        }
+    }, []);
+
     const handleStop = () => {
         if (abortRef.current) return;
 
@@ -54,6 +123,9 @@ export function useSender() {
             totalContacts: 0
         });
         addLog('Envio interrompido pelo usuário.', 'warning');
+        
+        // Complete campaign even if stopped early
+        completeCampaign();
     };
 
     const processQueue = async (index: number, recipients: Contact[], message: string, selectedFile: any | null) => {
@@ -62,6 +134,9 @@ export function useSender() {
         if (index >= recipients.length) {
             setSendingStatus({ isSending: false, statusMessage: null, progress: 100, currentContactIndex: recipients.length });
             addLog('Transmissão completa!', 'success');
+            
+            // Complete campaign and send report
+            await completeCampaign();
             return;
         }
 
@@ -72,17 +147,14 @@ export function useSender() {
             if (abortRef.current) return;
             setSendingStatus({ statusMessage: `Enviando para ${contact.name} (${contact.number})...` });
 
-            // We now delegate variable substitution to the server (Smart Substitution)
-            // It will check for pushname or use the fallback name we send.
-
             const res = await fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     number: contact.number,
-                    message: message, // Raw message with {{name}}
+                    message: message,
                     media: selectedFile,
-                    name: contact.name // Pass fallback name
+                    name: contact.name
                 })
             });
 
@@ -93,6 +165,9 @@ export function useSender() {
                 throw new Error(errorData.error || 'Falha ao enviar');
             }
 
+            // Track success
+            metricsRef.current.sentCount++;
+            
             addLog(`Enviado para ${contact.name}`, 'success');
 
             const nextContact = recipients[index + 1];
@@ -118,7 +193,7 @@ export function useSender() {
                 }, 1000);
 
                 timeoutRef.current = setTimeout(() => {
-                    cleanup(); // Clear interval before proceeding
+                    cleanup();
                     if (!abortRef.current) {
                         processQueue(index + 1, recipients, message, selectedFile);
                     }
@@ -130,9 +205,12 @@ export function useSender() {
         } catch (error) {
             if (abortRef.current) return;
             console.error(error);
+            
+            // Track failure
+            metricsRef.current.failedCount++;
+            
             addLog(`Erro ao enviar para ${contact.name}: ${error}`, 'error');
 
-            // Retry/Skip logic with delay
             timeoutRef.current = setTimeout(() => {
                 if (!abortRef.current) {
                     processQueue(index + 1, recipients, message, selectedFile);
@@ -147,6 +225,20 @@ export function useSender() {
         // Reset state
         abortRef.current = false;
         cleanup();
+        
+        // Reset metrics
+        metricsRef.current = { campaignId: null, sentCount: 0, failedCount: 0 };
+
+        // Create campaign for tracking
+        const campaignName = `Campanha ${new Date().toLocaleString('pt-BR', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        })}`;
+        
+        const campaignId = await createCampaign(campaignName, recipients.length);
+        metricsRef.current.campaignId = campaignId;
 
         setSendingStatus({ isSending: true, statusMessage: 'Iniciando transmissão...', progress: 0, currentContactIndex: 0, totalContacts: recipients.length });
         processQueue(0, recipients, message, selectedFile);

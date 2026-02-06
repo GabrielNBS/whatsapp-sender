@@ -240,7 +240,7 @@ _Relatório gerado automaticamente_
 // SINGLETON FACTORY
 // ============================================
 
-import { prisma } from './prisma';
+import { prisma } from './db';
 
 let reportServiceInstance: ReportService | null = null;
 

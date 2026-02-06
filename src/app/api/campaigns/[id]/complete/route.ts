@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCampaignService } from '@/lib/CampaignService';
 import { getReportService } from '@/lib/ReportService';
-import { prisma } from '@/lib/prisma';
+
 
 interface RouteParams {
   params: Promise<{ id: string }>;
