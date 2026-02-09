@@ -307,5 +307,269 @@
 
 ---
 
+# 7. REFATORAÇÃO ARQUITETURAL
+
+> **Objetivo**: Distribuir funções e componentes para evitar aglomerado de código em arquivos únicos, melhorando testabilidade, manutenibilidade e reutilização.
+
+## 7.1 Mapeamento de Arquivos Críticos
+
+| Arquivo                       | Tamanho           | Problema                          | Prioridade |
+| ----------------------------- | ----------------- | --------------------------------- | ---------- |
+| `group-management-dialog.tsx` | 12KB / 292 linhas | Lógica de negócio + UI misturados | Alta       |
+| `contact-engagement.tsx`      | 10KB / 227 linhas | Cálculos de engajamento inline    | Alta       |
+| `status-panel.tsx`            | 8KB / 196 linhas  | Estado complexo no componente     | Média      |
+| `send-form.tsx`               | 8KB / 228 linhas  | Muitas props (prop drilling)      | Média      |
+| `schedule-item.tsx`           | 7KB / 138 linhas  | Confirm inline, sem service       | Baixa      |
+| `recipient-selector.tsx`      | 7KB / ~200 linhas | Lógica de seleção inline          | Baixa      |
+
+---
+
+## 7.2 Tarefas de Extração - Hooks
+
+### [ ] 7.2.1 `useGroupManagement` Hook
+
+**Arquivo**: `src/hooks/use-group-management.ts`  
+**Extrair de**: `group-management-dialog.tsx`
+
+```
+Estado:
+├── actionState (move/remove)
+├── isLoading
+├── confirmRemove
+
+Handlers:
+├── handleRemove()
+├── handleMove()
+├── startMoveAction()
+└── cancelAction()
+
+Computed:
+├── groupContacts
+├── otherGroups
+└── canMove
+```
+
+---
+
+### [ ] 7.2.2 `useEngagementStatus` Hook
+
+**Arquivo**: `src/hooks/use-engagement-status.ts`  
+**Extrair de**: `contact-engagement.tsx`
+
+```
+Lógica:
+├── getEngagementStatus(stats)
+├── formatRelativeDate(date)
+└── STATUS_CONFIG mapping
+
+Retorno:
+├── status
+├── config (label, className, icon)
+└── formattedDates
+```
+
+---
+
+### [ ] 7.2.3 `useSendForm` Hook
+
+**Arquivo**: `src/hooks/use-send-form.ts`  
+**Extrair de**: Página `send/page.tsx` + `send-form.tsx`
+
+```
+Estado:
+├── message, selectedFile
+├── selectedGroupId
+├── isScheduleMode, scheduleDate
+├── selectedTemplateId
+
+Computed:
+├── recipientsCount
+├── estimatedTime
+├── canSubmit (validação)
+```
+
+---
+
+## 7.3 Tarefas de Extração - Services
+
+### [ ] 7.3.1 `GroupService`
+
+**Arquivo**: `src/lib/GroupService.ts`
+
+```typescript
+// Operações de grupo centralizadas
+moveContactToGroup(contactId, fromGroupId, toGroupId): Promise<void>
+removeContactFromGroup(contactId, groupId): Promise<void>
+getContactsInGroup(groupId): Contact[]
+validateGroupOperation(contact, action): ValidationResult
+```
+
+---
+
+### [ ] 7.3.2 `EngagementService`
+
+**Arquivo**: `src/lib/EngagementService.ts`
+
+```typescript
+// Cálculos de engajamento
+calculateEngagementRate(stats): number
+getEngagementStatus(stats): EngagementStatus
+getEngagementBadgeConfig(status): BadgeConfig
+formatEngagementDate(date): string
+```
+
+---
+
+## 7.4 Tarefas de Extração - Sub-componentes
+
+### [ ] 7.4.1 Quebrar `GroupManagementDialog`
+
+**Diretório**: `src/components/contacts/group-management/`
+
+```
+├── index.ts                    # Re-exports
+├── GroupManagementDialog.tsx   # Container principal
+├── ContactRow.tsx              # Linha da tabela
+├── MoveContactForm.tsx         # Select + OK/Cancel
+├── RemoveConfirmDialog.tsx     # AlertDialog
+└── types.ts                    # Interfaces
+```
+
+---
+
+### [ ] 7.4.2 Quebrar `StatusPanel`
+
+**Diretório**: `src/components/send/status/`
+
+```
+├── index.ts
+├── StatusPanel.tsx             # Container
+├── ProgressSection.tsx         # Barra de progresso
+├── LogsSection.tsx             # Lista de logs
+├── SchedulesList.tsx           # Lista de agendamentos
+└── StatusIndicator.tsx         # Badge de status
+```
+
+---
+
+### [ ] 7.4.3 Quebrar `ScheduleItem`
+
+**Diretório**: `src/components/schedule/`
+
+```
+├── index.ts
+├── ScheduleItem.tsx            # Container
+├── ScheduleHeader.tsx          # Header expandível
+├── ScheduleDetails.tsx         # Conteúdo expandido
+├── ContactsPreview.tsx         # Preview de contatos
+└── CancelConfirmDialog.tsx     # Confirmação
+```
+
+---
+
+## 7.5 Ordem de Implementação Sugerida
+
+> ⚠️ **IMPORTANTE**: Implementar uma tarefa por vez para manter estabilidade.
+
+### Fase A: Extrações de Lógica (Sem quebrar UI)
+
+1. [ ] Criar `GroupService.ts`
+2. [ ] Criar `EngagementService.ts`
+3. [ ] Criar `useGroupManagement` hook
+4. [ ] Criar `useEngagementStatus` hook
+5. [ ] Criar `useSendForm` hook
+
+### Fase B: Refatorar Componentes Existentes
+
+6. [ ] Refatorar `group-management-dialog.tsx` para usar hook + service
+7. [ ] Refatorar `contact-engagement.tsx` para usar hook + service
+8. [ ] Refatorar `send-form.tsx` para usar hook
+
+### Fase C: Quebrar Componentes (Opcional)
+
+9. [ ] Quebrar `GroupManagementDialog` em sub-componentes
+10. [ ] Quebrar `StatusPanel` em sub-componentes
+11. [ ] Quebrar `ScheduleItem` em sub-componentes
+
+---
+
+## 7.6 Critérios de Conclusão
+
+Cada tarefa está completa quando:
+
+- [ ] Arquivo criado no local correto
+- [ ] Tipos TypeScript definidos
+- [ ] Imports atualizados no componente original
+- [ ] Testes manuais passam (navegação funciona)
+- [ ] Build sem erros (`pnpm build`)
+- [ ] Nenhuma regressão visual
+
+---
+
 _Documento gerado em: 05/02/2026_
 _WhatsApp Sender - Roadmap v1.0_
+
+# 8. GAPS FUTUROS E ROADMAP
+
+> **Status**: Identificado em 09/02/2026 apos diagnostico geral da aplicacao.
+
+## 8.1 Gaps Criticos (Curto Prazo)
+
+| Gap | Problema | Acao Sugerida | Esforco |
+|-----|----------|---------------|---------|
+| **Prisma Schema** | ContactWhereUniqueInput.number error | Verificar @@unique no schema | 1h |
+| **Error Boundaries** | Erros quebram toda a UI | Criar ErrorBoundary.tsx | 2h |
+| **Loading States** | Gerenciamento individual | Suspense boundaries | 2h |
+
+---
+
+## 8.2 Gaps de Arquitetura (Medio Prazo)
+
+### 8.2.1 Quebrar whatsapp.ts (828 linhas)
+
+Estrutura proposta:
+- lib/whatsapp/WhatsAppClient.ts (Conexao e eventos)
+- lib/whatsapp/MessageSender.ts (Envio de mensagens)
+- lib/whatsapp/PollingService.ts (Polling de confirmacoes)
+- lib/whatsapp/index.ts (Re-exports)
+
+### 8.2.2 Zustand Slices Pattern
+
+Estrutura proposta:
+- store/contactsSlice.ts
+- store/logsSlice.ts
+- store/sendingSlice.ts
+- store/index.ts
+
+### 8.2.3 Validacao Zod nas APIs
+
+14 rotas API sem schema validation - adicionar Zod schemas.
+
+---
+
+## 8.3 Gaps de Qualidade (Longo Prazo)
+
+| Area | Prioridade | Ferramenta |
+|------|------------|------------|
+| Testes unitarios (Services) | Alta | Jest |
+| Testes de hooks | Media | @testing-library/react-hooks |
+| Testes E2E | Baixa | Playwright |
+
+---
+
+## 8.4 Ordem de Implementacao
+
+| Fase | Prioridade | Tarefa | Esforco |
+|------|------------|--------|---------|
+| E1 | Alta | Corrigir Prisma schema | 1h |
+| E2 | Alta | Error Boundaries | 2h |
+| E3 | Media | Quebrar whatsapp.ts | 4h |
+| E4 | Media | Zustand slices | 3h |
+| E5 | Media | Validacao Zod | 3h |
+| E6 | Baixa | Testes unitarios | 4h |
+| E7 | Baixa | Testes integracao | 4h |
+
+---
+
+_Documento atualizado em: 09/02/2026_
+_WhatsApp Sender - Roadmap v1.1_

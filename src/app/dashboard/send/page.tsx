@@ -7,6 +7,7 @@ import { nanoid } from 'nanoid';
 import { StaleBatchDialog } from '@/components/send/stale-batch-dialog';
 import { useScheduler } from '@/hooks/use-scheduler';
 import { useSender } from '@/hooks/use-sender';
+import { useSendForm } from '@/hooks/use-send-form';
 import {
     MessageSquare,
     Calendar,
@@ -72,26 +73,8 @@ export default function SendPage() {
 
     // Local State (UI)
     const [mounted, setMounted] = useState(false);
-
-    // NEW: Unified Selection State
-    const [recipientConfig, setRecipientConfig] = useState<{
-        type: 'group' | 'contact';
-        id: string;
-        name: string;
-    }>({ type: 'group', id: 'all', name: 'Todos os Contatos' });
-
-    const [message, setMessage] = useState('');
-    const [selectedFile, setSelectedFile] = useState<{ data: string, mimetype: string, filename: string } | null>(null);
-    const [isScheduleMode, setIsScheduleMode] = useState(false);
-
-    const [scheduleDate, setScheduleDate] = useState('');
     const [showStopConfirmation, setShowStopConfirmation] = useState(false);
-
-
-
-    // Templates State
     const [templates, setTemplates] = useState<Template[]>([]);
-    const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
     useEffect(() => {
         setMounted(true);
@@ -117,50 +100,40 @@ export default function SendPage() {
 
     const isSending = mounted ? sendingStatus.isSending : false;
 
-    // Logic to calculate actual recipients based on selection type
-    const recipients = recipientConfig.type === 'group'
-        ? (recipientConfig.id === 'all' ? contacts : getContactsByGroup(recipientConfig.id))
-        : contacts.filter(c => c.id === recipientConfig.id);
+    // Use the send form hook for form state management
+    const {
+        recipientConfig,
+        message,
+        selectedFile,
+        isScheduleMode,
+        scheduleDate,
+        selectedTemplateId,
+        recipients,
+        estimatedTime,
+        setRecipientConfig,
+        setMessage,
+        setSelectedFile,
+        setIsScheduleMode,
+        setScheduleDate,
+        handleTemplateSelect,
+        resetForm,
+    } = useSendForm({
+        groups,
+        contacts,
+        getContactsByGroup,
+        templates,
+    });
 
-
-
-    // Estimate: 20s per contact is conservative default from store/logic
-    const estimatedTime = Math.ceil((recipients.length) * 20 / 60);
-
-    const addLog = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    const addLog = (logMessage: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
         storeAddLog({
             id: nanoid(),
-            message,
+            message: logMessage,
             type,
             timestamp: new Date()
         });
     };
 
-    // Handlers
-    const handleTemplateSelect = (templateId: string) => {
-        if (templateId === 'none') {
-            setSelectedTemplateId(null);
-            return;
-        }
-        setSelectedTemplateId(templateId);
-        const template = templates.find(t => t.id === templateId);
-        if (template) {
-            setMessage(template.content);
-            if (template.media) {
-                try {
-                    const mediaData = JSON.parse(template.media);
-                    setSelectedFile(mediaData);
-                } catch (e) {
-                    console.error("Error parsing template media", e);
-                }
-            } else {
-                setSelectedFile(null);
-            }
-        }
-    };
-
-
-
+    // Handlers - Page-specific logic (API calls)
     const handleSchedule = async () => {
         if (!scheduleDate) {
             toast.error("Selecione uma data para agendar.");
@@ -188,9 +161,7 @@ export default function SendPage() {
 
             addLog('Agendamento realizado com sucesso!', 'success');
             toast.success("Agendamento realizado com sucesso!");
-            setMessage('');
-            setSelectedFile(null);
-            setIsScheduleMode(false);
+            resetForm();
             fetchSchedules();
 
         } catch (error) {
@@ -222,8 +193,6 @@ export default function SendPage() {
     const formatTime = (date: Date) => {
         return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
-
-
 
     const recentLogs = logs.slice(0, 50);
 
