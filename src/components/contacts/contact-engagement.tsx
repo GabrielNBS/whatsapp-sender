@@ -1,5 +1,16 @@
 "use client";
 
+import { 
+  formatDistanceToNow, 
+  isToday, 
+  isYesterday, 
+  format,
+  differenceInDays,
+  isValid
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useMemo } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -9,13 +20,6 @@ import {
 } from "@/components/ui/tooltip";
 import { CheckCheck, Clock, Mail, MailOpen, User } from "lucide-react";
 
-/**
- * Props do componente de engajamento
- * 
- * REFATORAÇÃO:
- * - Adicionado lastSentAt e lastReadAt para mostrar datas
- * - Mantido compatibilidade com formato anterior
- */
 interface ContactEngagementProps {
   stats?: {
     sentCount: number;
@@ -26,144 +30,196 @@ interface ContactEngagementProps {
 }
 
 /**
- * Tipos de status de engajamento (mais claro que percentual)
+ * Tipos de status de engajamento
  */
-type EngagementStatus = 
-  | "new"          // Nunca contatado
-  | "sent"         // Enviado, aguardando leitura
-  | "read_today"   // Leu hoje
-  | "read_recent"  // Leu nos últimos 7 dias  
-  | "read_old"     // Leu há mais de 7 dias
-  | "engaged";     // Múltiplas leituras (engajado)
+export enum EngagementStatus {
+  NEW = "new",              // Nunca contatado
+  SENT = "sent",            // Enviado, aguardando leitura
+  READ_TODAY = "read_today",  // Leu hoje
+  READ_RECENT = "read_recent", // Leu nos últimos 7 dias  
+  READ_OLD = "read_old",      // Leu há mais de 7 dias
+  ENGAGED = "engaged"       // Múltiplas leituras (engajado)
+}
+
+const CONSTANTS = {
+  ENGAGEMENT_THRESHOLD: 0.6,
+  MIN_INTERACTIONS: 3,  // Mínimo de interações para considerar "engajado"
+  DAYS_RECENT: 7,
+  DAYS_MONTH: 30,
+} as const;
 
 /**
- * Calcula o status de engajamento baseado nos dados
+ * Converte Date | string | null em Date válido ou null
+ * Protege contra datas inválidas
  */
-function getEngagementStatus(stats: ContactEngagementProps["stats"]): EngagementStatus {
-  if (!stats || stats.sentCount === 0) {
-    return "new";
-  }
+function parseDate(date: Date | string | null | undefined): Date | null {
+  if (!date) return null;
   
-  if (stats.readCount === 0) {
-    return "sent";
-  }
+  const parsed = date instanceof Date ? date : new Date(date);
   
-  // Se tem muitas leituras, está engajado
-  if (stats.readCount >= 3) {
-    return "engaged";
-  }
-  
-  // Verificar quando foi a última leitura
-  if (stats.lastReadAt) {
-    const lastRead = new Date(stats.lastReadAt);
-    const now = new Date();
-    const diffMs = now.getTime() - lastRead.getTime();
-    const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    
-    if (diffDays < 1) {
-      return "read_today";
-    }
-    if (diffDays < 7) {
-      return "read_recent";
-    }
-    return "read_old";
-  }
-  
-  // Fallback se não tiver data mas tiver readCount
-  return "read_recent";
+  return isValid(parsed) ? parsed : null;
 }
 
 /**
- * Configuração visual para cada status
+ * Determina o status de engajamento baseado nas estatísticas
+ * Prioriza: recenticidade > engajamento > quantidade
+ */
+function getEngagementStatus(stats: ContactEngagementProps["stats"]): EngagementStatus {
+  // Sem dados ou nunca contatado
+  if (!stats || stats.sentCount === 0) {
+    return EngagementStatus.NEW;
+  }
+  
+  // Enviado mas nunca lido
+  if (stats.readCount === 0) {
+    return EngagementStatus.SENT;
+  }
+  
+  // Avaliar recenticidade primeiro (mais importante)
+  const lastRead = parseDate(stats.lastReadAt);
+  
+  if (lastRead) {
+    const now = new Date();
+    
+    // Validar que a data não está no futuro
+    if (lastRead > now) {
+      console.warn("Data de leitura no futuro detectada", lastRead);
+      return EngagementStatus.SENT;
+    }
+    
+    // Leu hoje
+    if (isToday(lastRead)) {
+      return EngagementStatus.READ_TODAY;
+    }
+    
+    const daysSinceRead = differenceInDays(now, lastRead);
+    
+    // Leu recentemente (últimos 7 dias)
+    if (daysSinceRead < CONSTANTS.DAYS_RECENT) {
+      return EngagementStatus.READ_RECENT;
+    }
+    
+    // Não lê há mais de 30 dias = inativo
+    if (daysSinceRead > CONSTANTS.DAYS_MONTH) {
+      return EngagementStatus.READ_OLD;
+    }
+  }
+  
+  // Avaliar taxa de engajamento (requer volume mínimo)
+  const engagementRate = stats.readCount / stats.sentCount;
+  
+  if (
+    stats.sentCount >= CONSTANTS.MIN_INTERACTIONS && 
+    engagementRate >= CONSTANTS.ENGAGEMENT_THRESHOLD
+  ) {
+    return EngagementStatus.ENGAGED;
+  }
+  
+  // Default: leitura recente mas sem engajamento alto
+  return EngagementStatus.READ_RECENT;
+}
+
+/**
+ * Configuração visual e semântica de cada status
+ * Usando apenas classes padrão do Tailwind e shadcn/ui
  */
 const STATUS_CONFIG: Record<EngagementStatus, {
   label: string;
   variant: "default" | "secondary" | "destructive" | "outline";
   className: string;
   icon: typeof Mail;
+  ariaLabel: string;
 }> = {
-  new: {
+  [EngagementStatus.NEW]: {
     label: "Novo",
     variant: "outline",
-    className: "bg-slate-50 text-slate-500 border-slate-200",
+    className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700",
     icon: User,
+    ariaLabel: "Contato novo, nunca contatado",
   },
-  sent: {
+  [EngagementStatus.SENT]: {
     label: "Aguardando",
     variant: "secondary",
-    className: "bg-amber-50 text-amber-600 border-amber-200",
+    className: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800",
     icon: Clock,
+    ariaLabel: "Mensagem enviada, aguardando leitura",
   },
-  read_today: {
+  [EngagementStatus.READ_TODAY]: {
     label: "Leu hoje",
     variant: "default",
-    className: "bg-green-50 text-green-600 border-green-200",
+    className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800",
     icon: CheckCheck,
+    ariaLabel: "Contato leu mensagem hoje",
   },
-  read_recent: {
+  [EngagementStatus.READ_RECENT]: {
     label: "Leu recente",
     variant: "secondary",
-    className: "bg-blue-50 text-blue-600 border-blue-200",
+    className: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800",
     icon: MailOpen,
+    ariaLabel: "Contato leu mensagem nos últimos 7 dias",
   },
-  read_old: {
+  [EngagementStatus.READ_OLD]: {
     label: "Inativo",
     variant: "outline",
-    className: "bg-slate-50 text-slate-400 border-slate-200",
+    className: "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900 dark:text-slate-500 dark:border-slate-700",
     icon: Mail,
+    ariaLabel: "Contato inativo, última leitura há mais de 30 dias",
   },
-  engaged: {
+  [EngagementStatus.ENGAGED]: {
     label: "Engajado",
     variant: "default",
-    className: "bg-emerald-50 text-emerald-600 border-emerald-200",
+    className: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950 dark:text-violet-400 dark:border-violet-800",
     icon: CheckCheck,
+    ariaLabel: "Contato altamente engajado, lê regularmente",
   },
 };
 
 /**
- * Formata data relativa (há X dias, hoje, ontem)
+ * Formata data de forma relativa e contextual
  */
 function formatRelativeDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   
-  const d = new Date(date);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const parsed = parseDate(date);
+  if (!parsed) return "—";
   
-  if (diffDays === 0) {
-    // Hoje - mostrar hora
-    return `Hoje às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+  const now = new Date();
+  
+  if (parsed > now) {
+    return "Data inválida";
   }
-  if (diffDays === 1) {
+  
+  if (isToday(parsed)) {
+    return `Hoje às ${format(parsed, "HH:mm")}`;
+  }
+  
+  if (isYesterday(parsed)) {
     return "Ontem";
   }
+  
+  const diffDays = differenceInDays(now, parsed);
+  
   if (diffDays < 7) {
-    return `Há ${diffDays} dias`;
+    return formatDistanceToNow(parsed, { addSuffix: true, locale: ptBR });
   }
-  if (diffDays < 30) {
-    const weeks = Math.floor(diffDays / 7);
-    return `Há ${weeks} semana${weeks > 1 ? "s" : ""}`;
+  if (diffDays < 365) {
+    return format(parsed, "dd MMM", { locale: ptBR });
   }
-  // Mais de 30 dias - mostrar data
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  
+  return format(parsed, "dd MMM yyyy", { locale: ptBR });
 }
 
-/**
- * Componente ContactEngagement - Refatorado
- * 
- * MUDANÇAS:
- * 1. Removida barra de progresso confusa (sent/read ratio não faz sentido)
- * 2. Badge de status claro com ícone
- * 3. Tooltip com detalhes incluindo datas
- * 4. Visual mais limpo e informativo
- */
 export function ContactEngagement({ stats }: ContactEngagementProps) {
-  const status = getEngagementStatus(stats);
+  const status = useMemo(() => getEngagementStatus(stats), [stats]);
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
   
   const { sentCount = 0, readCount = 0, lastSentAt, lastReadAt } = stats || {};
+  
+  // Calcular taxa de engajamento
+  const engagementRate = sentCount > 0 
+    ? Math.round((readCount / sentCount) * 100) 
+    : 0;
 
   return (
     <TooltipProvider>
@@ -172,68 +228,91 @@ export function ContactEngagement({ stats }: ContactEngagementProps) {
           <Badge 
             variant={config.variant}
             className={`cursor-help gap-1.5 font-medium transition-all hover:opacity-80 ${config.className}`}
+            aria-label={config.ariaLabel}
+            role="status"
           >
-            <Icon className="w-3 h-3" />
+            <Icon className="w-3 h-3" aria-hidden="true" />
             {config.label}
           </Badge>
         </TooltipTrigger>
-        <TooltipContent side="top" className="p-0 overflow-hidden">
-          <div className="min-w-[180px]">
+        <TooltipContent 
+          side="top" 
+          className="p-0 overflow-hidden"
+          aria-live="polite"
+        >
+          <div className="min-w-[200px]">
             {/* Header */}
-            <div className="px-3 py-2 bg-slate-50 border-b">
-              <p className="font-semibold text-xs text-slate-700">
+            <div className="px-3 py-2 bg-muted border-b">
+              <p className="font-semibold text-xs text-foreground">
                 Histórico de Engajamento
               </p>
             </div>
             
             {/* Stats */}
             <div className="p-3 space-y-2 text-xs">
-              {/* Enviadas */}
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Mail className="w-3 h-3" />
-                  Enviadas
-                </span>
-                <span className="font-mono font-medium">{sentCount}</span>
-              </div>
-              
-              {/* Lidas */}
-              <div className="flex items-center justify-between gap-4">
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <CheckCheck className="w-3 h-3" />
-                  Lidas
-                </span>
-                <span className="font-mono font-medium">{readCount}</span>
-              </div>
-              
-              {/* Separador */}
-              <div className="border-t border-dashed my-2" />
-              
-              {/* Último envio */}
-              {sentCount > 0 && (
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Último envio</span>
-                  <span className="text-slate-600 text-[11px]">
-                    {formatRelativeDate(lastSentAt)}
-                  </span>
+              {sentCount > 0 ? (
+                <>
+                  {/* Enviadas */}
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <Mail className="w-3 h-3" aria-hidden="true" />
+                      Enviadas
+                    </span>
+                    <span className="font-mono font-medium tabular-nums">
+                      {sentCount}
+                    </span>
+                  </div>
+                  
+                  {/* Lidas */}
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <CheckCheck className="w-3 h-3" aria-hidden="true" />
+                      Lidas
+                    </span>
+                    <span className="font-mono font-medium tabular-nums">
+                      {readCount}
+                    </span>
+                  </div>
+                  
+                  {/* Taxa de abertura */}
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">
+                      Taxa de abertura
+                    </span>
+                    <span className="font-mono font-medium tabular-nums">
+                      {engagementRate}%
+                    </span>
+                  </div>
+                  
+                  {/* Separador */}
+                  <div className="border-t border-dashed my-2" />
+                  
+                  {/* Último envio */}
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Último envio</span>
+                    <span className="text-muted-foreground text-[11px] tabular-nums">
+                      {formatRelativeDate(lastSentAt)}
+                    </span>
+                  </div>
+                  
+                  {/* Última leitura */}
+                  {readCount > 0 && (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted-foreground">Última leitura</span>
+                      <span className="text-muted-foreground text-[11px] tabular-nums">
+                        {formatRelativeDate(lastReadAt)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Mensagem para novo contato */
+                <div className="flex flex-col items-center justify-center py-2 text-center">
+                  <User className="w-8 h-8 text-muted-foreground/40 mb-2" aria-hidden="true" />
+                  <p className="text-muted-foreground text-xs">
+                    Nenhuma mensagem enviada
+                  </p>
                 </div>
-              )}
-              
-              {/* Última leitura */}
-              {readCount > 0 && (
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted-foreground">Última leitura</span>
-                  <span className="text-slate-600 text-[11px]">
-                    {formatRelativeDate(lastReadAt)}
-                  </span>
-                </div>
-              )}
-              
-              {/* Mensagem para novo contato */}
-              {sentCount === 0 && (
-                <p className="text-muted-foreground text-center py-1">
-                  Nenhuma mensagem enviada
-                </p>
               )}
             </div>
           </div>
