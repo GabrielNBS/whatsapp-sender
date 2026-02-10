@@ -17,6 +17,7 @@ interface RecipientSelectorProps {
     name: string;
   }) => void;
   getContactsByGroup: (groupId: string) => Contact[];
+  disabled?: boolean;
 }
 
 export function RecipientSelector({
@@ -25,6 +26,7 @@ export function RecipientSelector({
   value,
   onChange,
   getContactsByGroup,
+  disabled = false,
 }: RecipientSelectorProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -50,6 +52,7 @@ export function RecipientSelector({
   );
 
   const handleSelect = (type: "group" | "contact", id: string, name: string) => {
+    if (disabled) return;
     onChange({ type, id, name });
     setIsSearchOpen(false);
     setSearchTerm("");
@@ -57,7 +60,7 @@ export function RecipientSelector({
 
   return (
     <div
-      className="bg-card rounded-xl shadow-sm border border-border p-4 space-y-4 relative z-50"
+      className={`bg-card rounded-xl shadow-sm border border-border p-4 space-y-4 relative z-50 ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
       ref={searchRef}
     >
       <h2 className="text-sm font-semibold flex items-center gap-2 text-foreground">

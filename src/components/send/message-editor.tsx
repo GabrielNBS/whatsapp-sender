@@ -16,6 +16,7 @@ interface MessageEditorProps {
   onFileChange: (
     file: { data: string; mimetype: string; filename: string } | null
   ) => void;
+  disabled?: boolean;
 }
 
 export function MessageEditor({
@@ -23,8 +24,10 @@ export function MessageEditor({
   onMessageChange,
   selectedFile,
   onFileChange,
+  disabled = false,
 }: MessageEditorProps) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (disabled) return;
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -44,7 +47,7 @@ export function MessageEditor({
   };
 
   return (
-    <div className="bg-card rounded-xl shadow-sm border border-border flex flex-col h-full overflow-hidden">
+    <div className={`bg-card rounded-xl shadow-sm border border-border flex flex-col h-full overflow-hidden ${disabled ? 'opacity-60 pointer-events-none' : ''}`}>
       {/* Toolbar Header */}
       <div className="px-4 py-3 border-b border-border flex items-center justify-between bg-muted/50">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -56,6 +59,7 @@ export function MessageEditor({
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-primary rounded"
             title="Negrito"
+            disabled={disabled}
           >
             <Bold className="w-3.5 h-3.5" />
           </Button>
@@ -64,6 +68,7 @@ export function MessageEditor({
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-primary rounded"
             title="Itálico"
+            disabled={disabled}
           >
             <Italic className="w-3.5 h-3.5" />
           </Button>
@@ -72,6 +77,7 @@ export function MessageEditor({
             size="icon"
             className="h-7 w-7 text-muted-foreground hover:text-primary rounded"
             title="Emoji"
+            disabled={disabled}
           >
             <Smile className="w-3.5 h-3.5" />
           </Button>
@@ -85,6 +91,7 @@ export function MessageEditor({
           onChange={(e) => onMessageChange(e.target.value)}
           className="w-full h-full border-0 resize-none p-4 text-base focus-visible:ring-0 bg-transparent relative overflow-y-auto scrollbar-thin scrollbar-thumb-border"
           placeholder="Digite sua mensagem..."
+          disabled={disabled}
         />
       </div>
 
@@ -112,6 +119,7 @@ export function MessageEditor({
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-destructive hover:bg-destructive/10 ml-2"
               onClick={() => onFileChange(null)}
+              disabled={disabled}
             >
               <Trash2 className="w-3.5 h-3.5" />
             </Button>
@@ -124,12 +132,14 @@ export function MessageEditor({
               accept="image/*"
               className="hidden"
               onChange={handleFileChange}
+              disabled={disabled}
             />
             <Button
               variant="outline"
               size="sm"
               className="text-xs h-9 bg-card border-dashed text-muted-foreground hover:text-primary hover:border-primary/50"
               onClick={() => document.getElementById("image-upload")?.click()}
+              disabled={disabled}
             >
               <ImageIcon className="w-3.5 h-3.5 mr-2" />
               Adicionar Imagem

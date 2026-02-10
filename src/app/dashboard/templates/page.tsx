@@ -10,7 +10,7 @@ import {
     FileText, 
     Image as ImageIcon, 
     Copy, 
-    Send, 
+    // Send, // Removed
     Pencil, 
     Megaphone
 } from 'lucide-react';
@@ -22,7 +22,8 @@ interface Template {
     id: string;
     title: string;
     content: string;
-    media?: string;
+    media?: string | null;
+    category?: string | null;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -31,10 +32,12 @@ export default function TemplatesPage() {
     const [templates, setTemplates] = useState<Template[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'media' | 'text'>('all');
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
     // Sheet State
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+    const [isDuplicate, setIsDuplicate] = useState(false);
 
     useEffect(() => {
         fetchTemplates();
@@ -54,13 +57,24 @@ export default function TemplatesPage() {
         }
     };
 
+    // Extract unique categories
+    const categories = Array.from(new Set(templates.map(t => t.category).filter(Boolean))) as string[];
+
     const handleOpenCreate = () => {
         setEditingTemplate(null);
+        setIsDuplicate(false);
         setIsSheetOpen(true);
     }
 
     const handleOpenEdit = (template: Template) => {
         setEditingTemplate(template);
+        setIsDuplicate(false);
+        setIsSheetOpen(true);
+    }
+
+    const handleDuplicate = (template: Template) => {
+        setEditingTemplate(template);
+        setIsDuplicate(true);
         setIsSheetOpen(true);
     }
 
@@ -86,10 +100,13 @@ export default function TemplatesPage() {
     };
 
     const filteredTemplates = templates.filter(t => {
-        if (filter === 'all') return true;
-        const hasMedia = !!t.media;
-        if (filter === 'media') return hasMedia;
-        if (filter === 'text') return !hasMedia;
+        // Filter by Type
+        if (filter === 'media' && !t.media) return false;
+        if (filter === 'text' && t.media) return false;
+        
+        // Filter by Category
+        if (selectedCategory && t.category !== selectedCategory) return false;
+
         return true;
     });
 
@@ -120,40 +137,63 @@ export default function TemplatesPage() {
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setFilter('all')}
-                        className={cn(
-                            "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
-                            filter === 'all' 
-                                ? "bg-blue-500 text-white border-blue-500" 
-                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                        )}
-                    >
-                        Todos
-                    </button>
-                    <button
-                        onClick={() => setFilter('media')}
-                        className={cn(
-                            "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
-                            filter === 'media' 
-                                ? "bg-blue-500 text-white border-blue-500" 
-                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                        )}
-                    >
-                        Mídia
-                    </button>
-                    <button
-                        onClick={() => setFilter('text')}
-                        className={cn(
-                            "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border",
-                            filter === 'text' 
-                                ? "bg-blue-500 text-white border-blue-500" 
-                                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                        )}
-                    >
-                        Texto
-                    </button>
+                <div className="flex flex-col gap-4">
+                    {/* Type Filter */}
+                    <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                        <button
+                            onClick={() => setFilter('all')}
+                            className={cn(
+                                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border whitespace-nowrap",
+                                filter === 'all' 
+                                    ? "bg-blue-500 text-white border-blue-500" 
+                                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                            )}
+                        >
+                            Todos
+                        </button>
+                        <button
+                            onClick={() => setFilter('media')}
+                            className={cn(
+                                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border whitespace-nowrap",
+                                filter === 'media' 
+                                    ? "bg-blue-500 text-white border-blue-500" 
+                                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                            )}
+                        >
+                            Mídia
+                        </button>
+                        <button
+                            onClick={() => setFilter('text')}
+                            className={cn(
+                                "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border whitespace-nowrap",
+                                filter === 'text' 
+                                    ? "bg-blue-500 text-white border-blue-500" 
+                                    : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                            )}
+                        >
+                            Texto
+                        </button>
+                    
+                        {/* Divider */}
+                        <div className="w-px h-6 bg-gray-200 mx-2" />
+
+                        {/* Category Filters */}
+                        {categories.map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-full text-sm font-medium transition-colors border whitespace-nowrap flex items-center gap-1.5",
+                                    selectedCategory === cat
+                                        ? "bg-gray-800 text-white border-gray-800"
+                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                )}
+                            >
+                                {/* <Tag className="w-3 h-3" /> */}
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -170,7 +210,7 @@ export default function TemplatesPage() {
                     return (
                         <Card key={template.id} className="overflow-hidden border-0 shadow-sm bg-white rounded-[20px] flex flex-col p-0 gap-0">
                             {/* Image Section */}
-                            {mediaObj && (
+                            {mediaObj ? (
                                 <div className="relative w-full h-48 bg-gray-100">
                                     <Image 
                                         src={`data:${mediaObj.mimetype};base64,${mediaObj.data}`}
@@ -182,6 +222,13 @@ export default function TemplatesPage() {
                                     <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded flex items-center gap-1">
                                         <ImageIcon className="w-3 h-3" />
                                         <span className="truncate max-w-[150px]">{mediaObj.filename}</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="relative w-full h-48 bg-slate-100 flex items-center justify-center overflow-hidden group-hover:bg-slate-200 transition-colors">
+                                    <div className="z-10 flex flex-col items-center gap-2 opacity-50">
+                                        <ImageIcon className="w-8 h-8 text-slate-400" />
+                                        <span className="text-xs font-medium text-slate-500">Sem mídia</span>
                                     </div>
                                 </div>
                             )}
@@ -217,6 +264,7 @@ export default function TemplatesPage() {
                                             size="sm" 
                                             className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                                             onClick={() => copyToClipboard(template.content)}
+                                            title="Copiar texto"
                                         >
                                             <Copy className="h-4 w-4" />
                                         </Button>
@@ -224,9 +272,13 @@ export default function TemplatesPage() {
                                             variant="ghost" 
                                             size="sm" 
                                             className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                                            // Handle send action
+                                            title="Duplicar modelo"
+                                            onClick={() => handleDuplicate(template)}
                                         >
-                                            <Send className="h-4 w-4" />
+                                            <div className="relative">
+                                                <Copy className="h-4 w-4" />
+                                                <Plus className="h-2 w-2 absolute -bottom-1 -right-1 bg-white rounded-full text-green-600" />
+                                            </div>
                                         </Button>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -235,6 +287,7 @@ export default function TemplatesPage() {
                                             size="sm" 
                                             className="h-8 w-8 p-0 text-gray-400 hover:text-blue-500 hover:bg-blue-50"
                                             onClick={() => handleOpenEdit(template)}
+                                            title='Editar modelo'
                                         >
                                             <Pencil className="h-4 w-4" />
                                         </Button>
@@ -243,6 +296,7 @@ export default function TemplatesPage() {
                                             size="sm" 
                                             className="h-8 w-8 p-0 text-gray-400 hover:text-red-500 hover:bg-red-50"
                                             onClick={() => handleDelete(template.id)}
+                                            title='Deletar modelo'
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
@@ -271,6 +325,7 @@ export default function TemplatesPage() {
                 onOpenChange={setIsSheetOpen}
                 template={editingTemplate}
                 onSave={handleSaveSuccess}
+                isDuplicate={isDuplicate}
             />
 
         </div>

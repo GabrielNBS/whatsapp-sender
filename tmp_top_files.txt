@@ -1,0 +1,15 @@
+﻿777	src\lib\whatsapp.ts
+534	src\app\dashboard\contacts\page.tsx
+382	src\components\settings\report-settings.tsx
+344	src\app\dashboard\send\page.tsx
+293	src\lib\AnalyticsService.ts
+278	src\lib\constants.ts
+264	src\lib\MessageFormatter.ts
+255	src\app\dashboard\templates\page.tsx
+248	src\components\dashboard\templates\template-sheet.tsx
+222	src\lib\MetricsService.ts
+217	src\lib\EngagementService.ts
+216	src\components\send\send-form.tsx
+214	src\lib\ReportService.ts
+214	src\hooks\use-sender.ts
+184	src\hooks\use-send-form.ts

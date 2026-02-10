@@ -49,7 +49,6 @@ export function GroupManagementDialog({ group, isOpen, onClose }: GroupManagemen
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent 
           className="max-w-3xl max-h-[80vh] flex flex-col"
-          aria-labelledby={dialogTitleId}
         >
           <DialogHeader>
             <DialogTitle id={dialogTitleId}>
