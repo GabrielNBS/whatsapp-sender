@@ -185,7 +185,11 @@ export default function SendPage() {
         if (isScheduleMode) {
             await handleSchedule();
         } else {
-            await handleSend(recipients, message, selectedFile);
+            const started = await handleSend(recipients, message, selectedFile);
+            if (started) {
+                setMessage('');
+                setSelectedFile(null);
+            }
         }
     };
 
@@ -230,17 +234,18 @@ export default function SendPage() {
                         value={recipientConfig}
                         onChange={setRecipientConfig}
                         getContactsByGroup={getContactsByGroup}
+                        disabled={isSending}
                     />
 
                     {/* Template Card */}
-                    <div className="bg-card rounded-xl shadow-sm border border-border p-4 space-y-4">
+                    <div className={`bg-card rounded-xl shadow-sm border border-border p-4 space-y-4 ${isSending ? 'opacity-60 pointer-events-none' : ''}`}>
                         <div className="flex justify-between items-center">
                             <h2 className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <MessageSquare className="w-4 h-4 text-primary" />
                                 Modelo
                             </h2>
                         </div>
-                        <Select value={selectedTemplateId || 'none'} onValueChange={handleTemplateSelect}>
+                        <Select value={selectedTemplateId || 'none'} onValueChange={handleTemplateSelect} disabled={isSending}>
                             <SelectTrigger className="w-full h-9 text-sm">
                                 <SelectValue placeholder="Selecione um modelo..." />
                             </SelectTrigger>
@@ -254,13 +259,13 @@ export default function SendPage() {
                     </div>
 
                     {/* Schedule Card */}
-                    <div className="bg-card rounded-xl shadow-sm border border-border p-4 space-y-4">
+                    <div className={`bg-card rounded-xl shadow-sm border border-border p-4 space-y-4 ${isSending ? 'opacity-60 pointer-events-none' : ''}`}>
                         <div className="flex items-center justify-between">
                             <h2 className="text-sm font-semibold flex items-center gap-2 text-foreground">
                                 <Calendar className="w-4 h-4 text-primary" />
                                 Agendamento
                             </h2>
-                            <Switch checked={isScheduleMode} onCheckedChange={setIsScheduleMode} />
+                            <Switch checked={isScheduleMode} onCheckedChange={setIsScheduleMode} disabled={isSending} />
                         </div>
                         {isScheduleMode && (
                             <div className="animate-in fade-in slide-in-from-top-2 pt-2">
@@ -270,6 +275,7 @@ export default function SendPage() {
                                     value={scheduleDate}
                                     onChange={(e) => setScheduleDate(e.target.value)}
                                     className="h-9 text-sm"
+                                    disabled={isSending}
                                 />
                             </div>
                         )}
@@ -283,6 +289,7 @@ export default function SendPage() {
                         onMessageChange={setMessage}
                         selectedFile={selectedFile}
                         onFileChange={setSelectedFile}
+                        disabled={isSending}
                     />
                 </div>
 
@@ -318,12 +325,12 @@ export default function SendPage() {
                                 <div className="mb-4 space-y-2">
                                     <p className="text-[10px] font-bold text-muted-foreground uppercase">Agendamentos</p>
                                     {activeSchedules.map(schedule => (
-                                        <div key={schedule.id} className="bg-info/10 border border-info/20 rounded p-2 flex justify-between items-center">
+                                        <div key={schedule.id} className="bg-foreground border border-info/20 rounded p-2 flex justify-between items-center">
                                             <div className="min-w-0">
-                                                <p className="text-xs font-medium text-info-foreground truncate">{schedule.batchName}</p>
+                                                <p className="text-xs font-medium text-secondary truncate">{schedule.batchName}</p>
                                                 <p className="text-[10px] text-muted-foreground">{new Date(schedule.scheduledFor).toLocaleString('pt-BR')}</p>
                                             </div>
-                                            <button onClick={() => handleCancelSchedule(schedule.id)} className="text-destructive/70 hover:text-destructive">
+                                            <button onClick={() => handleCancelSchedule(schedule.id)} className="text-secondary hover:text-destructive">
                                                 <Trash2 className="w-3 h-3" />
                                             </button>
                                         </div>
@@ -345,7 +352,7 @@ export default function SendPage() {
                                             log.type === 'error' ? "bg-destructive" : "bg-muted-foreground/30"
                                     )} />
                                     <div className="min-w-0">
-                                        <p className="text-xs text-foreground leading-snug break-words">{log.message}</p>
+                                        <p className="text-xs text-foreground leading-snug wrap-break-word">{log.message}</p>
                                         <p className="text-[10px] text-muted-foreground mt-0.5">{formatTime(new Date(log.timestamp))}</p>
                                     </div>
                                 </div>
