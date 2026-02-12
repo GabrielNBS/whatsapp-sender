@@ -63,6 +63,7 @@ export function RecipientSelector({
       className={`bg-card rounded-xl shadow-sm border border-border p-4 space-y-4 relative z-50 ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
       ref={searchRef}
     >
+      
       <h2 className="text-sm font-semibold flex items-center gap-2 text-foreground">
         <Users className="w-4 h-4 text-primary" />
         Destinatários
