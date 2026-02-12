@@ -15,6 +15,8 @@ interface ActionPanelProps {
     current: number;
     total: number;
   };
+  /** Whether to show the action buttons. Default is true. */
+  showActionButtons?: boolean;
 }
 
 export function ActionPanel({
@@ -26,6 +28,7 @@ export function ActionPanel({
   onAction,
   onStop,
   sendProgress,
+  showActionButtons = true,
 }: ActionPanelProps) {
   const showProgress = isSending && sendProgress && sendProgress.total > 0;
   
@@ -89,33 +92,35 @@ export function ActionPanel({
         </div>
       </div>
 
-      <Button
-        onClick={isSending ? onStop : onAction}
-        className={cn(
-          "w-full h-11 text-sm font-semibold shadow transition-all mt-1",
-          isSending
-            ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground animate-in fade-in"
-            : isScheduleMode
-            ? "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
-            : "bg-success hover:bg-success/90 text-success-foreground"
-        )}
-      >
-        {isSending ? (
-          <>
-            <X className="w-4 h-4 mr-2" />
-            Parar Envio
-          </>
-        ) : (
-          <>
-            {isScheduleMode ? (
-              <Calendar className="w-4 h-4 mr-2" />
-            ) : (
-              <Send className="w-4 h-4 mr-2" />
-            )}
-            {isScheduleMode ? "Agendar Disparo" : "Iniciar Disparo"}
-          </>
-        )}
-      </Button>
+      {showActionButtons && (
+        <Button
+          onClick={isSending ? onStop : onAction}
+          className={cn(
+            "w-full h-11 text-sm font-semibold shadow transition-all mt-1",
+            isSending
+              ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground animate-in fade-in"
+              : isScheduleMode
+              ? "bg-secondary hover:bg-secondary/80 text-secondary-foreground"
+              : "bg-success hover:bg-success/90 text-success-foreground"
+          )}
+        >
+          {isSending ? (
+            <>
+              <X className="w-4 h-4 mr-2" />
+              Parar Envio
+            </>
+          ) : (
+            <>
+              {isScheduleMode ? (
+                <Calendar className="w-4 h-4 mr-2" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              {isScheduleMode ? "Agendar Disparo" : "Iniciar Disparo"}
+            </>
+          )}
+        </Button>
+      )}
     </div>
   );
 }

@@ -758,6 +758,19 @@ export class WhatsAppService {
     return { success: true };
   }
 
+  public async getProfilePicUrl(number: string): Promise<string | null> {
+    if (!this.isReady) return null;
+
+    try {
+      const contactId = `${number.replace(/\D/g, "")}@c.us`;
+      const profilePicUrl = await this.client.getProfilePicUrl(contactId);
+      return profilePicUrl || null;
+    } catch (error) {
+      console.warn(`Failed to get profile pic for ${number}`, error);
+      return null;
+    }
+  }
+
   public async logout() {
     await this.client.logout();
     this.isAuthenticated = false;

@@ -35,6 +35,10 @@ interface AppState {
   // History
   history: Campaign[];
   addCampaign: (campaign: Campaign) => void;
+
+  // Avatar Cache
+  avatars: Record<string, string | null>;
+  fetchAvatar: (phone: string) => Promise<string | null>;
 }
 
 export const useAppStore = create<AppState>()(
@@ -123,7 +127,38 @@ export const useAppStore = create<AppState>()(
 
       addCampaign: (campaign) => set((state) => ({
         history: [campaign, ...state.history].slice(0, 50) // Keep last 50 campaigns
-      }))
+      })),
+
+      // Avatar Logic
+      avatars: {},
+      fetchAvatar: async (phone) => {
+        const { avatars } = get();
+        // Return cached if exists (undefined check because null is a valid "no avatar" state)
+        if (avatars[phone] !== undefined) {
+            return avatars[phone];
+        }
+
+        try {
+            const res = await fetch(`/api/contacts/avatar?phone=${encodeURIComponent(phone)}`);
+            if (res.ok) {
+                const data = await res.json();
+                const url = data.url || null;
+                
+                set((state) => ({
+                    avatars: { ...state.avatars, [phone]: url }
+                }));
+                return url;
+            }
+        } catch (error) {
+            console.error('Failed to fetch avatar', error);
+        }
+
+        // Cache failure as null to avoid retry loop in short term
+        set((state) => ({
+            avatars: { ...state.avatars, [phone]: null }
+        }));
+        return null;
+      }
     }),
     {
       name: 'whatsapp-sender-storage',
