@@ -6,7 +6,7 @@ echo.
 echo Isso pode levar alguns minutos. Por favor, aguarde.
 echo.
 
-cd /d "c:\workspace\whatsapp-sender"
+cd /d "%~dp0"
 
 echo 1. Removendo pasta node_modules (pode demorar)...
 if exist node_modules rmdir /s /q node_modules

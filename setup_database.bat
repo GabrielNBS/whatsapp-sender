@@ -1,6 +1,6 @@
 @echo off
 echo Configurando Banco de Dados do WhatsApp Sender...
-cd /d "c:\workspace\whatsapp-sender"
+cd /d "%~dp0"
 
 echo Instalando dependencias...
 call npm install

@@ -1,6 +1,7 @@
-import { User, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { Contact } from '@/lib/store';
 import { formatPhoneNumber } from '@/lib/utils';
+import { AvatarDisplay } from '@/components/ui/avatar-display';
 
 interface ContactListProps {
   contacts: Contact[];
@@ -26,7 +27,7 @@ export function ContactList({ contacts, selectedId, onSelect }: ContactListProps
           onClick={() => onSelect(contact)}
         >
           <div className="flex items-center gap-2">
-            <User className="w-3.5 h-3.5 text-muted-foreground" />
+            <AvatarDisplay name={contact.name} phone={contact.number} className="w-8 h-8" />
             <div className="flex flex-col">
               <span>{contact.name}</span>
               <span className="text-[10px] text-muted-foreground">
