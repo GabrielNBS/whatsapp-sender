@@ -11,8 +11,10 @@ import {
   Settings,
   LogOut,
   FileText,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigation } from '@/hooks/use-navigation';
 
 const navItems = [
   { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
@@ -25,6 +27,7 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { isNavigating, targetPath, startNavigation } = useNavigation();
 
   const handleLogout = async () => {
     try {
@@ -33,6 +36,13 @@ export function Sidebar() {
     } catch (error) {
       console.error('Falha ao sair', error);
     }
+  };
+
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    if (href === pathname) return; // Already on this page
+    startNavigation(href);
+    router.push(href);
   };
 
   return (
@@ -48,20 +58,27 @@ export function Sidebar() {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
+          const isLoadingThis = isNavigating && targetPath === item.href;
           return (
-            <Link
+            <a
               key={item.href}
               href={item.href}
+              onClick={(e) => handleNavClick(e, item.href)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-sm font-medium",
                 isActive
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                isLoadingThis && "opacity-70"
               )}
             >
-              <Icon className="w-5 h-5" />
+              {isLoadingThis ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Icon className="w-5 h-5" />
+              )}
               {item.label}
-            </Link>
+            </a>
           );
         })}
       </nav>
