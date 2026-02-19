@@ -342,7 +342,7 @@ export default function SendPage() {
                                                 {/* Template Selector integrated in header */}
                                                 <div className="flex items-center gap-2">
                                                     <Select value={selectedTemplateId || 'none'} onValueChange={handleTemplateSelect} disabled={isSending}>
-                                                        <SelectTrigger className="w-[200px] h-9 text-xs bg-primary text-primary-foreground hover:bg-primary/90 border-0 font-medium transition-colors">
+                                                        <SelectTrigger animatedBorder className="w-[200px] h-9 text-xs font-medium">
                                                             <div className="flex items-center gap-2">
                                                                 <FileText className="w-3.5 h-3.5" />
                                                                 <SelectValue placeholder="Carregar Modelo" />
