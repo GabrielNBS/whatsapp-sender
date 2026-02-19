@@ -7,12 +7,11 @@ async function seed() {
         const phone = '11999999999';
         // Create or update contact
         const contact = await prisma.contact.upsert({
-            where: { number: phone },
+            where: { phone: phone },
             update: {},
             create: {
                 name: 'Test User',
-                number: phone,
-                groupIds: ['default']
+                phone: phone,
             }
         });
         
