@@ -6,7 +6,7 @@ import { Plus, Trash2, Command, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
+
 
 interface Snippet {
   id: string;
@@ -32,7 +32,7 @@ export function SnippetSettings() {
         setSnippets(await res.json());
       }
     } catch (error) {
-      toast.error("Erro ao carregar snippets");
+      toast.error(`Erro ao carregar snippets`);
     } finally {
       setLoading(false);
     }
@@ -58,10 +58,10 @@ export function SnippetSettings() {
         setContent("");
         fetchSnippets();
       } else {
-        toast.error("Erro ao criar snippet");
+        toast.error(`Erro ao criar snippet`);
       }
     } catch (error) {
-      toast.error("Erro ao criar snippet");
+      toast.error(`Erro ao criar snippet`);
     } finally {
       setIsCreating(false);
     }
@@ -78,7 +78,7 @@ export function SnippetSettings() {
         setSnippets(snippets.filter((s) => s.id !== id));
       }
     } catch (error) {
-      toast.error("Erro ao remover snippet");
+      toast.error(`Erro ao remover snippet`);
     }
   };
 
