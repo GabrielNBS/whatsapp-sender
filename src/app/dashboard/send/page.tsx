@@ -1,5 +1,8 @@
 'use client';
 
+import { useHydrated } from '@/hooks/use-hydrated';
+import { SendPageSkeleton } from '@/components/send/send-page-skeleton';
+
 import { useState, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Template } from '@/lib/types';
@@ -8,6 +11,7 @@ import { StaleBatchDialog } from '@/components/send/stale-batch-dialog';
 import { useScheduler } from '@/hooks/use-scheduler';
 import { useSender } from '@/hooks/use-sender';
 import { useSendForm } from '@/hooks/use-send-form';
+import { useScheduleMessages } from '@/hooks/use-schedule-messages';
 import {
     MessageSquare,
     Calendar,
@@ -20,7 +24,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
-// UI Components
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -36,16 +39,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 
-// Custom Components
 import { RecipientSelector } from '@/components/send/recipient-selector';
 import { MessageEditor } from '@/components/send/message-editor';
 import { StepIndicator } from '@/components/send/step-indicator';
 import { WizardNavigation } from '@/components/send/wizard-navigation';
 import { ActionPanel } from '@/components/send/action-panel';
 import { WhatsAppMockup } from '@/components/dashboard/templates/whatsapp-mockup';
-import { FileText, Plus } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
-// Steps definition
 const STEPS = [
   { id: 1, label: "Destinatários", icon: Users },
   { id: 2, label: "Conteúdo", icon: MessageSquare },
@@ -53,7 +54,6 @@ const STEPS = [
 ];
 
 export default function SendPage() {
-    // Global Store State
     const {
         groups: storeGroups,
         contacts: storeContacts,
@@ -66,7 +66,6 @@ export default function SendPage() {
         setSendingStatus
     } = useAppStore();
 
-    // Log Cleanup Effect
     useEffect(() => {
         const interval = setInterval(() => {
             cleanupLogs();
@@ -74,7 +73,6 @@ export default function SendPage() {
         return () => clearInterval(interval);
     }, [cleanupLogs]);
 
-    // Hooks
     const {
         activeSchedules,
         staleBatch,
@@ -85,39 +83,35 @@ export default function SendPage() {
 
     const { handleSend, handleStop } = useSender();
 
-    // Local State (UI)
-    const [mounted, setMounted] = useState(false);
     const [showStopConfirmation, setShowStopConfirmation] = useState(false);
     const [templates, setTemplates] = useState<Template[]>([]);
-    
-    // Wizard State
+
     const [currentStep, setCurrentStep] = useState(1);
+    
+    const hydrated = useHydrated();
 
     useEffect(() => {
-        setMounted(true);
+        const fetchTemplates = async () => {
+            try {
+                const res = await fetch('/api/templates');
+                if (res.ok) {
+                    const data = await res.json();
+                    setTemplates(data);
+                }
+            } catch (error) {
+                console.error("Falha ao buscar modelos", error);
+            }
+        };
+
         fetchTemplates();
     }, []);
 
-    const fetchTemplates = async () => {
-        try {
-            const res = await fetch('/api/templates');
-            if (res.ok) {
-                const data = await res.json();
-                setTemplates(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch templates", error);
-        }
-    };
+    const groups = storeGroups;
+    const contacts = storeContacts;
+    const getContactsByGroup = storeGetContacts;
 
-    // Derived State
-    const groups = mounted ? storeGroups : [{ id: 'default', name: 'Geral', description: 'Lista Padrão' }];
-    const contacts = mounted ? storeContacts : [];
-    const getContactsByGroup = mounted ? storeGetContacts : () => [];
+    const isSending = sendingStatus.isSending;
 
-    const isSending = mounted ? sendingStatus.isSending : false;
-
-    // Use the send form hook for form state management
     const {
         recipientConfig,
         message,
@@ -165,43 +159,44 @@ export default function SendPage() {
         }
     };
 
+
+    // Custom Hook for Scheduling
+    const { mutate: scheduleMessages } = useScheduleMessages({
+        onSuccess: () => {
+             addLog('Agendamento realizado com sucesso!', 'success');
+             toast.success("Agendamento realizado com sucesso!");
+             resetForm();
+             fetchSchedules();
+             setCurrentStep(1); // Reset wizard
+             // Clear loading state in store if needed, though hook handles its own loading
+             setSendingStatus({ isSending: false, statusMessage: null });
+        },
+        onError: (error) => {
+            addLog('Erro ao agendar: ' + error.message, 'error');
+            toast.error("Erro ao agendar envio.");
+             setSendingStatus({ isSending: false, statusMessage: null });
+        }
+    });
+
     const handleSchedule = async () => {
         if (!scheduleDate) {
             toast.error("Selecione uma data para agendar.");
             return;
         }
+        
+        // Update store state to reflect global loading/busy state if desired
         setSendingStatus({ isSending: true, statusMessage: 'Agendando envio...' });
 
-        try {
-            const res = await fetch('/api/schedule', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    recipients: recipients,
-                    message,
-                    media: selectedFile,
-                    scheduledFor: scheduleDate,
-                    batchName: recipientConfig.type === 'contact'
-                        ? `Envio para ${recipientConfig.name}`
-                        : `Campanha para ${recipients.length} contatos`,
-                    templateId: selectedTemplateId
-                })
-            });
-
-            if (!res.ok) throw new Error('Falha ao agendar');
-
-            addLog('Agendamento realizado com sucesso!', 'success');
-            toast.success("Agendamento realizado com sucesso!");
-            resetForm();
-            fetchSchedules();
-            setCurrentStep(1); // Reset wizard
-
-        } catch (error) {
-            addLog('Erro ao agendar: ' + error, 'error');
-            toast.error("Erro ao agendar envio.");
-        } finally {
-            setSendingStatus({ isSending: false, statusMessage: null });
-        }
+        await scheduleMessages({
+            recipients: recipients,
+            message,
+            media: selectedFile,
+            scheduledFor: scheduleDate,
+            batchName: recipientConfig.type === 'contact'
+                ? `Envio para ${recipientConfig.name}`
+                : `Campanha para ${recipients.length} contatos`,
+            templateId: selectedTemplateId || ''
+        });
     };
 
     const handleFinalAction = async () => {
@@ -241,6 +236,10 @@ export default function SendPage() {
     const formatTime = (date: Date) => {
         return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
+
+    if (!hydrated) {
+        return <SendPageSkeleton />;
+    }
 
     const recentLogs = logs.slice(0, 50);
 
@@ -432,7 +431,7 @@ export default function SendPage() {
 
                                                 {/* Message Preview (Mini) */}
                                                 {/* Message Preview (Reference Mockup) */}
-                                                <div className="bg-muted/30 border border-border rounded-xl p-4 flex flex-col h-full bg-slate-50 dark:bg-zinc-950/50">
+                                                <div className="border border-border rounded-xl p-4 flex flex-col h-full bg-slate-50 dark:bg-zinc-950/50">
                                                     <h3 className="font-medium text-sm mb-3">Pré-visualização</h3>
                                                     <div className="flex-1 overflow-hidden relative transform scale-90 origin-top h-[500px]">
                                                         <WhatsAppMockup 
