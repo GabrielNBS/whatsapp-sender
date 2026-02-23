@@ -37,11 +37,7 @@ export function WizardNavigation({
       <Button
         onClick={onNext}
         disabled={isNextDisabled || isSending}
-        className={cn(
-          "gap-2 min-w-[120px] transition-all duration-300",
-          isLastStep ? "bg-primary hover:bg-primary/90" : "bg-card hover:bg-accent text-foreground border border-border"
-        )}
-        variant={isLastStep ? "default" : "outline"}
+        variant={isLastStep ? "success" : "default"}
       >
         {isLastStep ? (
           <>
