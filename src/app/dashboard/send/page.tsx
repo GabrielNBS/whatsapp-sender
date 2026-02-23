@@ -43,7 +43,7 @@ import { RecipientSelector } from '@/components/send/recipient-selector';
 import { MessageEditor } from '@/components/send/message-editor';
 import { StepIndicator } from '@/components/send/step-indicator';
 import { WizardNavigation } from '@/components/send/wizard-navigation';
-import { ActionPanel } from '@/components/send/action-panel';
+
 import { WhatsAppMockup } from '@/components/dashboard/templates/whatsapp-mockup';
 import { FileText } from 'lucide-react';
 
@@ -84,6 +84,7 @@ export default function SendPage() {
     const { handleSend, handleStop } = useSender();
 
     const [showStopConfirmation, setShowStopConfirmation] = useState(false);
+    const [showMonitoringPanel, setShowMonitoringPanel] = useState(false);
     const [templates, setTemplates] = useState<Template[]>([]);
 
     const [currentStep, setCurrentStep] = useState(1);
@@ -210,9 +211,9 @@ export default function SendPage() {
         } else {
             const started = await handleSend(recipients, message, selectedFile);
             if (started) {
-                setMessage('');
-                setSelectedFile(null);
-                setCurrentStep(1); // Reset wizard
+                resetForm();
+                setCurrentStep(1);
+                setShowMonitoringPanel(true);
             }
         }
     };
@@ -235,6 +236,15 @@ export default function SendPage() {
     // Formatting Helpers
     const formatTime = (date: Date) => {
         return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    };
+
+    const handleNewTransmission = () => {
+        resetForm();
+        setCurrentStep(1);
+        setRecipientConfig({ type: 'group', id: 'all', name: 'Todos os Contatos' });
+        setShowMonitoringPanel(false);
+        clearLogs();
+        setSendingStatus({ isSending: false, statusMessage: null, totalContacts: 0, currentContactIndex: 0, progress: 0, failedContacts: [], stoppedByUser: false });
     };
 
     if (!hydrated) {
@@ -266,10 +276,10 @@ export default function SendPage() {
             </div>
 
             {/* Main Grid Content */}
-            <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
+            <div className="flex gap-6 flex-1 min-h-0 overflow-hidden">
 
-                {/* WIZARD CONTAINER (Left + Center merged) */}
-                <div className="col-span-12 lg:col-span-9 flex flex-col min-h-0">
+                {/* WIZARD CONTAINER */}
+                <motion.div layout className="flex flex-col min-h-0 flex-1" transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}>
                     <div className="bg-card rounded-xl shadow-lg border border-border flex flex-col h-full overflow-hidden relative">
                         
                         {/* Top Bar with Step Indicator */}
@@ -342,10 +352,10 @@ export default function SendPage() {
                                                 {/* Template Selector integrated in header */}
                                                 <div className="flex items-center gap-2">
                                                     <Select value={selectedTemplateId || 'none'} onValueChange={handleTemplateSelect} disabled={isSending}>
-                                                        <SelectTrigger animatedBorder className="w-[200px] h-9 text-xs font-medium">
-                                                            <div className="flex items-center gap-2">
-                                                                <FileText className="w-3.5 h-3.5" />
-                                                                <SelectValue placeholder="Carregar Modelo" />
+                                                        <SelectTrigger animatedBorder className="w-[200px] h-9 text-xs font-medium text-secondary bg-primary">
+                                                            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                                                                <FileText className="w-3.5 h-3.5 shrink-0" />
+                                                                <span className="truncate"><SelectValue placeholder="Carregar Modelo" /></span>
                                                             </div>
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -429,11 +439,10 @@ export default function SendPage() {
                                                     </div>
                                                 </div>
 
-                                                {/* Message Preview (Mini) */}
-                                                {/* Message Preview (Reference Mockup) */}
-                                                <div className="border border-border rounded-xl p-4 flex flex-col h-full bg-slate-50 dark:bg-zinc-950/50">
-                                                    <h3 className="font-medium text-sm mb-3">Pré-visualização</h3>
-                                                    <div className="flex-1 overflow-hidden relative transform scale-90 origin-top h-[500px]">
+                                                {/* WhatsApp Preview */}
+                                                <div className="border border-border rounded-xl p-4 flex flex-col bg-slate-50 dark:bg-zinc-950/50" style={{ minHeight: 0 }}>
+                                                    <h3 className="font-medium text-sm mb-3 shrink-0">Pré-visualização</h3>
+                                                    <div className="flex-1 min-h-0" style={{ height: '360px' }}>
                                                         <WhatsAppMockup 
                                                             content={message} 
                                                             media={selectedFile} 
@@ -459,11 +468,256 @@ export default function SendPage() {
                                 isSending={isSending}
                             />
                         </div>
-                    </div>
-                </div>
 
-                {/* RIGHT COL: LOGS (Span 3) - Kept as is for observability */}
-                <div className="col-span-12 lg:col-span-3 flex flex-col gap-4 min-h-0 overflow-hidden">
+                        {/* Sending Overlay — covers wizard while transmitting */}
+                        <AnimatePresence>
+                            {isSending && (
+                                <motion.div
+                                    key="sending-overlay"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.25 }}
+                                    className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm p-8"
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0.85, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        transition={{ delay: 0.1, duration: 0.3 }}
+                                        className="flex flex-col items-center gap-5 w-full max-w-sm text-center"
+                                    >
+                                        {/* SVG illustration */}
+                                        <svg viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-44 h-32">
+                                            <rect x="20" y="20" width="80" height="140" rx="14" fill="#f0fdf4" stroke="#22c55e" strokeWidth="2.5"/>
+                                            <rect x="30" y="38" width="60" height="104" rx="6" fill="#dcfce7"/>
+                                            <circle cx="60" cy="152" r="6" fill="#bbf7d0" stroke="#22c55e" strokeWidth="1.5"/>
+                                            <motion.g animate={{ x: [0, 8, 0], opacity: [1, 0.7, 1] }} transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}>
+                                                <rect x="110" y="55" width="70" height="28" rx="12" fill="#22c55e"/>
+                                                <path d="M110 72 L102 80 L118 72" fill="#22c55e"/>
+                                                <rect x="118" y="63" width="54" height="6" rx="3" fill="white" opacity="0.8"/>
+                                                <rect x="118" y="73" width="36" height="4" rx="2" fill="white" opacity="0.5"/>
+                                            </motion.g>
+                                            <motion.g animate={{ x: [0, 10, 0], opacity: [0.8, 0.5, 0.8] }} transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut", delay: 0.3 }}>
+                                                <rect x="115" y="100" width="58" height="24" rx="10" fill="#4ade80"/>
+                                                <path d="M115 116 L107 123 L122 116" fill="#4ade80"/>
+                                                <rect x="122" y="107" width="44" height="5" rx="2.5" fill="white" opacity="0.7"/>
+                                                <rect x="122" y="115" width="28" height="3.5" rx="1.75" fill="white" opacity="0.45"/>
+                                            </motion.g>
+                                            <motion.g animate={{ x: [0, 6, 0], opacity: [0.6, 0.3, 0.6] }} transition={{ repeat: Infinity, duration: 2.1, ease: "easeInOut", delay: 0.7 }}>
+                                                <rect x="120" y="136" width="46" height="20" rx="8" fill="#86efac"/>
+                                                <path d="M120 150 L113 156 L127 150" fill="#86efac"/>
+                                                <rect x="127" y="142" width="32" height="4" rx="2" fill="white" opacity="0.6"/>
+                                                <rect x="127" y="149" width="20" height="3" rx="1.5" fill="white" opacity="0.4"/>
+                                            </motion.g>
+                                            <circle cx="195" cy="48" r="4" fill="#fbbf24" opacity="0.8"/>
+                                            <circle cx="205" cy="90" r="2.5" fill="#34d399" opacity="0.7"/>
+                                            <circle cx="198" cy="128" r="3" fill="#fbbf24" opacity="0.6"/>
+                                        </svg>
+
+                                        {/* Title + status */}
+                                        <div className="space-y-1">
+                                            <h3 className="text-xl font-bold text-gray-800">Enviando mensagens...</h3>
+                                            <p className="text-sm text-gray-500">
+                                                {sendingStatus.statusMessage || 'Transmissão em andamento. Não feche esta janela.'}
+                                            </p>
+                                        </div>
+
+                                        {/* Big progress counter */}
+                                        {sendingStatus.totalContacts > 0 && (
+                                            <div className="w-full space-y-3">
+                                                <div className="flex items-baseline justify-center gap-2">
+                                                    <span className="text-5xl font-extrabold" style={{ background: 'linear-gradient(135deg, #16a34a, #4ade80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                                                        {(sendingStatus.currentContactIndex ?? 0) + 1}
+                                                    </span>
+                                                    <span className="text-xl text-gray-400">/ {sendingStatus.totalContacts}</span>
+                                                </div>
+                                                <p className="text-xs text-gray-400">
+                                                    {sendingStatus.totalContacts - ((sendingStatus.currentContactIndex ?? 0) + 1)} restantes
+                                                </p>
+                                                {/* Progress bar */}
+                                                <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        className="h-full rounded-full"
+                                                        style={{ background: 'linear-gradient(90deg, #16a34a, #4ade80)' }}
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${Math.round((((sendingStatus.currentContactIndex ?? 0) + 1) / sendingStatus.totalContacts) * 100)}%` }}
+                                                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Info grid: estimated time + safe delay + recipient type */}
+                                        <div className="w-full grid grid-cols-3 gap-2 pt-1 border-t border-gray-100">
+                                            <div className="text-center">
+                                                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Estimativa</p>
+                                                <p className="text-sm font-semibold text-gray-700">~{estimatedTime} min</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Atraso</p>
+                                                <p className="text-sm font-semibold text-green-600">Ativo ✓</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Modo</p>
+                                                <span className={cn(
+                                                    "inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold",
+                                                    recipientConfig.type === 'group'
+                                                        ? "bg-blue-50 text-blue-700"
+                                                        : "bg-green-50 text-green-700"
+                                                )}>
+                                                    {recipientConfig.type === 'group' ? 'GRUPO' : 'CONTATO'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Pulsing dots */}
+                                        <div className="flex items-center gap-2">
+                                            {[0, 0.2, 0.4].map((delay, i) => (
+                                                <motion.span
+                                                    key={i}
+                                                    className="w-2 h-2 rounded-full"
+                                                    style={{ background: 'linear-gradient(135deg, #16a34a, #4ade80)' }}
+                                                    animate={{ scale: [1, 1.5, 1], opacity: [0.4, 1, 0.4] }}
+                                                    transition={{ repeat: Infinity, duration: 1, delay, ease: 'easeInOut' }}
+                                                />
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Completed Overlay — shown when send is done but monitoring panel is still visible */}
+                        <AnimatePresence>
+                            {!isSending && showMonitoringPanel && (
+                                <motion.div
+                                    key="completed-overlay"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/97 backdrop-blur-sm p-8"
+                                >
+                                    <motion.div
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        transition={{ delay: 0.1, duration: 0.3 }}
+                                        className="flex flex-col items-center gap-5 w-full max-w-sm text-center"
+                                    >
+                                        {/* Icon: 3 states */}
+                                        {sendingStatus.stoppedByUser ? (
+                                            // Stopped manually — gray/slate
+                                            <div className="w-20 h-20 rounded-full flex items-center justify-center bg-slate-100 border-4 border-slate-200">
+                                                <svg viewBox="0 0 40 40" fill="none" className="w-9 h-9">
+                                                    <rect x="11" y="11" width="7" height="18" rx="2" fill="#64748b"/>
+                                                    <rect x="22" y="11" width="7" height="18" rx="2" fill="#64748b"/>
+                                                </svg>
+                                            </div>
+                                        ) : sendingStatus.failedContacts.length === 0 ? (
+                                            // Full success — green
+                                            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #16a34a, #4ade80)' }}>
+                                                <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
+                                                    <path d="M8 20 L17 29 L32 12" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                            </div>
+                                        ) : (
+                                            // Partial — amber
+                                            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}>
+                                                <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
+                                                    <path d="M20 12 L20 22" stroke="white" strokeWidth="3.5" strokeLinecap="round"/>
+                                                    <circle cx="20" cy="29" r="2" fill="white"/>
+                                                </svg>
+                                            </div>
+                                        )}
+
+                                        {/* Title + subtitle: 3 states + plural/singular */}
+                                        {(() => {
+                                            const sent = sendingStatus.totalContacts - sendingStatus.failedContacts.length;
+                                            const failed = sendingStatus.failedContacts.length;
+                                            const msgWord = (n: number) => n === 1 ? 'mensagem' : 'mensagens';
+                                            if (sendingStatus.stoppedByUser) {
+                                                return (
+                                                    <div className="space-y-1">
+                                                        <h3 className="text-2xl font-extrabold text-slate-700">Envio Interrompido</h3>
+                                                        <p className="text-sm text-slate-500">
+                                                            {sent === 0
+                                                                ? 'Nenhuma mensagem foi enviada.'
+                                                                : `${sent} ${msgWord(sent)} ${sent === 1 ? 'entregue' : 'entregues'} antes da parada.`
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+                                            if (failed === 0) {
+                                                return (
+                                                    <div className="space-y-1">
+                                                        <h3 className="text-2xl font-extrabold text-gray-800">Transmissão Concluída!</h3>
+                                                        <p className="text-sm text-gray-500">
+                                                            {sendingStatus.totalContacts} {msgWord(sendingStatus.totalContacts)} {sendingStatus.totalContacts === 1 ? 'entregue' : 'entregues'} com sucesso.
+                                                        </p>
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <div className="space-y-1">
+                                                    <h3 className="text-2xl font-extrabold text-gray-800">Transmissão Parcial</h3>
+                                                    <p className="text-sm text-gray-500">
+                                                        {sent} {msgWord(sent)} {sent === 1 ? 'entregue' : 'entregues'}, {failed} com {failed === 1 ? 'falha' : 'falhas'}.
+                                                    </p>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* Failed contacts list */}
+                                        {sendingStatus.failedContacts.length > 0 && (
+                                            <div className="w-full">
+                                                <p className="text-xs font-semibold text-orange-600 uppercase tracking-wider mb-2">
+                                                    {sendingStatus.failedContacts.length === 1 ? 'Número com problema' : 'Números com problema'}
+                                                </p>
+                                                <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1 scrollbar-thin scrollbar-thumb-border">
+                                                    {sendingStatus.failedContacts.map((c, i) => (
+                                                        <div key={i} className="flex items-center gap-2.5 bg-orange-50 border border-orange-100 rounded-lg px-3 py-2 text-left">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0" />
+                                                            <div className="min-w-0">
+                                                                <p className="text-xs font-semibold text-gray-800 truncate">{c.name}</p>
+                                                                <p className="text-[10px] text-gray-500 font-mono">{c.number}</p>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* CTA */}
+                                        <button
+                                            onClick={handleNewTransmission}
+                                            className="w-full h-11 rounded-xl font-semibold text-sm text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
+                                            style={{
+                                                background: sendingStatus.stoppedByUser
+                                                    ? 'linear-gradient(135deg, #475569, #64748b)'
+                                                    : 'linear-gradient(135deg, #16a34a, #4ade80)'
+                                            }}
+                                        >
+                                            Nova Transmissão
+                                        </button>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </motion.div>
+
+                {/* RIGHT COL: LOGS — slides in when sending starts, stays until new transmission */}
+                <AnimatePresence initial={false}>
+                {showMonitoringPanel && (
+                <motion.div
+                    key="monitoring-panel"
+                    initial={{ x: '100%', opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: '100%', opacity: 0 }}
+                    transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                    style={{ width: '300px', minWidth: '300px' }}
+                    className="flex flex-col gap-4 min-h-0 overflow-hidden shrink-0">
                     {/* Live Logs Panel - Fills remaining height */}
                     <div className="bg-card rounded-xl shadow-lg border border-border flex flex-col min-h-0 flex-1 overflow-hidden">
                         <div className="p-4 border-b border-border flex justify-between items-center bg-muted/50">
@@ -477,23 +731,7 @@ export default function SendPage() {
                             </button>
                         </div>
                         
-                        {/* Monitor Panel (ActionPanel without buttons) */}
-                        <div className="p-4 border-b border-border bg-background/50">
-                             <ActionPanel
-                                recipientCount={recipients.length}
-                                estimatedTime={estimatedTime}
-                                recipientType={recipientConfig.type}
-                                isSending={isSending}
-                                isScheduleMode={isScheduleMode}
-                                onAction={() => {}} // Not used here as buttons are hidden
-                                onStop={handleStop}
-                                showActionButtons={false}
-                                sendProgress={isSending ? {
-                                    current: sendingStatus.currentContactIndex,
-                                    total: sendingStatus.totalContacts
-                                } : undefined}
-                            />
-                        </div>
+
 
                         <div className="overflow-y-auto p-4 space-y-3 flex-1 scrollbar-thin scrollbar-thumb-border">
                             {/* Active Schedules first if any */}
@@ -562,7 +800,9 @@ export default function SendPage() {
                              </div>
                         )}
                     </div>
-                </div>
+                </motion.div>
+                )}
+                </AnimatePresence>
             </div>
 
             {/* Stop Confirmation Dialog */}

@@ -30,7 +30,7 @@ export function WhatsAppMockup({ content, media, footer, showFooter }: WhatsAppM
   };
 
   return (
-    <div className="w-full bg-[#E5DDD5] rounded-[24px] overflow-hidden relative shadow-xl border border-gray-200 mx-auto font-sans flex flex-col h-[600px]">
+    <div className="w-full bg-[#E5DDD5] rounded-[24px] overflow-hidden relative shadow-xl border border-gray-200 mx-auto font-sans flex flex-col h-full">
         {/* Status Bar Mockup */}
         <div className="bg-[#005e54] h-7 w-full flex items-center justify-between px-4 shrink-0">
             <div className="text-[10px] text-white/90 font-medium font-mono">12:30</div>

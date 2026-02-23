@@ -122,6 +122,8 @@ export function useSendForm({
   const handleTemplateSelect = useCallback((templateId: string) => {
     if (templateId === 'none') {
       setSelectedTemplateId(null);
+      setMessage('');
+      setSelectedFile(null);
       return;
     }
     
