@@ -10,6 +10,7 @@ interface CampaignMetrics {
   campaignId: string | null;
   sentCount: number;
   failedCount: number;
+  failedContacts: { name: string; number: string }[];
 }
 
 export function useSender() {
@@ -25,6 +26,7 @@ export function useSender() {
     campaignId: null,
     sentCount: 0,
     failedCount: 0,
+    failedContacts: [],
   });
 
   const addLog = (message: string, type: LogType = "info") => {
@@ -115,7 +117,7 @@ export function useSender() {
       console.error("[useSender] Error completing campaign:", error);
     } finally {
       // Reset metrics for next campaign
-      metricsRef.current = { campaignId: null, sentCount: 0, failedCount: 0 };
+      metricsRef.current = { campaignId: null, sentCount: 0, failedCount: 0, failedContacts: [] };
     }
   }, []);
 
@@ -129,6 +131,8 @@ export function useSender() {
       isSending: false,
       statusMessage: null,
       totalContacts: 0,
+      failedContacts: [],
+      stoppedByUser: true,
     });
     addLog("Envio interrompido pelo usuário.", "warning");
 
@@ -234,6 +238,13 @@ export function useSender() {
 
       // Track failure
       metricsRef.current.failedCount++;
+      metricsRef.current.failedContacts = [
+        ...metricsRef.current.failedContacts,
+        { name: contact.name, number: contact.number },
+      ];
+
+      // Expose failed contacts to the overlay
+      setSendingStatus({ failedContacts: metricsRef.current.failedContacts });
 
       addLog(`Erro ao enviar para ${contact.name}: ${error}`, "error");
 
@@ -257,7 +268,7 @@ export function useSender() {
     cleanup();
 
     // Reset metrics
-    metricsRef.current = { campaignId: null, sentCount: 0, failedCount: 0 };
+    metricsRef.current = { campaignId: null, sentCount: 0, failedCount: 0, failedContacts: [] };
 
     // Create campaign for tracking
     const campaignName = `Campanha ${new Date().toLocaleString("pt-BR", {
@@ -276,6 +287,8 @@ export function useSender() {
       progress: 0,
       currentContactIndex: 0,
       totalContacts: recipients.length,
+      failedContacts: [],
+      stoppedByUser: false,
     });
     processQueue(0, recipients, message, selectedFile);
 
