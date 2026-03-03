@@ -1,5 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+import { SplitText } from '@/components/ui/split-text';
+import { AnimatedContent } from '@/components/ui/animated-content';
+
 import { Settings, BarChart3, Command } from "lucide-react";
 import { ReportSettings } from "@/components/settings/report-settings";
 import { GeneralSettings } from "@/components/settings/general-settings";
@@ -7,6 +11,8 @@ import { SnippetSettings } from "@/components/settings/snippet-settings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState('general');
+
   return (
     <div className="h-[calc(100vh-theme(spacing.20))] flex flex-col space-y-6">
       {/* Header */}
@@ -15,14 +21,14 @@ export default function SettingsPage() {
           <Settings className="w-6 h-6 text-muted-foreground" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Configurações</h1>
+          <SplitText text="Configurações" as="h1" className="text-2xl font-bold" />
           <p className="text-sm text-muted-foreground">
             Gerencie as opções do sistema
           </p>
         </div>
       </div>
 
-      <Tabs defaultValue="general" className="flex-1 flex flex-col overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
         <div className="shrink-0 pb-4">
             <TabsList className="grid w-full grid-cols-3 max-w-[600px]">
             <TabsTrigger value="general" className="flex items-center gap-2">
@@ -38,17 +44,19 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto pr-4 -mr-4">
-            <TabsContent value="general" className="mt-0 h-full">
-            <GeneralSettings />
+          <AnimatedContent activeKey={activeTab} spring="gentle" direction="vertical" offset={16}>
+            <TabsContent value="general" className="mt-0 h-full" forceMount>
+              <GeneralSettings />
             </TabsContent>
             
-            <TabsContent value="snippets" className="mt-0 h-full">
-            <SnippetSettings />
+            <TabsContent value="snippets" className="mt-0 h-full" forceMount>
+              <SnippetSettings />
             </TabsContent>
             
-            <TabsContent value="reports" className="mt-0 h-full">
-            <ReportSettings />
+            <TabsContent value="reports" className="mt-0 h-full" forceMount>
+              <ReportSettings />
             </TabsContent>
+          </AnimatedContent>
         </div>
       </Tabs>
     </div>

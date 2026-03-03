@@ -1,5 +1,7 @@
 'use client';
 
+import { SplitText } from '@/components/ui/split-text';
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
@@ -29,7 +31,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <SplitText text="Dashboard" as="h1" className="text-3xl font-bold tracking-tight" />
         <Button 
           variant="ghost" 
           size="sm" 

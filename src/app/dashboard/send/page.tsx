@@ -4,6 +4,8 @@ import { useHydrated } from '@/hooks/use-hydrated';
 import { SendPageSkeleton } from '@/components/send/send-page-skeleton';
 
 import { useState, useEffect } from 'react';
+import { SplitText } from '@/components/ui/split-text';
+import { AnimatedContent } from '@/components/ui/animated-content';
 import { useAppStore } from '@/lib/store';
 import { Template } from '@/lib/types';
 import { nanoid } from 'nanoid';
@@ -72,6 +74,22 @@ export default function SendPage() {
         }, 60000); // Check every minute
         return () => clearInterval(interval);
     }, [cleanupLogs]);
+
+    // Safety guard: reset stale sending state on mount (e.g. after forced close / power loss)
+    useEffect(() => {
+        if (sendingStatus.isSending) {
+            setSendingStatus({
+                isSending: false,
+                statusMessage: null,
+                totalContacts: 0,
+                currentContactIndex: 0,
+                progress: 0,
+                failedContacts: [],
+                stoppedByUser: false,
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const {
         activeSchedules,
@@ -264,7 +282,7 @@ export default function SendPage() {
             {/* Header Compact */}
             <div className="flex justify-between items-center mb-4 shrink-0">
                 <div>
-                    <h1 className="text-xl font-bold tracking-tight text-foreground">Nova Campanha</h1>
+                    <SplitText text="Nova Campanha" as="h1" className="text-xl font-bold tracking-tight text-foreground" />
                     <p className="text-muted-foreground text-xs">Command Center</p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -289,15 +307,7 @@ export default function SendPage() {
 
                         {/* Content Area with Animation */}
                         <div className="flex-1 overflow-y-auto p-6 relative">
-                            <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={currentStep}
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="h-full flex flex-col"
-                                >
+                            <AnimatedContent activeKey={currentStep} spring="snappy" className="h-full flex flex-col">
                                     {/* STEP 1: RECIPIENTS */}
                                     {currentStep === 1 && (
                                         <div className="max-w-xl mx-auto w-full space-y-6">
@@ -453,8 +463,7 @@ export default function SendPage() {
                                             </div>
                                         </div>
                                     )}
-                                </motion.div>
-                            </AnimatePresence>
+                            </AnimatedContent>
                         </div>
 
                         {/* Bottom Navigation Bar */}
