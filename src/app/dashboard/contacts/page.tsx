@@ -1,5 +1,8 @@
 'use client';
 
+import { SplitText } from '@/components/ui/split-text';
+import { AnimatedContent } from '@/components/ui/animated-content';
+
 import { useState, useEffect } from 'react';
 import { toast } from "sonner";
 import { useAppStore, Contact, Group } from '@/lib/store';
@@ -30,6 +33,7 @@ export default function ContactsPage() {
    const [newContactNumber, setNewContactNumber] = useState('');
    const [newContactGroupId, setNewContactGroupId] = useState('default');
    const [isAddOpen, setIsAddOpen] = useState(false);
+   const [activeTab, setActiveTab] = useState('contacts');
 
    const [newGroupName, setNewGroupName] = useState('');
    const [isGroupOpen, setIsGroupOpen] = useState(false);
@@ -139,13 +143,13 @@ export default function ContactsPage() {
    return (
       <div className="flex flex-col h-[calc(100vh-2rem)] -m-6 p-6 space-y-4 overflow-hidden">
          <div className="flex justify-between items-center shrink-0">
-            <h1 className="text-xl font-bold tracking-tight">Contatos & Grupos</h1>
+            <SplitText text="Contatos & Grupos" as="h1" className="text-xl font-bold tracking-tight" />
             <div className="text-sm text-muted-foreground">
                Total: {contacts.length}
             </div>
          </div>
 
-         <Tabs defaultValue="contacts" className="flex-1 flex flex-col min-h-0">
+         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <div className="flex justify-between items-center mb-4 shrink-0">
                <TabsList>
                   <TabsTrigger value="contacts">Todos os Contatos</TabsTrigger>
@@ -210,7 +214,8 @@ export default function ContactsPage() {
                </div>
             </div>
 
-            <TabsContent value="contacts" className="flex-1 flex flex-col min-h-0 data-[state=inactive]:hidden border rounded-lg bg-white overflow-hidden">
+            <AnimatedContent activeKey={activeTab} spring="snappy" direction="horizontal" offset={20}>
+             <TabsContent value="contacts" className="flex-1 flex flex-col min-h-0 data-[state=inactive]:hidden border rounded-lg bg-white overflow-hidden" forceMount>
                <ValidContactTable contacts={contacts} onDelete={deleteContact} />
             </TabsContent>
 
@@ -282,8 +287,9 @@ export default function ContactsPage() {
                      </AlertDialogFooter>
                   </AlertDialogContent>
                </AlertDialog>
-            </TabsContent>
-         </Tabs>
+             </TabsContent>
+            </AnimatedContent>
+          </Tabs>
 
          <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
             <DialogContent className="sm:max-w-[425px]">

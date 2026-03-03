@@ -1,5 +1,7 @@
 'use client';
 
+import { SplitText } from '@/components/ui/split-text';
+
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
@@ -126,7 +128,7 @@ export default function TemplatesPage() {
             {/* Header Section */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold tracking-tight text-foreground">Modelos de Mensagem</h1>
+                    <SplitText text="Modelos de Mensagem" as="h1" className="text-2xl font-bold tracking-tight text-foreground" />
                     <Button 
                         onClick={handleOpenCreate} 
                         className="fixed bottom-8 right-8 z-50 h-14 px-8 rounded-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 font-semibold text-base"

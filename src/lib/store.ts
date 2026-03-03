@@ -166,6 +166,11 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'whatsapp-sender-storage',
+      partialize: (state) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { sendingStatus, logs, ...rest } = state;
+        return rest;
+      },
     }
   )
 );
