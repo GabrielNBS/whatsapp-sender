@@ -59,6 +59,10 @@ export interface IMetricsService {
   getRealtimeMetrics(): Promise<RealtimeMetrics>;
   getEngagementStats(): Promise<EngagementStats>;
   getTodayStats(): Promise<{ sent: number; read: number }>;
+  getDashboardChartsData(): Promise<{
+    funnel: Array<{ name: string; value: number }>;
+    trends: Array<{ date: string; sent: number; read: number; responses: number }>;
+  }>;
 }
 
 // ============================================
@@ -164,6 +168,70 @@ export class MetricsService implements IMetricsService {
     ).length;
     
     return { sent: sentToday, read: readToday };
+  }
+
+  /**
+   * Obtém dados formatados para os gráficos visuais (Recharts)
+   */
+  async getDashboardChartsData(): Promise<{
+    funnel: Array<{ name: string; value: number }>;
+    trends: Array<{ date: string; sent: number; read: number; responses: number }>;
+  }> {
+    // 1. Funil de Engajamento Global
+    const analytics = await prisma.contactAnalytics.findMany();
+    const validContacts = analytics.length;
+    const totalSent = analytics.reduce((sum: number, a: any) => sum + a.sentCount, 0);
+    const totalReads = analytics.reduce((sum: number, a: any) => sum + a.readCount, 0);
+    
+    // Fallback: se houver mais leituras que envios (bugs antigos), cap
+    const normalizedReads = Math.min(totalReads, totalSent);
+    
+    const funnel = [
+      { name: 'Contatos Válidos', value: validContacts },
+      { name: 'Enviadas', value: totalSent },
+      { name: 'Lidas', value: normalizedReads }
+    ];
+
+    // 2. Tendência dos últimos 7 dias (Trends) baseada nas Campanhas (History)
+    // Extraímos das campanhas recentes para ter um baseline de dados reais.
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 6);
+    last7Days.setHours(0, 0, 0, 0);
+
+    const campaigns = await prisma.campaign.findMany({
+      where: { startedAt: { gte: last7Days } },
+      orderBy: { startedAt: 'asc' }
+    });
+
+    // Agrupar por dia
+    const trendsMap = new Map<string, { sent: number; read: number; responses: number }>();
+    
+    // Inicializa últimos 7 dias com 0 para o gráfico não quebrar
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(last7Days);
+      d.setDate(d.getDate() + i);
+      const dayStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      trendsMap.set(dayStr, { sent: 0, read: 0, responses: 0 });
+    }
+
+    campaigns.forEach((camp: any) => {
+      const dayStr = camp.startedAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+      const current = trendsMap.get(dayStr);
+      if (current) {
+        current.sent += camp.sentCount;
+        current.read += camp.readCount;
+        current.responses += camp.responseCount;
+      }
+    });
+
+    const trends = Array.from(trendsMap.entries()).map(([date, data]) => ({
+      date,
+      sent: data.sent,
+      read: data.read,
+      responses: data.responses
+    }));
+
+    return { funnel, trends };
   }
 
   /**

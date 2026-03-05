@@ -21,10 +21,14 @@ import {
 import Link from 'next/link';
 import { MetricsCard, formatters } from '@/components/dashboard/metrics-card';
 import { useRealtimeMetrics } from '@/hooks/use-realtime-metrics';
+import { useDashboardCharts } from '@/hooks/use-dashboard-charts';
+import { EngagementFunnelChart } from '@/components/analytics/engagement-funnel';
+import { EngagementTrendsChart } from '@/components/analytics/engagement-trends';
 
 export default function DashboardPage() {
   const { contacts, groups } = useAppStore();
   const { metrics, isLoading, refresh } = useRealtimeMetrics({ pollingInterval: 3000 });
+  const { data: chartsData, isLoading: isChartsLoading } = useDashboardCharts();
 
   const isConnected = metrics?.connection.status === 'connected';
 
@@ -147,6 +151,14 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Gráficos Visuais (Recharts) */}
+      {!isChartsLoading && chartsData && (
+        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
+          <EngagementTrendsChart data={chartsData.trends} />
+          <EngagementFunnelChart data={chartsData.funnel} />
+        </div>
+      )}
 
       <div className="mt-8 bg-card shadow-md">
         <Card className="bg-card text-card-foreground border-none">

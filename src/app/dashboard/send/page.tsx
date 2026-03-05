@@ -525,7 +525,9 @@ export default function SendPage() {
 
                                         {/* Title + status */}
                                         <div className="space-y-1">
-                                            <h3 className="text-xl font-bold text-gray-800">Enviando mensagens...</h3>
+                                            <h3 className="text-xl font-bold text-gray-800">
+                                                {sendingStatus.isPaused ? 'Envio Pausado (Desconectado)' : 'Enviando mensagens...'}
+                                            </h3>
                                             <p className="text-sm text-gray-500">
                                                 {sendingStatus.statusMessage || 'Transmissão em andamento. Não feche esta janela.'}
                                             </p>
@@ -536,12 +538,12 @@ export default function SendPage() {
                                             <div className="w-full space-y-3">
                                                 <div className="flex items-baseline justify-center gap-2">
                                                     <span className="text-5xl font-extrabold" style={{ background: 'linear-gradient(135deg, #16a34a, #4ade80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                                                        {(sendingStatus.currentContactIndex ?? 0) + 1}
+                                                        {sendingStatus.sentCount + sendingStatus.failedCount}
                                                     </span>
                                                     <span className="text-xl text-gray-400">/ {sendingStatus.totalContacts}</span>
                                                 </div>
                                                 <p className="text-xs text-gray-400">
-                                                    {sendingStatus.totalContacts - ((sendingStatus.currentContactIndex ?? 0) + 1)} restantes
+                                                    {sendingStatus.totalContacts - (sendingStatus.sentCount + sendingStatus.failedCount)} restantes
                                                 </p>
                                                 {/* Progress bar */}
                                                 <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -549,7 +551,7 @@ export default function SendPage() {
                                                         className="h-full rounded-full"
                                                         style={{ background: 'linear-gradient(90deg, #16a34a, #4ade80)' }}
                                                         initial={{ width: 0 }}
-                                                        animate={{ width: `${Math.round((((sendingStatus.currentContactIndex ?? 0) + 1) / sendingStatus.totalContacts) * 100)}%` }}
+                                                        animate={{ width: `${Math.round(((sendingStatus.sentCount + sendingStatus.failedCount) / sendingStatus.totalContacts) * 100)}%` }}
                                                         transition={{ duration: 0.5, ease: 'easeOut' }}
                                                     />
                                                 </div>
@@ -615,64 +617,111 @@ export default function SendPage() {
                                     >
                                         {/* Icon: 3 states */}
                                         {sendingStatus.stoppedByUser ? (
-                                            // Stopped manually — gray/slate
-                                            <div className="w-20 h-20 rounded-full flex items-center justify-center bg-slate-100 border-4 border-slate-200">
-                                                <svg viewBox="0 0 40 40" fill="none" className="w-9 h-9">
-                                                    <rect x="11" y="11" width="7" height="18" rx="2" fill="#64748b"/>
-                                                    <rect x="22" y="11" width="7" height="18" rx="2" fill="#64748b"/>
+                                            // Stopped manually — gray/slate with pulse
+                                            <motion.div 
+                                                className="w-24 h-24 rounded-full flex items-center justify-center bg-slate-100 border-4 border-slate-200 shadow-inner"
+                                                initial={{ scale: 0.8, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                                            >
+                                                <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
+                                                    <rect x="11" y="10" width="6" height="20" rx="3" fill="#64748b"/>
+                                                    <rect x="23" y="10" width="6" height="20" rx="3" fill="#64748b"/>
                                                 </svg>
-                                            </div>
+                                            </motion.div>
                                         ) : sendingStatus.failedContacts.length === 0 ? (
-                                            // Full success — green
-                                            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #16a34a, #4ade80)' }}>
-                                                <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
-                                                    <path d="M8 20 L17 29 L32 12" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                            // Full success — green with check draw
+                                            <motion.div 
+                                                className="w-24 h-24 rounded-full flex items-center justify-center shadow-lg shadow-green-500/20" 
+                                                style={{ background: 'linear-gradient(135deg, #16a34a, #4ade80)' }}
+                                                initial={{ scale: 0.8, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                                            >
+                                                <svg viewBox="0 0 40 40" fill="none" className="w-12 h-12">
+                                                    <motion.path 
+                                                        d="M10 21 L16 27 L30 13" 
+                                                        stroke="white" 
+                                                        strokeWidth="4" 
+                                                        strokeLinecap="round" 
+                                                        strokeLinejoin="round"
+                                                        initial={{ pathLength: 0 }}
+                                                        animate={{ pathLength: 1 }}
+                                                        transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                                                    />
                                                 </svg>
-                                            </div>
+                                            </motion.div>
                                         ) : (
-                                            // Partial — amber
-                                            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}>
-                                                <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
-                                                    <path d="M20 12 L20 22" stroke="white" strokeWidth="3.5" strokeLinecap="round"/>
-                                                    <circle cx="20" cy="29" r="2" fill="white"/>
+                                            // Partial — amber with bounce exclamation
+                                            <motion.div 
+                                                className="w-24 h-24 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/20" 
+                                                style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)' }}
+                                                initial={{ scale: 0.8, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                                            >
+                                                <svg viewBox="0 0 40 40" fill="none" className="w-12 h-12">
+                                                    <motion.path 
+                                                        d="M20 10 L20 24" 
+                                                        stroke="white" 
+                                                        strokeWidth="4" 
+                                                        strokeLinecap="round"
+                                                        initial={{ pathLength: 0 }}
+                                                        animate={{ pathLength: 1 }}
+                                                        transition={{ duration: 0.4, delay: 0.2 }}
+                                                    />
+                                                    <motion.circle 
+                                                        cx="20" cy="31" r="2.5" 
+                                                        fill="white"
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        transition={{ type: "spring", stiffness: 400, damping: 10, delay: 0.5 }}
+                                                    />
                                                 </svg>
-                                            </div>
+                                            </motion.div>
                                         )}
 
-                                        {/* Title + subtitle: 3 states + plural/singular */}
                                         {(() => {
-                                            const sent = sendingStatus.totalContacts - sendingStatus.failedContacts.length;
-                                            const failed = sendingStatus.failedContacts.length;
-                                            const msgWord = (n: number) => n === 1 ? 'mensagem' : 'mensagens';
-                                            if (sendingStatus.stoppedByUser) {
-                                                return (
-                                                    <div className="space-y-1">
-                                                        <h3 className="text-2xl font-extrabold text-slate-700">Envio Interrompido</h3>
-                                                        <p className="text-sm text-slate-500">
-                                                            {sent === 0
-                                                                ? 'Nenhuma mensagem foi enviada.'
-                                                                : `${sent} ${msgWord(sent)} ${sent === 1 ? 'entregue' : 'entregues'} antes da parada.`
-                                                            }
-                                                        </p>
-                                                    </div>
-                                                );
-                                            }
-                                            if (failed === 0) {
-                                                return (
-                                                    <div className="space-y-1">
-                                                        <h3 className="text-2xl font-extrabold text-gray-800">Transmissão Concluída!</h3>
-                                                        <p className="text-sm text-gray-500">
-                                                            {sendingStatus.totalContacts} {msgWord(sendingStatus.totalContacts)} {sendingStatus.totalContacts === 1 ? 'entregue' : 'entregues'} com sucesso.
-                                                        </p>
-                                                    </div>
-                                                );
-                                            }
+                                            const sent = sendingStatus.sentCount;
+                                            const failed = sendingStatus.failedCount;
+                                            const total = sent + failed;
+                                            const successRate = total > 0 ? Math.round((sent / total) * 100) : 0;
+
+                                            const getHeaderColors = () => {
+                                                if (sendingStatus.stoppedByUser) return { title: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-100', text: 'text-slate-600' };
+                                                if (failed === 0) return { title: 'text-gray-800', bg: 'bg-green-50', border: 'border-green-100', text: 'text-green-700' };
+                                                return { title: 'text-gray-800', bg: 'bg-amber-50', border: 'border-amber-100', text: 'text-amber-700' };
+                                            };
+                                            const colors = getHeaderColors();
+
                                             return (
-                                                <div className="space-y-1">
-                                                    <h3 className="text-2xl font-extrabold text-gray-800">Transmissão Parcial</h3>
-                                                    <p className="text-sm text-gray-500">
-                                                        {sent} {msgWord(sent)} {sent === 1 ? 'entregue' : 'entregues'}, {failed} com {failed === 1 ? 'falha' : 'falhas'}.
-                                                    </p>
+                                                <div className="w-full space-y-5">
+                                                    <div className="space-y-1">
+                                                        <h3 className={`text-2xl font-extrabold ${colors.title}`}>
+                                                            {sendingStatus.stoppedByUser ? 'Envio Interrompido' : failed === 0 ? 'Transmissão Concluída!' : 'Transmissão Parcial'}
+                                                        </h3>
+                                                        <p className="text-sm text-gray-500">
+                                                            {sendingStatus.stoppedByUser 
+                                                                ? 'O envio foi parado manualmente pelo usuário.' 
+                                                                : 'O processamento da lista de contatos chegou ao fim.'}
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Metrics Grid */}
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        <div className={`flex flex-col items-center justify-center p-3 rounded-lg border ${colors.border} ${colors.bg}`}>
+                                                            <span className={`text-2xl font-bold ${colors.text}`}>{sent}</span>
+                                                            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mt-0.5">Entregues</span>
+                                                        </div>
+                                                        <div className={`flex flex-col items-center justify-center p-3 rounded-lg border ${colors.border} ${colors.bg}`}>
+                                                            <span className={`text-2xl font-bold ${sendingStatus.stoppedByUser ? colors.text : failed > 0 ? 'text-orange-600' : 'text-gray-400'}`}>{failed}</span>
+                                                            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mt-0.5">Falhas</span>
+                                                        </div>
+                                                        <div className={`flex flex-col items-center justify-center p-3 rounded-lg border ${colors.border} ${colors.bg}`}>
+                                                            <span className={`text-2xl font-bold ${colors.text}`}>{successRate}%</span>
+                                                            <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 mt-0.5">Sucesso</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             );
                                         })()}

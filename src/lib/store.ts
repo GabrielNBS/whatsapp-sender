@@ -31,6 +31,9 @@ interface AppState {
     statusMessage: string | null;
     failedContacts: { name: string; number: string }[];
     stoppedByUser: boolean;
+    isPaused: boolean;
+    sentCount: number;
+    failedCount: number;
   };
   setSendingStatus: (status: Partial<AppState['sendingStatus']>) => void;
 
@@ -61,6 +64,9 @@ export const useAppStore = create<AppState>()(
         statusMessage: null,
         failedContacts: [],
         stoppedByUser: false,
+        isPaused: false,
+        sentCount: 0,
+        failedCount: 0,
       },
 
       history: [],

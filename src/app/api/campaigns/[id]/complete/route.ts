@@ -36,7 +36,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       console.log('[API] Sending immediate report for campaign:', id);
       
       const reportMessage = reportService.formatImmediateReport(campaign);
-      const result = await reportService.sendReportToAllRecipients(reportMessage);
+      const chartUrl = reportService.getImmediateChartUrl(campaign);
+      const result = await reportService.sendReportToAllRecipients(reportMessage, chartUrl);
       
       if (result.success || result.sentTo.length > 0) {
         await campaignService.markImmediateReportSent(id);

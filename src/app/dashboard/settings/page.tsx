@@ -8,7 +8,7 @@ import { Settings, BarChart3, Command } from "lucide-react";
 import { ReportSettings } from "@/components/settings/report-settings";
 import { GeneralSettings } from "@/components/settings/general-settings";
 import { SnippetSettings } from "@/components/settings/snippet-settings";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
@@ -45,17 +45,11 @@ export default function SettingsPage() {
 
         <div className="flex-1 overflow-y-auto pr-4 -mr-4">
           <AnimatedContent activeKey={activeTab} spring="gentle" direction="vertical" offset={16}>
-            <TabsContent value="general" className="mt-0 h-full" forceMount>
-              <GeneralSettings />
-            </TabsContent>
-            
-            <TabsContent value="snippets" className="mt-0 h-full" forceMount>
-              <SnippetSettings />
-            </TabsContent>
-            
-            <TabsContent value="reports" className="mt-0 h-full" forceMount>
-              <ReportSettings />
-            </TabsContent>
+            <div className="mt-0 h-full">
+                {activeTab === 'general' && <GeneralSettings />}
+                {activeTab === 'snippets' && <SnippetSettings />}
+                {activeTab === 'reports' && <ReportSettings />}
+            </div>
           </AnimatedContent>
         </div>
       </Tabs>
