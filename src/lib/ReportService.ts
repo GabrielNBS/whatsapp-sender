@@ -6,6 +6,7 @@
  */
 
 import { PrismaClient, Campaign, ReportRecipient, ReportConfig } from '@prisma/client';
+import { getWhatsAppInstance } from './whatsapp';
 
 // ============================================
 // INTERFACES
@@ -14,7 +15,9 @@ import { PrismaClient, Campaign, ReportRecipient, ReportConfig } from '@prisma/c
 export interface IReportService {
   formatImmediateReport(campaign: Campaign): string;
   formatEngagementReport(campaign: Campaign): string;
-  sendReportToAllRecipients(message: string): Promise<SendReportResult>;
+  getImmediateChartUrl(campaign: Campaign): string;
+  getEngagementChartUrl(campaign: Campaign): string;
+  sendReportToAllRecipients(message: string, chartUrl?: string): Promise<SendReportResult>;
   getConfig(): Promise<ReportConfigWithRecipients | null>;
   getActiveRecipients(): Promise<ReportRecipient[]>;
 }
@@ -150,6 +153,47 @@ _Relatório gerado automaticamente_
   }
 
   /**
+   * Helper param builder for QuickChart.io visual charts
+   */
+  getImmediateChartUrl(campaign: Campaign): string {
+    const config = {
+      type: 'doughnut',
+      data: {
+        labels: ['Enviados', 'Falhas'],
+        datasets: [{
+          data: [campaign.sentCount, campaign.failedCount],
+          backgroundColor: ['#10b981', '#ef4444']
+        }]
+      },
+      options: { 
+        plugins: { 
+          doughnutlabel: { labels: [{ text: campaign.sentCount.toString(), font: { size: 20 } }, { text: 'Enviados' }]} 
+        } 
+      }
+    };
+    return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=400&h=400`;
+  }
+
+  getEngagementChartUrl(campaign: Campaign): string {
+    const config = {
+      type: 'bar',
+      data: {
+        labels: ['Enviados', 'Lidos', 'Respostas'],
+        datasets: [{
+          label: 'Conversão',
+          data: [campaign.sentCount, campaign.readCount, campaign.responseCount],
+          backgroundColor: ['#3b82f6', '#10b981', '#f59e0b']
+        }]
+      },
+      options: {
+        legend: { display: false },
+        title: { display: true, text: 'Funil de Engajamento' }
+      }
+    };
+    return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=500&h=300`;
+  }
+
+  /**
    * Get report configuration with recipients
    */
   async getConfig(): Promise<ReportConfigWithRecipients | null> {
@@ -171,7 +215,7 @@ _Relatório gerado automaticamente_
   /**
    * Send report message to all active recipients
    */
-  async sendReportToAllRecipients(message: string): Promise<SendReportResult> {
+  async sendReportToAllRecipients(message: string, chartUrl?: string): Promise<SendReportResult> {
     const recipients = await this.getActiveRecipients();
     
     if (recipients.length === 0) {
@@ -186,26 +230,38 @@ _Relatório gerado automaticamente_
       try {
         console.log(`[ReportService] Sending report to ${recipient.name} (${recipient.phone})`);
         
-        // Use the internal API to send message
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            number: recipient.phone,
-            message: message,
-          }),
-        });
-
-        if (response.ok) {
-          sentTo.push(recipient.phone);
-          console.log(`[ReportService] ✅ Report sent to ${recipient.name}`);
-        } else {
-          failed.push(recipient.phone);
-          console.error(`[ReportService] ❌ Failed to send to ${recipient.name}`);
+        let mediaData;
+        if (chartUrl) {
+          try {
+            const chartRes = await fetch(chartUrl);
+            if (chartRes.ok) {
+              const arrayBuffer = await chartRes.arrayBuffer();
+              const buffer = Buffer.from(arrayBuffer);
+              mediaData = {
+                mimetype: 'image/png',
+                data: buffer.toString('base64'),
+                filename: 'report-chart.png'
+              };
+            }
+          } catch (e) {
+            console.error('[ReportService] Error fetching chart image:', e);
+          }
         }
 
+        const whatsapp = getWhatsAppInstance();
+        
+        if (!whatsapp || !whatsapp.getStatus().isAuthenticated) {
+          console.error('[ReportService] WhatsApp not connected, cannot send report');
+          failed.push(recipient.phone);
+          continue;
+        }
+
+        await whatsapp.sendMessage(recipient.phone, message, mediaData);
+        sentTo.push(recipient.phone);
+        console.log(`[ReportService] ✅ Report sent to ${recipient.name}`);
+
         // Small delay between sends to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 3000));
         
       } catch (error) {
         console.error(`[ReportService] Error sending to ${recipient.name}:`, error);
