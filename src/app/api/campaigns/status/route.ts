@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const logOffset = parseInt(searchParams.get('logOffset') || '0', 10);
     
-    const status = getQueueService().getStatus(logOffset);
+    const status = await getQueueService().getStatus(logOffset);
     return NextResponse.json(status);
   } catch (error) {
     console.error('[API] Error fetching queue status:', error);

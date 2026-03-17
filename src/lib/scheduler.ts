@@ -1,89 +1,127 @@
-import cron from 'node-cron';
 import { prisma } from './db';
-import { calculateSafetyDelay } from './utils'; // Shared logic
+import { calculateSafetyDelay } from './utils';
 import whatsappService from './whatsapp';
+import { getCampaignService } from './CampaignService';
+import { getQueueService } from './QueueService';
 
 export function startScheduler() {
-    if ((global as any).isSchedulerRunning) {
+    const globalObj = global as unknown as { isSchedulerRunning?: boolean, wakeUpScheduler?: () => void };
+    if (globalObj.isSchedulerRunning) {
         return;
     }
-    (global as any).isSchedulerRunning = true;
+    globalObj.isSchedulerRunning = true;
 
-    console.log('[Scheduler] Service started.');
+    console.log('[Scheduler] Background Worker started.');
 
+    let workerTimeout: NodeJS.Timeout | null = null;
     let isProcessing = false;
 
-    cron.schedule('* * * * *', async () => {
-        if (isProcessing) {
-            console.log('[Scheduler] Previous job still running, skipping...');
-            return;
-        }
+    async function workerLoop() {
+        if (isProcessing) return;
         isProcessing = true;
-        
         try {
             const now = new Date();
-            const pendingMessages = await prisma.scheduledMessage.findMany({
+            
+            // Pega APENAS 1 mensagem pendente mais prioritária (horário vencido ou imediato)
+            const msg = await prisma.scheduledMessage.findFirst({
                 where: {
                     status: 'PENDING',
-                    scheduledFor: {
-                        lte: now,
-                        gte: new Date(now.getTime() - 60 * 60 * 1000) // Don't process if > 1h late (stale)
-                    }
+                    scheduledFor: { lte: now }
                 },
-                include: {
-                    template: true
-                }
+                orderBy: { scheduledFor: 'asc' },
+                include: { template: true }
             });
 
-            if (pendingMessages.length === 0) return;
-
-            console.log(`[Scheduler] Check at ${now.toISOString()}: Found ${pendingMessages.length} messages.`);
-
-            const status = whatsappService.getStatus();
-            if (!status.isReady) {
-                console.log(`[Scheduler] WhatsApp client not ready (Status: ${status.status} - Auth: ${status.isAuthenticated}). Skipping sending for now.`);
+            if (!msg) {
+                // Sem mensagens, repousa curto antes de buscar novamente
+                workerTimeout = setTimeout(workerLoop, 2000);
                 return;
             }
 
-            for (const msg of pendingMessages) {
-                const content = msg.template.content;
-                // Note: We don't replace here anymore, we let whatsappService handle it with pushname
-                
-                let mediaData = undefined;
-                if ((msg.template as any).media) {
-                    try {
-                        mediaData = JSON.parse((msg.template as any).media);
-                    } catch (e) {
-                        console.error('Failed to parse media for template', msg.templateId);
-                    }
-                }
-
-                try {
-                    console.log(`[Scheduler] Sending to ${msg.contactName} (${msg.contactPhone})`);
-                    await whatsappService.sendMessage(msg.contactPhone, content, mediaData, { fallbackName: msg.contactName });
-
-                    await prisma.scheduledMessage.update({
-                        where: { id: msg.id },
-                        data: { status: 'SENT' }
-                    });
-                } catch (err: any) {
-                    console.error(`[Scheduler] Failed to send to ${msg.contactName}`, err);
-                    await prisma.scheduledMessage.update({
-                        where: { id: msg.id },
-                        data: { status: 'FAILED' }
-                    });
-                }
-                
-                // Safety Delay: 15s to 30s
-                const delay = calculateSafetyDelay();
-                console.log(`[Scheduler] Waiting ${delay/1000}s before next message...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
+            const queueLogs = getQueueService();
+            const status = whatsappService.getStatus();
+            if (!status.isReady) {
+                console.log(`[Scheduler] WhatsApp not ready (Status: ${status.status} - Auth: ${status.isAuthenticated}). Sleeping 10s...`);
+                queueLogs.pushLog('WhatsApp desconectado. Aguardando reconexão...', 'warning');
+                workerTimeout = setTimeout(workerLoop, 10000);
+                return;
             }
 
+            let success = false;
+            try {
+                const mediaData = msg.template.media ? JSON.parse(msg.template.media as string) : undefined;
+                await whatsappService.sendMessage(msg.contactPhone, msg.template.content, mediaData, { fallbackName: msg.contactName });
+                success = true;
+                queueLogs.pushLog(`Enviado para ${msg.contactName}`, 'success');
+            } catch (err: unknown) {
+                console.error(`[Scheduler] Error sending to ${msg.contactPhone}:`, err);
+                const errorMessage = err instanceof Error ? err.message : String(err);
+                queueLogs.pushLog(`Erro ao enviar para ${msg.contactName}: ${errorMessage}`, 'error');
+            }
+
+            // Atualiza o DB
+            await prisma.scheduledMessage.update({
+                where: { id: msg.id },
+                data: { status: success ? 'SENT' : 'FAILED' }
+            });
+
+            // Atualiza campanha
+            if (msg.batchId) {
+                const campaignService = getCampaignService();
+                if (success) {
+                   await prisma.campaign.update({ where: { id: msg.batchId }, data: { sentCount: { increment: 1 } } });
+                } else {
+                   await prisma.campaign.update({ where: { id: msg.batchId }, data: { failedCount: { increment: 1 } } });
+                }
+                
+                // Checa se a campanha terminou
+                const pendingLeft = await prisma.scheduledMessage.count({
+                   where: { batchId: msg.batchId, status: 'PENDING' }
+                });
+
+                if (pendingLeft === 0) {
+                   const tmpCamp = await prisma.campaign.findUnique({ where: { id: msg.batchId }});
+                   if (!tmpCamp) return;
+
+                   const camp = await campaignService.completeCampaign(msg.batchId, {
+                       sentCount: tmpCamp.sentCount,
+                       failedCount: tmpCamp.failedCount
+                   });
+                   // The frontend use-send-polling will emit "Transmissão finalizada!" automatically when it detects the queue has ended.
+                   
+                   // Dispara report associado (DIP resolvido no ReportService)
+                   const { getReportService } = await import('./ReportService');
+                   const reportService = getReportService();
+                   const config = await reportService.getConfig();
+                   if (config?.sendImmediate && camp) {
+                       reportService.setSender(whatsappService);
+                       const reportMessage = reportService.formatImmediateReport(camp);
+                       const chartUrl = reportService.getImmediateChartUrl(camp);
+                       const result = await reportService.sendReportToAllRecipients(reportMessage, chartUrl);
+                       if (result.success || result.sentTo.length > 0) {
+                           await campaignService.markImmediateReportSent(camp.id);
+                       }
+                   }
+                }
+            }
+            
+            // Realiza safety delay independente da cron original. E prossegue a fila
+            const delay = calculateSafetyDelay();
+            workerTimeout = setTimeout(workerLoop, delay);
+
         } catch (error) {
-            console.error('[Scheduler] Error processing schedule:', error);
+            console.error('[Scheduler] Worker loop error:', error);
+            workerTimeout = setTimeout(workerLoop, 5000);
         } finally {
             isProcessing = false;
         }
-    });
+    }
+
+    globalObj.wakeUpScheduler = () => {
+        if (workerTimeout) clearTimeout(workerTimeout);
+        if (!isProcessing) workerLoop();
+    };
+
+    // Dispara a rotina inicial
+    workerLoop();
 }

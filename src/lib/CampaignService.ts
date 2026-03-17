@@ -17,6 +17,7 @@ export interface ICampaignService {
   updateCampaignMetrics(campaignId: string, metrics: Partial<CampaignMetrics>): Promise<Campaign>;
   getCampaign(campaignId: string): Promise<Campaign | null>;
   getRecentCampaigns(limit?: number): Promise<Campaign[]>;
+  getCampaignHistory(limit?: number): Promise<CampaignHistoryItem[]>;
   getPendingEngagementReports(): Promise<Campaign[]>;
 }
 
@@ -36,6 +37,19 @@ export interface CampaignMetrics {
   failedCount: number;
   readCount: number;
   responseCount: number;
+}
+
+export interface FailedMessageDetail {
+  contactName: string;
+  contactPhone: string;
+  templateId: string;
+}
+
+export interface CampaignHistoryItem extends Campaign {
+  failedDetails: FailedMessageDetail[];
+  templateId?: string;
+  templateTitle?: string;
+  templateContent?: string;
 }
 
 // ============================================
@@ -110,6 +124,50 @@ export class CampaignService implements ICampaignService {
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
+  }
+
+  /**
+   * Get full campaign history with failure details
+   */
+  async getCampaignHistory(limit: number = 50): Promise<CampaignHistoryItem[]> {
+    const campaigns = await this.prisma.campaign.findMany({
+      orderBy: { startedAt: 'desc' },
+      take: limit,
+    });
+
+    // For each campaign, fetch failed messages to allow triage
+    const history = await Promise.all(
+      campaigns.map(async (camp) => {
+        let failedMessages: FailedMessageDetail[] = [];
+        if (camp.failedCount > 0) {
+           const dbFailed = await this.prisma.scheduledMessage.findMany({
+             where: { batchId: camp.id, status: 'FAILED' },
+             select: { contactName: true, contactPhone: true, templateId: true }
+           });
+           failedMessages = dbFailed as FailedMessageDetail[];
+        }
+        
+        // Try to get the template used from the first message of this batch
+        let templateData = null;
+        const firstMsg = await this.prisma.scheduledMessage.findFirst({
+            where: { batchId: camp.id },
+            include: { template: true }
+        });
+        if (firstMsg && firstMsg.template) {
+            templateData = firstMsg.template;
+        }
+
+        return {
+          ...camp,
+          failedDetails: failedMessages,
+          templateId: templateData?.id,
+          templateTitle: templateData?.title,
+          templateContent: templateData?.content,
+        };
+      })
+    );
+    
+    return history;
   }
 
   /**

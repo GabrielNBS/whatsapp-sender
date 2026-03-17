@@ -42,8 +42,6 @@ export function GroupManagementDialog({ group, isOpen, onClose }: GroupManagemen
 
   if (!group) return null;
 
-  const dialogTitleId = `group-dialog-title-${group.id}`;
-
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -51,7 +49,7 @@ export function GroupManagementDialog({ group, isOpen, onClose }: GroupManagemen
           className="max-w-3xl max-h-[80vh] flex flex-col"
         >
           <DialogHeader>
-            <DialogTitle id={dialogTitleId}>
+            <DialogTitle>
               Gerenciar Grupo: {group.name}
             </DialogTitle>
             <DialogDescription>
@@ -65,7 +63,7 @@ export function GroupManagementDialog({ group, isOpen, onClose }: GroupManagemen
                 Nenhum contato neste grupo.
               </div>
             ) : (
-              <Table aria-labelledby={dialogTitleId}>
+              <Table aria-label={`Contatos do grupo ${group.name}`}>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
