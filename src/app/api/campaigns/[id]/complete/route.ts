@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCampaignService } from '@/lib/CampaignService';
 import { getReportService } from '@/lib/ReportService';
+import { getWhatsAppInstance } from '@/lib/whatsapp';
 
 
 interface RouteParams {
@@ -37,6 +38,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       
       const reportMessage = reportService.formatImmediateReport(campaign);
       const chartUrl = reportService.getImmediateChartUrl(campaign);
+
+      const whatsapp = getWhatsAppInstance();
+      if (whatsapp) {
+        reportService.setSender(whatsapp);
+      }
+
       const result = await reportService.sendReportToAllRecipients(reportMessage, chartUrl);
       
       if (result.success || result.sentTo.length > 0) {

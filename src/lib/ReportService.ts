@@ -6,7 +6,7 @@
  */
 
 import { PrismaClient, Campaign, ReportRecipient, ReportConfig } from '@prisma/client';
-import { getWhatsAppInstance } from './whatsapp';
+import { IMessageSender } from './types';
 
 // ============================================
 // INTERFACES
@@ -70,7 +70,17 @@ function calculateSpeed(totalSent: number, startedAt: Date, completedAt: Date | 
 // ============================================
 
 export class ReportService implements IReportService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(
+    private prisma: PrismaClient,
+    private messageSender?: IMessageSender
+  ) {}
+
+  /**
+   * Set the message sender instance
+   */
+  setSender(sender: IMessageSender) {
+    this.messageSender = sender;
+  }
 
   /**
    * Format immediate report (sent right after campaign completion)
@@ -248,15 +258,13 @@ _Relatório gerado automaticamente_
           }
         }
 
-        const whatsapp = getWhatsAppInstance();
-        
-        if (!whatsapp || !whatsapp.getStatus().isAuthenticated) {
-          console.error('[ReportService] WhatsApp not connected, cannot send report');
+        if (!this.messageSender) {
+          console.error('[ReportService] Message sender not configured, cannot send report');
           failed.push(recipient.phone);
           continue;
         }
 
-        await whatsapp.sendMessage(recipient.phone, message, mediaData);
+        await this.messageSender.sendMessage(recipient.phone, message, mediaData);
         sentTo.push(recipient.phone);
         console.log(`[ReportService] ✅ Report sent to ${recipient.name}`);
 

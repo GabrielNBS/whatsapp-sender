@@ -61,3 +61,7 @@ export interface Campaign {
     };
     type: 'INSTANT' | 'SCHEDULED';
 }
+
+export interface IMessageSender {
+    sendMessage(to: string, message: string, media?: { mimetype: string; data: string; filename?: string }): Promise<unknown>;
+}

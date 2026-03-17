@@ -21,17 +21,18 @@ export async function POST(request: NextRequest) {
     const queueService = getQueueService();
     
     // Inicia a fila no background
-    await queueService.startCampaign(campaign.id, recipients, message, media);
+    await queueService.startCampaign(campaign.id, campaign.name, recipients, message, media);
 
     return NextResponse.json({ 
       success: true, 
       campaignId: campaign.id 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API] Error starting campaign:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: error.message || 'Falha ao iniciar campanha' },
+      { error: errorMessage || 'Falha ao iniciar campanha' },
       { status: 500 }
     );
   }

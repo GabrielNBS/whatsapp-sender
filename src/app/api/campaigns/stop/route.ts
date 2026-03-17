@@ -3,7 +3,7 @@ import { getQueueService } from '@/lib/QueueService';
 
 export async function POST() {
   try {
-    getQueueService().stopCampaign();
+    await getQueueService().stopCampaign();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[API] Error stopping campaign:', error);

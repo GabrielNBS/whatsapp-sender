@@ -75,21 +75,9 @@ export default function SendPage() {
         return () => clearInterval(interval);
     }, [cleanupLogs]);
 
-    // Safety guard: reset stale sending state on mount (e.g. after forced close / power loss)
-    useEffect(() => {
-        if (sendingStatus.isSending) {
-            setSendingStatus({
-                isSending: false,
-                statusMessage: null,
-                totalContacts: 0,
-                currentContactIndex: 0,
-                progress: 0,
-                failedContacts: [],
-                stoppedByUser: false,
-            });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+
+
+
 
     const {
         activeSchedules,
@@ -775,7 +763,7 @@ export default function SendPage() {
                     exit={{ x: '100%', opacity: 0 }}
                     transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
                     style={{ width: '300px', minWidth: '300px' }}
-                    className="flex flex-col gap-4 min-h-0 overflow-hidden shrink-0">
+                    className="flex flex-col gap-4 min-h-0 shrink-0">
                     {/* Live Logs Panel - Fills remaining height */}
                     <div className="bg-card rounded-xl shadow-lg border border-border flex flex-col min-h-0 flex-1 overflow-hidden">
                         <div className="p-4 border-b border-border flex justify-between items-center bg-muted/50">

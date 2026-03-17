@@ -4,6 +4,7 @@ import Link from 'next/link';
 import DeveloperTag from '@/components/developer-tag';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
+
 import {
   LayoutDashboard,
   Users,
@@ -12,14 +13,17 @@ import {
   LogOut,
   FileText,
   Loader2,
+  History,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigation } from '@/hooks/use-navigation';
+
 
 const navItems = [
   { href: '/dashboard', label: 'Visão Geral', icon: LayoutDashboard },
   { href: '/dashboard/contacts', label: 'Contatos', icon: Users },
   { href: '/dashboard/send', label: 'Envios', icon: Send },
+  { href: '/dashboard/history', label: 'Histórico', icon: History },
   { href: '/dashboard/templates', label: 'Modelos', icon: FileText },
   { href: '/dashboard/settings', label: 'Configurações', icon: Settings },
 ];
@@ -28,6 +32,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isNavigating, targetPath, startNavigation } = useNavigation();
+
 
   const handleLogout = async () => {
     try {
@@ -38,11 +43,12 @@ export function Sidebar() {
     }
   };
 
-  const handleNavClick = (e: React.MouseEvent, href: string) => {
-    e.preventDefault();
-    if (href === pathname) return; // Already on this page
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (href === pathname) {
+      e.preventDefault(); // Already on this page
+      return; 
+    }
     startNavigation(href);
-    router.push(href);
   };
 
   return (
@@ -60,7 +66,7 @@ export function Sidebar() {
           const isActive = pathname === item.href;
           const isLoadingThis = isNavigating && targetPath === item.href;
           return (
-            <a
+            <Link
               key={item.href}
               href={item.href}
               onClick={(e) => handleNavClick(e, item.href)}
@@ -78,7 +84,7 @@ export function Sidebar() {
                 <Icon className="w-5 h-5" />
               )}
               {item.label}
-            </a>
+            </Link>
           );
         })}
       </nav>

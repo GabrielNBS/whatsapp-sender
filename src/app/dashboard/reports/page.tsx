@@ -63,7 +63,7 @@ export default function ReportsPage() {
           value="Quarta"
           description="Maior taxa de leitura (78%)"
           icon={Trophy}
-          variant="primary"
+          variant="default"
           isLoading={isLoading}
         />
       </div>
