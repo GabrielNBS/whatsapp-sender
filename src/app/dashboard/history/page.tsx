@@ -19,6 +19,7 @@ import {
   MessageSquare,
   ArrowDownNarrowWide,
   ArrowUpNarrowWide,
+  Image,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ interface CampaignHistoryItem {
   failedDetails: FailedDetail[];
   templateTitle?: string;
   templateContent?: string;
+  templateMedia?: string | null;
 }
 
 // ===================================================
@@ -294,24 +296,79 @@ function CampaignDetail({
       </div>
 
       {/* Template Preview */}
-      {campaign.templateContent && (
-        <div className="bg-card border border-border rounded-xl p-6">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
-            <MessageSquare className="w-4 h-4 text-primary" />
-            Mensagem Enviada
-          </h3>
-          <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg p-4 max-w-md">
-            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-              {campaign.templateContent}
-            </p>
+      {campaign.templateContent && (() => {
+        const mediaObj = campaign.templateMedia
+          ? (() => { try { return JSON.parse(campaign.templateMedia); } catch { return null; } })()
+          : null;
+        const isImage = mediaObj?.mimetype?.startsWith('image/');
+
+        return (
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+            {/* Section Header + Model Badge */}
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-primary" />
+                Mensagem Enviada
+              </h3>
+              {campaign.templateTitle && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+                  <MessageSquare className="w-3 h-3" />
+                  {campaign.templateTitle}
+                </span>
+              )}
+            </div>
+
+            {/* Content: Message + Media */}
+            <div className={cn(
+              'flex gap-4',
+              isImage ? 'flex-col sm:flex-row' : 'flex-col'
+            )}>
+              {/* Message Bubble */}
+              <div className="flex-1">
+                <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl rounded-tl-sm p-4 max-w-md">
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                    {campaign.templateContent}
+                  </p>
+                </div>
+              </div>
+
+              {/* Media Preview */}
+              {isImage && mediaObj?.data && (
+                <div className="shrink-0">
+                  <div className="relative group w-full sm:w-48 h-48 rounded-xl overflow-hidden border border-border bg-muted">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`data:${mediaObj.mimetype};base64,${mediaObj.data}`}
+                      alt={mediaObj.filename || 'Mídia do template'}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                    {mediaObj.filename && (
+                      <div className="absolute bottom-0 inset-x-0 bg-linear-to-t from-black/60 to-transparent px-3 py-2">
+                        <p className="text-[11px] text-white font-medium truncate flex items-center gap-1">
+                          <Image className="w-3 h-3" />
+                          {mediaObj.filename}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Non-image media indicator */}
+              {mediaObj && !isImage && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground w-fit">
+                  <Image className="w-4 h-4" />
+                  <span>{mediaObj.filename || 'Arquivo anexado'}</span>
+                  <span className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground/70">
+                    {mediaObj.mimetype?.split('/')[1] || 'arquivo'}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
-          {campaign.templateTitle && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Modelo: <span className="font-medium">{campaign.templateTitle}</span>
-            </p>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
       {/* Failed Contacts Triage */}
       {campaign.failedDetails.length > 0 && (
