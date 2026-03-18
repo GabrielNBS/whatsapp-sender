@@ -50,6 +50,7 @@ export interface CampaignHistoryItem extends Campaign {
   templateId?: string;
   templateTitle?: string;
   templateContent?: string;
+  templateMedia?: string | null;
 }
 
 // ============================================
@@ -163,6 +164,7 @@ export class CampaignService implements ICampaignService {
           templateId: templateData?.id,
           templateTitle: templateData?.title,
           templateContent: templateData?.content,
+          templateMedia: templateData?.media ?? null,
         };
       })
     );
