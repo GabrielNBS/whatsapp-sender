@@ -1,10 +1,3 @@
-/**
- * useCampaign Hook
- * 
- * Manages campaign lifecycle from the frontend.
- * Used by useSender to track sending campaigns.
- */
-
 import { useState, useCallback } from 'react';
 
 interface Campaign {
@@ -61,9 +54,7 @@ export function useCampaign() {
     }
   }, []);
 
-  /**
-   * Complete the current campaign and trigger reports
-   */
+
   const completeCampaign = useCallback(async (metrics: CompleteCampaignParams): Promise<boolean> => {
     if (!currentCampaign) {
       console.warn('[useCampaign] No active campaign to complete');
