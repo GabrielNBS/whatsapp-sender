@@ -1,9 +1,3 @@
-/**
- * API Route: /api/campaigns/[id]/complete
- * 
- * Complete a campaign and trigger immediate report
- */
-
 import { NextRequest, NextResponse } from 'next/server';
 import { getCampaignService } from '@/lib/CampaignService';
 import { getReportService } from '@/lib/ReportService';

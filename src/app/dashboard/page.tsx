@@ -8,7 +8,6 @@ import { useAppStore } from '@/lib/store';
 import { 
   MessageSquare, 
   Users, 
-  Activity, 
   ExternalLink, 
   Wifi, 
   WifiOff,
