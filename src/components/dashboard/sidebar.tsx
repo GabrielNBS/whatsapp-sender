@@ -13,7 +13,7 @@ import {
   LogOut,
   FileText,
   Loader2,
-  History,
+  History
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigation } from '@/hooks/use-navigation';
@@ -32,7 +32,6 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { isNavigating, targetPath, startNavigation } = useNavigation();
-
 
   const handleLogout = async () => {
     try {
@@ -53,7 +52,7 @@ export function Sidebar() {
 
   return (
     <div className="flex flex-col h-full bg-sidebar border-r border-sidebar-border w-64">
-      <div className="p-6 border-b border-sidebar-border">
+      <div className="p-6 border-b border-sidebar-border flex items-center justify-between">
         <h2 className="text-xl font-bold flex items-center gap-2 text-sidebar-foreground">
           <Send className="w-6 h-6 text-primary" />
           Whatsender

@@ -4,6 +4,7 @@ import { prisma } from './db';
 class QueueService {
   private activeCampaignId: string | null = null;
   private abortSignal = false;
+  private isInitializing = false;
   private logs: { message: string, type: 'info'|'success'|'warning'|'error', timestamp: number }[] = [];
   private totalLogs = 0;
 
@@ -14,6 +15,22 @@ class QueueService {
   }
 
   public async getStatus(logOffset: number = 0) {
+    if (this.isInitializing) {
+        return {
+            isSending: true,
+            isPaused: false,
+            progress: 0,
+            currentContactIndex: 0,
+            totalContacts: 0,
+            statusMessage: 'Iniciando transmissão no servidor...',
+            failedContacts: [],
+            sentCount: 0,
+            failedCount: 0,
+            logs: logOffset < this.totalLogs ? this.logs.slice(Math.max(0, this.logs.length - (this.totalLogs - logOffset))) : [],
+            totalLogs: this.totalLogs
+        };
+    }
+
     if (!this.activeCampaignId) {
       // Find the most recently active campaign to resume status
       const recent = await prisma.campaign.findFirst({
@@ -35,7 +52,17 @@ class QueueService {
       where: { batchId: this.activeCampaignId!, status: 'PENDING' }
     });
 
-    const isSending = pendingCount > 0 && !campaign.completedAt && !this.abortSignal;
+    const activePendingCount = await prisma.scheduledMessage.count({
+      where: { 
+          batchId: this.activeCampaignId!, 
+          status: 'PENDING',
+          scheduledFor: { lte: new Date() }
+      }
+    });
+
+    const isSending = activePendingCount > 0 && !campaign.completedAt && !this.abortSignal;
+    const isScheduled = pendingCount > 0 && activePendingCount === 0;
+
     const sentCount = campaign.sentCount;
     const failedCount = campaign.failedCount;
     const total = campaign.totalContacts;
@@ -61,11 +88,11 @@ class QueueService {
 
     return {
       isSending: isSending,
-      isPaused: !isSending && pendingCount > 0 && !this.abortSignal,
+      isPaused: false,
       progress: campaign.completedAt ? 100 : progress,
       currentContactIndex,
       totalContacts: total,
-      statusMessage: isSending ? `Processando fila... (${currentContactIndex}/${total})` : (campaign.completedAt ? 'Concluído' : 'Processamento Pausado / Parado'),
+      statusMessage: isSending ? `Processando fila... (${currentContactIndex}/${total})` : (isScheduled ? 'Agendado' : (campaign.completedAt ? 'Concluído' : 'Processamento Finalizado')),
       failedContacts: failedRecords.map(r => ({ name: r.contactName, number: r.contactPhone })),
       sentCount,
       failedCount,
@@ -81,11 +108,13 @@ class QueueService {
     message: string,
     media: { mimetype: string; data: string; filename?: string } | null
   ) {
-    this.activeCampaignId = campaignId;
-    this.abortSignal = false;
-    this.logs = [];
+    this.isInitializing = true;
+    try {
+      this.activeCampaignId = campaignId;
+      this.abortSignal = false;
+      this.logs = [];
 
-    this.addLog('Processando lista de contatos...', 'info');
+      this.addLog('Processando lista de contatos...', 'info');
 
     const stringifiedMedia = media ? JSON.stringify(media) : null;
     const safeMessage = typeof message === 'string' ? message : JSON.stringify(message);
@@ -121,10 +150,13 @@ class QueueService {
         }))
     );
 
-    // Wake up scheduler immediately
-    const g = global as unknown as { wakeUpScheduler?: () => void };
-    if (g.wakeUpScheduler) {
-       g.wakeUpScheduler();
+      // Wake up scheduler immediately
+      const g = global as unknown as { wakeUpScheduler?: () => void };
+      if (g.wakeUpScheduler) {
+         g.wakeUpScheduler();
+      }
+    } finally {
+      this.isInitializing = false;
     }
   }
 

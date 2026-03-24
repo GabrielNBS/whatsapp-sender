@@ -3,7 +3,6 @@
 import { useNavigation } from '@/hooks/use-navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Skeleton maps for each route
 const skeletons: Record<string, () => React.ReactNode> = {
   '/dashboard': DashboardSkeleton,
   '/dashboard/contacts': ContactsSkeleton,
@@ -20,7 +19,6 @@ export function DashboardContent({ children }: { children: React.ReactNode }) {
     if (SkeletonComponent) {
       return <>{SkeletonComponent()}</>;
     }
-    // Fallback skeleton for unknown routes
     return <GenericSkeleton />;
   }
 
@@ -131,8 +129,8 @@ function SendSkeleton() {
         </div>
         <Skeleton className="h-8 w-40 rounded-full" />
       </div>
-      <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
-        <div className="col-span-12 lg:col-span-9 flex flex-col min-h-0">
+      <div className="flex gap-6 flex-1 min-h-0">
+        <div className="flex flex-col min-h-0 flex-1">
           <div className="bg-card rounded-xl shadow-lg border border-border flex flex-col h-full overflow-hidden">
             <div className="pt-6 pb-2 px-6 border-b border-border/50 bg-background/50">
               <div className="flex justify-between items-center max-w-3xl mx-auto w-full">
@@ -156,25 +154,6 @@ function SendSkeleton() {
             <div className="p-6 pt-2 flex justify-between">
               <Skeleton className="h-10 w-24" />
               <Skeleton className="h-10 w-24" />
-            </div>
-          </div>
-        </div>
-        <div className="col-span-12 lg:col-span-3 flex flex-col gap-4 min-h-0">
-          <div className="bg-card rounded-xl shadow-lg border border-border flex flex-col flex-1 overflow-hidden">
-            <div className="p-4 border-b border-border flex justify-between items-center">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-12" />
-            </div>
-            <div className="p-4 space-y-3 flex-1">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex gap-3 items-start">
-                  <Skeleton className="w-1.5 h-1.5 rounded-full mt-1 shrink-0" />
-                  <div className="space-y-1 flex-1">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         </div>

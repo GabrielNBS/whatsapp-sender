@@ -15,8 +15,7 @@ export function SendProgressTooltip() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
 
-  const isOnSendPage = pathname === '/dashboard/send';
-  const shouldShow = sendingStatus.isSending && !isOnSendPage;
+  const shouldShow = sendingStatus.isSending;
 
   const total = sendingStatus.totalContacts;
   const processed = sendingStatus.sentCount + sendingStatus.failedCount;

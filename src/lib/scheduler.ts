@@ -55,8 +55,7 @@ export function startScheduler() {
                 queueLogs.pushLog(`Enviado para ${msg.contactName}`, 'success');
             } catch (err: unknown) {
                 console.error(`[Scheduler] Error sending to ${msg.contactPhone}:`, err);
-                const errorMessage = err instanceof Error ? err.message : String(err);
-                queueLogs.pushLog(`Erro ao enviar para ${msg.contactName}: ${errorMessage}`, 'error');
+                queueLogs.pushLog(`Erro ao enviar para ${msg.contactName}`, 'error');
             }
 
             // Atualiza o DB
@@ -69,9 +68,9 @@ export function startScheduler() {
             if (msg.batchId) {
                 const campaignService = getCampaignService();
                 if (success) {
-                   await prisma.campaign.update({ where: { id: msg.batchId }, data: { sentCount: { increment: 1 } } });
+                   await prisma.campaign.updateMany({ where: { id: msg.batchId }, data: { sentCount: { increment: 1 } } });
                 } else {
-                   await prisma.campaign.update({ where: { id: msg.batchId }, data: { failedCount: { increment: 1 } } });
+                   await prisma.campaign.updateMany({ where: { id: msg.batchId }, data: { failedCount: { increment: 1 } } });
                 }
                 
                 // Checa se a campanha terminou

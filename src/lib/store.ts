@@ -168,7 +168,7 @@ export const useAppStore = create<AppState>()(
             avatars: { ...state.avatars, [phone]: null }
         }));
         return null;
-      }
+      },
     }),
     {
       name: 'whatsapp-sender-storage',
