@@ -4,6 +4,8 @@ import { useAppStore } from "@/lib/store";
 import { LogType } from "@/lib/types";
 import { nanoid } from "nanoid";
 import { useRef, useCallback, useEffect } from "react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 /**
  * Global polling hook that keeps sendingStatus in sync with the backend.
@@ -11,8 +13,10 @@ import { useRef, useCallback, useEffect } from "react";
  */
 export function useSendPolling() {
   const { setSendingStatus, addLog: storeAddLog } = useAppStore();
+  const router = useRouter();
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const prevIsSendingRef = useRef(false);
   const logOffsetRef = useRef(0);
 
   const addLog = useCallback((message: string, type: LogType = "info") => {
@@ -67,12 +71,30 @@ export function useSendPolling() {
             failedCount: status.failedCount || 0,
             isPaused: false,
           });
+          
+          if (prevIsSendingRef.current) {
+            toast.success("Transmissão finalizada!", {
+              description: `${status.sentCount || 0} mensagens enviadas com sucesso.`,
+              action: {
+                label: "Ver Histórico",
+                onClick: () => router.push('/dashboard/history')
+              }
+            });
+            prevIsSendingRef.current = false;
+          }
+
           addLog("Transmissão finalizada!", "success");
           return;
         }
 
         // Backend is still sending
         if (status.isSending) {
+          if (!prevIsSendingRef.current) {
+            toast.success("Transmissão iniciada!", {
+              description: "O sistema começou a enviar as mensagens."
+            });
+            prevIsSendingRef.current = true;
+          }
           setSendingStatus({
             isSending: true,
             statusMessage: status.statusMessage,
@@ -90,7 +112,7 @@ export function useSendPolling() {
     } catch (error) {
       console.error('[useSendPolling] Polling error:', error);
     }
-  }, [setSendingStatus, addLog, cleanupPolling]);
+  }, [setSendingStatus, addLog, cleanupPolling, router]);
 
   const startPolling = useCallback(() => {
     if (pollIntervalRef.current) return; // Already polling
@@ -114,12 +136,46 @@ export function useSendPolling() {
     return cleanupPolling;
   }, [pollStatus, cleanupPolling]);
 
+  // Background slow polling for scheduled campaigns
+  useEffect(() => {
+    let slowPollInterval: NodeJS.Timeout | null = null;
+    const isSendingGlobal = useAppStore.getState().sendingStatus.isSending;
+    
+    if (!isSendingGlobal) {
+      slowPollInterval = setInterval(async () => {
+        try {
+          const res = await fetch('/api/campaigns/status');
+          if (res.ok) {
+            const status = await res.json();
+            if (status.isSending) {
+              // A scheduled campaign started! Wake up the fast poller.
+              pollStatus();
+            }
+          }
+        } catch {
+          // ignore background errors
+        }
+      }, 10000); // 10 seconds check
+    }
+
+    return () => {
+      if (slowPollInterval) clearInterval(slowPollInterval);
+    };
+  }, [pollStatus]);
+
   // Auto-start polling when sendingStatus.isSending becomes true (e.g. after handleSend)
   const isSending = useAppStore((s) => s.sendingStatus.isSending);
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
     if (isSending && !pollIntervalRef.current) {
-      startPolling();
+      // Delay polling by 1.5 seconds to avoid race conditions with POST /start
+      timeoutId = setTimeout(() => {
+        startPolling();
+      }, 1500);
     }
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [isSending, startPolling]);
 
   return { startPolling, cleanupPolling };
