@@ -31,7 +31,7 @@ export function ActionMenu() {
             size="lg" 
             className="h-14 rounded-full px-6 shadow-xl hover:shadow-2xl transition-all duration-300 font-semibold flex items-center gap-2 bg-primary text-primary-foreground"
           >
-            Nova campanha <Plus className={`w-5 h-5 transition-transform duration-300 ${open ? 'rotate-45' : ''}`} />
+           Configurações <Plus className={`w-5 h-5 transition-transform duration-300 ${open ? 'rotate-45' : ''}`} />
           </Button>
         </PopoverTrigger>
         <PopoverContent 

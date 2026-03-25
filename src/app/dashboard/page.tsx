@@ -304,11 +304,6 @@ export default function SendPage() {
                     <div className="relative">
 
                     </div>
-
-                    <div className="flex items-center bg-card px-3 py-1.5 rounded-full text-xs font-medium border border-border shadow-sm text-foreground">
-                        <CheckCircle className="w-3.5 h-3.5 mr-2 text-success" />
-                        Sistema Operacional
-                    </div>
                 </div>
             </div>
 
@@ -352,18 +347,30 @@ export default function SendPage() {
                                         <QrCode className="w-4 h-4 mr-2" />
                                         Conectar Agora
                                     </Button>
-                                </motion.div>
+                                </motion.div> 
                             )}
                             
                             <AnimatedContent activeKey={currentStep} spring="snappy" className="h-full flex flex-col">
                                     {/* STEP 0: INTRO CTA */}
                                     {currentStep === 0 && (
                                         <div className="flex-1 flex flex-col items-center justify-center text-center max-w-2xl mx-auto space-y-8 py-12">
-                                            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                                            <motion.div 
+                                                initial={{ scale: 0.9, y: 0 }}
+                                                animate={{ 
+                                                    scale: [1, 1.05, 1],
+                                                    y: [0, -8, 0]
+                                                }}
+                                                transition={{ 
+                                                    duration: 4,
+                                                    repeat: Infinity,
+                                                    ease: "easeInOut"
+                                                }}
+                                                className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4"
+                                            >
                                                 <MessageSquare className="w-10 h-10 text-primary" />
-                                            </div>
+                                            </motion.div>
                                             <div className="space-y-4">
-                                                <h2 className="text-4xl font-extrabold tracking-tight">Pronto para engajar sua base?</h2>
+                                                <h2 className="text-6xl font-extrabold tracking-tight font-roboto animate-fluid-gradient">Pronto para engajar sua base?</h2>
                                                 <p className="text-lg text-muted-foreground leading-relaxed">
                                                     Crie campanhas personalizadas, selecione seus melhores contatos e alcance seu público de forma direta e eficiente. Tudo em poucos passos.
                                                 </p>
