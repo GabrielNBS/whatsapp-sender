@@ -8,6 +8,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-roboto: var(--font-roboto);
   --color-success-foreground: var(--success-foreground);
   --color-success: var(--success);
   --color-warning-foreground: var(--warning-foreground);
@@ -161,6 +162,21 @@
     box-shadow: inset 0 0 0 1.5px #7c3aed, 0 0 8px 1px #7c3aed44;
     border-color: #7c3aed;
   }
+}
+
+@keyframes fluid-gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-fluid-gradient {
+  background: linear-gradient(-45deg, #609000, #898833, #044950, #609000);
+  background-size: 300% 300%;
+  animation: fluid-gradient 6s ease infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* @keyframes glow-shift is referenced by inline style in SelectTrigger when animatedBorder=true */
