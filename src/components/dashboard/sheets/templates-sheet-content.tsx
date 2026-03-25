@@ -30,7 +30,7 @@ interface Template {
     updatedAt?: string;
 }
 
-export default function TemplatesPage() {
+export function TemplatesSheetContent() {
     const [templates, setTemplates] = useState<Template[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<'all' | 'media' | 'text'>('all');
@@ -123,7 +123,7 @@ export default function TemplatesPage() {
     };
 
     return (
-        <div className="space-y-6 pb-20"> {/* pb-20 for FAB space if needed, though header button is primary */}
+        <div className="flex flex-col h-full space-y-8 pb-20"> {/* pb-20 for FAB space if needed, though header button is primary */}
             
             {/* Header Section */}
             <div className="space-y-4">

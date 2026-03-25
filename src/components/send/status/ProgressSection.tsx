@@ -6,9 +6,11 @@ interface ProgressSectionProps {
   isSending: boolean;
   showCompletion: boolean;
   progress: number;
-  currentContactIndex: number;
+
   totalRecipients: number;
   statusMessage: string | null;
+  sentCount?: number;
+  failedCount?: number;
 }
 
 /**
@@ -18,9 +20,11 @@ export function ProgressSection({
   isSending,
   showCompletion,
   progress,
-  currentContactIndex,
+
   totalRecipients,
   statusMessage,
+  sentCount = 0,
+  failedCount = 0,
 }: ProgressSectionProps) {
   if (!isSending && !showCompletion) return null;
 
@@ -40,7 +44,7 @@ export function ProgressSection({
           {showCompletion && <PartyPopper className="w-4 h-4 text-success animate-bounce" />}
         </span>
         <span className="leading-none">
-          {showCompletion ? totalRecipients : currentContactIndex} / {totalRecipients}
+          {showCompletion ? totalRecipients : (sentCount + failedCount)} / {totalRecipients}
         </span>
       </div>
       

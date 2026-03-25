@@ -10,11 +10,11 @@ import { GeneralSettings } from "@/components/settings/general-settings";
 import { SnippetSettings } from "@/components/settings/snippet-settings";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function SettingsPage() {
+export function SettingsSheetContent() {
   const [activeTab, setActiveTab] = useState('general');
 
   return (
-    <div className="h-[calc(100vh-theme(spacing.20))] flex flex-col space-y-6">
+    <div className="flex flex-col h-full space-y-8">
       {/* Header */}
       <div className="flex items-center gap-3 shrink-0">
         <div className="p-2 bg-muted rounded-lg">

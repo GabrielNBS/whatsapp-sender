@@ -5,15 +5,14 @@ import { LogType } from "@/lib/types";
 import { nanoid } from "nanoid";
 import { useRef, useCallback, useEffect } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useGlobalSheet } from "@/components/dashboard/global-sheet-provider";
 
 /**
  * Global polling hook that keeps sendingStatus in sync with the backend.
- * Mount this in the dashboard layout so it stays alive across page navigations.
  */
 export function useSendPolling() {
   const { setSendingStatus, addLog: storeAddLog } = useAppStore();
-  const router = useRouter();
+  const { openSheet } = useGlobalSheet();
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const prevIsSendingRef = useRef(false);
@@ -77,7 +76,7 @@ export function useSendPolling() {
               description: `${status.sentCount || 0} mensagens enviadas com sucesso.`,
               action: {
                 label: "Ver Histórico",
-                onClick: () => router.push('/dashboard/history')
+                onClick: () => openSheet('history')
               }
             });
             prevIsSendingRef.current = false;
@@ -112,7 +111,7 @@ export function useSendPolling() {
     } catch (error) {
       console.error('[useSendPolling] Polling error:', error);
     }
-  }, [setSendingStatus, addLog, cleanupPolling, router]);
+  }, [setSendingStatus, addLog, cleanupPolling, openSheet]);
 
   const startPolling = useCallback(() => {
     if (pollIntervalRef.current) return; // Already polling
