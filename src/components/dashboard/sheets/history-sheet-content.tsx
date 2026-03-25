@@ -454,7 +454,7 @@ const FILTERS: { key: QuickFilter; label: string; icon: React.ComponentType<{ cl
   { key: 'failed', label: 'Com Falhas', icon: AlertTriangle },
 ];
 
-export default function HistoryPage() {
+export function HistorySheetContent() {
   const [campaigns, setCampaigns] = useState<CampaignHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCampaign, setSelectedCampaign] =
@@ -504,7 +504,7 @@ export default function HistoryPage() {
   }, [fetchHistory]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

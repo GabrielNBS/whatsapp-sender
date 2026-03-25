@@ -26,7 +26,7 @@ import { ContactEngagement } from '@/components/contacts/contact-engagement';
 
 
 
-export default function ContactsPage() {
+export function ContactsSheetContent() {
    const { groups, contacts, addContact, deleteContact, addGroup, deleteGroup, importContacts } = useAppStore();
 
    const [newContactName, setNewContactName] = useState('');
@@ -141,7 +141,7 @@ export default function ContactsPage() {
    };
 
    return (
-      <div className="flex flex-col h-[calc(100vh-2rem)] -m-6 p-6 space-y-4 overflow-hidden">
+      <div className="flex flex-col h-full space-y-8 overflow-hidden">
          <div className="flex justify-between items-center shrink-0">
             <SplitText text="Contatos & Grupos" as="h1" className="text-xl font-bold tracking-tight" />
             <div className="text-sm text-muted-foreground">
