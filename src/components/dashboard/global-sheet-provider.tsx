@@ -2,11 +2,12 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-export type SheetType = 'templates' | 'contacts' | 'history' | 'overview' | 'settings' | null;
+export type SheetType = 'templates' | 'contacts' | 'history' | 'overview' | 'settings' | 'monitoring' | null;
 
 interface GlobalSheetContextType {
   activeSheet: SheetType;
-  openSheet: (sheet: SheetType) => void;
+  sheetData: Record<string, unknown> | null;
+  openSheet: (sheet: SheetType, data?: Record<string, unknown>) => void;
   closeSheet: () => void;
 }
 
@@ -14,17 +15,20 @@ const GlobalSheetContext = createContext<GlobalSheetContextType | undefined>(und
 
 export function GlobalSheetProvider({ children }: { children: ReactNode }) {
   const [activeSheet, setActiveSheet] = useState<SheetType>(null);
+  const [sheetData, setSheetData] = useState<Record<string, unknown> | null>(null);
 
-  const openSheet = (sheet: SheetType) => {
+  const openSheet = (sheet: SheetType, data?: Record<string, unknown>) => {
+    setSheetData(data || null);
     setActiveSheet(sheet);
   };
 
   const closeSheet = () => {
     setActiveSheet(null);
+    setSheetData(null);
   };
 
   return (
-    <GlobalSheetContext.Provider value={{ activeSheet, openSheet, closeSheet }}>
+    <GlobalSheetContext.Provider value={{ activeSheet, sheetData, openSheet, closeSheet }}>
       {children}
     </GlobalSheetContext.Provider>
   );

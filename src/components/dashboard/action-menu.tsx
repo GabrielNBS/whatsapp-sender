@@ -6,10 +6,13 @@ import {
   PopoverTrigger 
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Plus, Users, History, FileText, Settings, LayoutDashboard } from "lucide-react";
+import { Users, History, FileText, Settings, LayoutDashboard } from "lucide-react";
 import { useGlobalSheet } from "./global-sheet-provider";
 import { useState } from "react";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { cn } from "@/lib/utils";
+
+import { motion } from "framer-motion";
 
 export function ActionMenu() {
   const { openSheet } = useGlobalSheet();
@@ -24,20 +27,30 @@ export function ActionMenu() {
   if (!isHydrated) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed top-6 right-6 z-40">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button 
-            size="lg" 
-            className="h-14 rounded-full px-6 shadow-xl hover:shadow-2xl transition-all duration-300 font-semibold flex items-center gap-2 bg-primary text-primary-foreground"
+            size="icon" 
+            className={cn(
+                "h-12 w-12 rounded-full shadow-2xl hover:shadow-primary/40 transition-all duration-300 bg-neutral-900 text-white border-none group relative overflow-hidden",
+                open && "ring-4 ring-primary/20 scale-95"
+            )}
           >
-           Configurações <Plus className={`w-5 h-5 transition-transform duration-300 ${open ? 'rotate-45' : ''}`} />
+            <motion.div
+                animate={{ rotate: open ? 90 : 0 }}
+                whileHover={{ rotate: 120 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                className="flex items-center justify-center w-full h-full"
+            >
+                <Settings className="w-6 h-6" />
+            </motion.div>
           </Button>
         </PopoverTrigger>
         <PopoverContent 
           align="end" 
-          sideOffset={16} 
-          className="w-56 p-2 rounded-2xl shadow-xl border-border/50"
+          sideOffset={12} 
+          className="w-56 p-2 rounded-2xl shadow-2xl border-border/50 bg-card/95 backdrop-blur-md"
         >
           <div className="flex flex-col gap-1">
             <Button variant="ghost" className="justify-start font-medium" onClick={() => handleAction('templates')}>

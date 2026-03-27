@@ -28,7 +28,7 @@ export function WizardNavigation({
         variant="ghost"
         onClick={onBack}
         disabled={isFirstStep || isSending}
-        className={cn("gap-2", isFirstStep && "invisible")}
+        className={cn("gap-2 rounded-full", isFirstStep && "invisible")}
       >
         <ArrowLeft className="w-4 h-4" />
         Voltar
@@ -38,11 +38,12 @@ export function WizardNavigation({
         onClick={onNext}
         disabled={isNextDisabled || isSending}
         variant={isLastStep ? "success" : "default"}
+        className="rounded-full px-6"
       >
         {isLastStep ? (
           <>
             {isSending ? "Enviando..." : "Confirmar Envio"}
-            <Send className="w-4 h-4 ml-1" />
+            <Send className="w-4 h-4 ml-2" />
           </>
         ) : (
           <>

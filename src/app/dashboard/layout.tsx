@@ -6,6 +6,8 @@ import { NavigationProvider } from '@/hooks/use-navigation';
 import { GlobalSheetProvider } from '@/components/dashboard/global-sheet-provider';
 import { GlobalSheet } from '@/components/dashboard/global-sheet';
 import { ActionMenu } from '@/components/dashboard/action-menu';
+import { TransmissionPill } from '@/components/dashboard/transmission-pill';
+import { NotificationBell } from '@/components/dashboard/notification-bell';
 import { useSendPolling } from '@/hooks/use-send-polling';
 
 function PollingManager() {
@@ -30,8 +32,10 @@ export default function DashboardLayout({
                 </DashboardContent>
               </div>
             </main>
+            <NotificationBell />
             <ActionMenu />
             <GlobalSheet />
+            <TransmissionPill />
             <PollingManager />
           </div>
         </GlobalSheetProvider>
