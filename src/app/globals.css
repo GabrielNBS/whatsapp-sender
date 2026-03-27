@@ -170,13 +170,15 @@
   100% { background-position: 0% 50%; }
 }
 
-.animate-fluid-gradient {
-  background: linear-gradient(-45deg, #609000, #898833, #044950, #609000);
-  background-size: 300% 300%;
-  animation: fluid-gradient 6s ease infinite;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+@keyframes gradient-x {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-x {
+  background-size: 200% auto;
+  animation: gradient-x 3s linear infinite;
 }
 
 /* @keyframes glow-shift is referenced by inline style in SelectTrigger when animatedBorder=true */

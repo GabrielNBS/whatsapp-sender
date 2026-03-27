@@ -10,13 +10,13 @@ import { formatPhoneNumber, findAnalyticsForPhone } from '@/lib/utils';
 import { GroupManagementDialog } from '@/components/contacts/group-management-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, Settings, FileSpreadsheet, BarChart3, Plus, Trash2, Upload, Users, Pencil } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings, FileSpreadsheet, Plus, Trash2, Upload, Users, Pencil, AlertTriangle, Save } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
 import { nanoid } from 'nanoid';
@@ -92,7 +92,7 @@ export function ContactsSheetContent() {
          Papa.parse(file, {
             header: true,
             complete: (results) => {
-               const parsed = (results.data as any[]).map((row) => {
+               const parsed = (results.data as Array<Record<string, string>>).map((row) => {
                   const rawNumber = row.number || '';
                   const cleanNumber = rawNumber.replace(/\D/g, '');
 
@@ -270,18 +270,24 @@ export function ContactsSheetContent() {
                />
 
                <AlertDialog open={!!deletingGroup} onOpenChange={(open) => !open && setDeletingGroup(null)}>
-                  <AlertDialogContent>
-                     <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir Grupo</AlertDialogTitle>
-                        <AlertDialogDescription>
-                           O grupo <strong>{deletingGroup?.name}</strong> possui contatos associados.
-                           Ao excluir, esses contatos serão movidos para o grupo &quot;Geral&quot; caso não pertençam a outros grupos.
-                           Deseja continuar?
-                        </AlertDialogDescription>
-                     </AlertDialogHeader>
-                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmDeleteGroup} className="bg-destructive text-info-foreground hover:bg-destructive/90">
+                  <AlertDialogContent className="rounded-2xl max-w-[400px] border-border bg-card/95 backdrop-blur-xl shadow-2xl">
+                     <div className="flex flex-col items-center text-center pt-4">
+                        <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                           <AlertTriangle className="w-7 h-7 text-destructive" />
+                        </div>
+                        <AlertDialogHeader className="space-y-3">
+                           <AlertDialogTitle className="text-xl font-bold tracking-tight text-center">Excluir Grupo</AlertDialogTitle>
+                           <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2">
+                              O grupo <strong className="text-foreground font-black">&quot;{deletingGroup?.name}&quot;</strong> possui contatos associados. <br/>
+                              Ao excluir, esses contatos serão movidos para o grupo <strong className="text-primary font-black">&quot;Geral&quot;</strong>.
+                              <br/><br/>
+                              Deseja continuar?
+                           </AlertDialogDescription>
+                        </AlertDialogHeader>
+                     </div>
+                     <AlertDialogFooter className="mt-6 flex flex-col sm:flex-row gap-3 justify-center! sm:justify-center! w-full px-2">
+                        <AlertDialogCancel className="w-full sm:w-auto min-w-[120px] rounded-xl font-bold border-border hover:bg-muted transition-all">Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmDeleteGroup} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto min-w-[120px] rounded-xl font-bold shadow-lg shadow-destructive/20 transition-all">
                            Excluir
                         </AlertDialogAction>
                      </AlertDialogFooter>
@@ -304,7 +310,7 @@ export function ContactsSheetContent() {
 
                   <div className="space-y-3">
                      <Label>Destino dos contatos</Label>
-                     <RadioGroup value={importTargetType} onValueChange={(v: any) => setImportTargetType(v)}>
+                     <RadioGroup value={importTargetType} onValueChange={(v: string) => setImportTargetType(v as 'default' | 'existing' | 'new')}>
                         <div className="flex items-center space-x-2">
                            <RadioGroupItem value="default" id="r1" />
                            <Label htmlFor="r1">Adicionar ao grupo Geral (Padrão)</Label>
@@ -377,13 +383,13 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
          console.log('Polling analytics...');
          fetch('/api/analytics', { cache: 'no-store', next: { revalidate: 0 } })
            .then(res => res.json())
-           .then(data => {
-              console.log('Received analytics data:', data.length, 'records');
-              if (Array.isArray(data)) {
-                 const map: Record<string, any> = {};
-                 data.forEach((item: any) => {
-                    map[item.phone] = item;
-                 });
+            .then(data => {
+               console.log('Received analytics data:', data.length, 'records');
+               if (Array.isArray(data)) {
+                  const map: Record<string, { sentCount: number, readCount: number, lastSentAt?: string | null, lastReadAt?: string | null }> = {};
+                  data.forEach((item: { phone: string, sentCount: number, readCount: number, lastSentAt?: string | null, lastReadAt?: string | null }) => {
+                     map[item.phone] = item;
+                  });
                  setAnalytics(map);
                  // Optional: Log specific test number to see if it updates
                  const testVal = map['11999999999'];
@@ -556,17 +562,23 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
 
          {/* Delete Confirmation */}
          <AlertDialog open={!!deletingContact} onOpenChange={(open) => !open && setDeletingContact(null)}>
-            <AlertDialogContent>
-               <AlertDialogHeader>
-                  <AlertDialogTitle>Excluir Contato</AlertDialogTitle>
-                  <AlertDialogDescription>
-                     Tem certeza que deseja excluir o contato <strong>{deletingContact?.name}</strong>?
-                     Esta ação não pode ser desfeita.
-                  </AlertDialogDescription>
-               </AlertDialogHeader>
-               <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={executeDelete} className="bg-destructive text-info-foreground hover:bg-destructive/90">
+            <AlertDialogContent className="rounded-2xl max-w-[400px] border-border bg-card/95 backdrop-blur-xl shadow-2xl">
+               <div className="flex flex-col items-center text-center pt-4">
+                  <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                     <AlertTriangle className="w-7 h-7 text-destructive" />
+                  </div>
+                  <AlertDialogHeader className="space-y-3">
+                     <AlertDialogTitle className="text-xl font-bold tracking-tight text-center">Excluir Contato</AlertDialogTitle>
+                     <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2 text-center">
+                        Tem certeza que deseja excluir o contato <br/>
+                        <strong className="text-foreground font-black text-base">&quot;{deletingContact?.name}&quot;</strong>? <br/>
+                        Esta ação não pode ser desfeita.
+                     </AlertDialogDescription>
+                  </AlertDialogHeader>
+               </div>
+               <AlertDialogFooter className="mt-6 flex flex-col sm:flex-row gap-3 justify-center! sm:justify-center! w-full px-2">
+                  <AlertDialogCancel className="w-full sm:w-auto min-w-[120px] rounded-xl font-bold border-border hover:bg-muted transition-all">Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={executeDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto min-w-[120px] rounded-xl font-bold shadow-lg shadow-destructive/20 transition-all">
                      Excluir
                   </AlertDialogAction>
                </AlertDialogFooter>
@@ -575,16 +587,22 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
 
          {/* Save Confirmation */}
          <AlertDialog open={confirmingSave} onOpenChange={setConfirmingSave}>
-            <AlertDialogContent>
-               <AlertDialogHeader>
-                  <AlertDialogTitle>Salvar Alterações</AlertDialogTitle>
-                  <AlertDialogDescription>
-                     Deseja confirmar a alteração do grupo para o contato <strong>{editingContact?.name}</strong>?
-                  </AlertDialogDescription>
-               </AlertDialogHeader>
-               <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={executeSaveEdit} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            <AlertDialogContent className="rounded-2xl max-w-[400px] border-border bg-card/95 backdrop-blur-xl shadow-2xl">
+               <div className="flex flex-col items-center text-center pt-4">
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                     <Save className="w-7 h-7 text-primary" />
+                  </div>
+                  <AlertDialogHeader className="space-y-3">
+                     <AlertDialogTitle className="text-xl font-bold tracking-tight text-center">Salvar Alterações</AlertDialogTitle>
+                     <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2 text-center">
+                        Deseja confirmar a alteração do grupo para o contato <br/>
+                        <strong className="text-foreground font-black text-base">&quot;{editingContact?.name}&quot;</strong>?
+                     </AlertDialogDescription>
+                  </AlertDialogHeader>
+               </div>
+               <AlertDialogFooter className="mt-6 flex flex-col sm:flex-row gap-3 justify-center! sm:justify-center! w-full px-2">
+                  <AlertDialogCancel className="w-full sm:w-auto min-w-[120px] rounded-xl font-bold border-border hover:bg-muted transition-all">Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={executeSaveEdit} className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto min-w-[120px] rounded-xl font-bold shadow-lg shadow-primary/20 transition-all">
                      Confirmar
                   </AlertDialogAction>
                </AlertDialogFooter>
