@@ -27,7 +27,7 @@ import { ContactEngagement } from '@/components/contacts/contact-engagement';
 
 
 export function ContactsSheetContent() {
-   const { groups, contacts, addContact, deleteContact, addGroup, deleteGroup, importContacts } = useAppStore();
+   const { groups, contacts, addContact, deleteContact, addGroup, deleteGroup, importContacts, clearContacts } = useAppStore();
 
    const [newContactName, setNewContactName] = useState('');
    const [newContactNumber, setNewContactNumber] = useState('');
@@ -46,6 +46,7 @@ export function ContactsSheetContent() {
    const [importTargetType, setImportTargetType] = useState<'default' | 'existing' | 'new'>('default');
    const [importTargetGroupId, setImportTargetGroupId] = useState<string>('');
    const [importNewGroupName, setImportNewGroupName] = useState('');
+   const [isClearConfirmOpen, setIsClearConfirmOpen] = useState(false);
 
    const handleAddContact = () => {
       if (newContactName && newContactNumber) {
@@ -91,17 +92,56 @@ export function ContactsSheetContent() {
       if (file) {
          Papa.parse(file, {
             header: true,
+            skipEmptyLines: true,
             complete: (results) => {
+               const nameSynonyms = ['name', 'nome', 'nome do cliente', 'cliente', 'contato', 'nome completo'];
+               const numberSynonyms = ['number', 'numero', 'celular', 'telefone', 'whatsapp', 'número whatsapp', 'número telefone', 'fone', 'tel'];
+
                const parsed = (results.data as Array<Record<string, string>>).map((row) => {
-                  const rawNumber = row.number || '';
+                  // Normalize keys to lowercase for easier matching
+                  const rowEntries = Object.entries(row);
+                  const normalizedRow: Record<string, string> = {};
+                  rowEntries.forEach(([k, v]) => {
+                     normalizedRow[k.toLowerCase().trim()] = v;
+                  });
+
+                  // 1. Find Name
+                  let name = 'Unknown';
+                  for (const synonym of nameSynonyms) {
+                     if (normalizedRow[synonym]) {
+                        name = normalizedRow[synonym];
+                        break;
+                     }
+                  }
+
+                  // 2. Find Number (Prioritize WhatsApp)
+                  let rawNumber = '';
+                  
+                  // Check synonyms in priority order
+                  // We look for any key that contains 'whatsapp' first
+                  const keys = Object.keys(normalizedRow);
+                  const whatsappKey = keys.find(k => k.includes('whatsapp'));
+                  
+                  if (whatsappKey && normalizedRow[whatsappKey]) {
+                     rawNumber = normalizedRow[whatsappKey];
+                  } else {
+                     // Fallback to other number synonyms
+                     for (const synonym of numberSynonyms) {
+                        if (normalizedRow[synonym]) {
+                           rawNumber = normalizedRow[synonym];
+                           break;
+                        }
+                     }
+                  }
+
                   const cleanNumber = rawNumber.replace(/\D/g, '');
 
                   if (cleanNumber.length < 10) return null;
 
                   return {
-                     name: row.name || 'Unknown',
+                     name: name || 'Unknown',
                      number: cleanNumber,
-                     groupIds: [] as string[] // Explicitly cast to string[]
+                     groupIds: [] as string[]
                   };
                }).filter((c): c is Omit<Contact, 'id'> => c !== null);
 
@@ -138,6 +178,12 @@ export function ContactsSheetContent() {
       setImportTargetType('default');
       setImportTargetGroupId('');
       setImportNewGroupName('');
+   };
+
+   const handleClearAll = () => {
+      clearContacts();
+      setIsClearConfirmOpen(false);
+      toast.success("Todos os contatos foram removidos");
    };
 
    return (
@@ -211,6 +257,18 @@ export function ContactsSheetContent() {
                      />
                      <Button variant="outline" size="sm"><Upload className="w-4 h-4 mr-2" /> Importar CSV</Button>
                   </div>
+
+                  {contacts.length > 0 && (
+                     <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/5"
+                        onClick={() => setIsClearConfirmOpen(true)}
+                     >
+                        <Trash2 className="w-4 h-4 mr-2" /> 
+                        Limpar Lista
+                     </Button>
+                  )}
                </div>
             </div>
 
@@ -365,6 +423,29 @@ export function ContactsSheetContent() {
                </div>
             </DialogContent>
          </Dialog>
+
+         <AlertDialog open={isClearConfirmOpen} onOpenChange={setIsClearConfirmOpen}>
+            <AlertDialogContent className="rounded-2xl max-w-[400px] border-border bg-card/95 backdrop-blur-xl shadow-2xl">
+               <div className="flex flex-col items-center text-center pt-4">
+                  <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                     <AlertTriangle className="w-7 h-7 text-destructive" />
+                  </div>
+                  <AlertDialogHeader className="space-y-3">
+                     <AlertDialogTitle className="text-xl font-bold tracking-tight text-center">Limpar Todos os Contatos</AlertDialogTitle>
+                     <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2 text-center">
+                        Tem certeza que deseja remover <strong className="text-foreground font-black text-base">{contacts.length} contatos</strong>? <br/>
+                        Esta ação excluirá permanentemente todos os contatos da sua lista local.
+                     </AlertDialogDescription>
+                  </AlertDialogHeader>
+               </div>
+               <AlertDialogFooter className="mt-6 flex flex-col sm:flex-row gap-3 justify-center! sm:justify-center! w-full px-2">
+                  <AlertDialogCancel className="w-full sm:w-auto min-w-[120px] rounded-xl font-bold border-border hover:bg-muted transition-all">Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto min-w-[120px] rounded-xl font-bold shadow-lg shadow-destructive/20 transition-all">
+                     Limpar Lista
+                  </AlertDialogAction>
+               </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
       </div>
    );
 }

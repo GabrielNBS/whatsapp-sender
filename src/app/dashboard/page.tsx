@@ -28,7 +28,8 @@ import {
     QrCode,
     RefreshCw,
     Play,
-    Plus
+    Plus,
+    Eye
 } from 'lucide-react';
 import {
     Select,
@@ -41,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { AnimatedPaperPlane } from "@/components/ui/animated-paper-plane";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
@@ -55,6 +57,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
 
 import { RecipientSelector } from '@/components/send/recipient-selector';
 import { MessageEditor } from '@/components/send/message-editor';
@@ -550,18 +553,16 @@ export default function SendPage() {
                                                                 whileTap="tap"
                                                                 className="relative inline-block"
                                                             >
-                                                        <SelectTrigger 
-                                                            animatedBorder 
-                                                            className="max-w-[260px] h-10 rounded-full bg-neutral-950 text-white border-transparent hover:bg-neutral-900 transition-all text-sm font-bold shadow-2xl px-4 gap-3 relative overflow-hidden group justify-start"
-                                                        >
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-lg pointer-events-none">🪄</span>
-                                                                <SelectValue placeholder="Usar Modelo" />
-                                                            </div>
-                                                        </SelectTrigger>
-                                                        
-
-                                                    </motion.div>
+                                                                <SelectTrigger 
+                                                                    animatedBorder 
+                                                                    className="max-w-[260px] h-10 rounded-full bg-neutral-950 text-white border-transparent hover:bg-neutral-900 transition-all text-sm font-bold shadow-2xl px-4 gap-3 relative overflow-hidden group justify-start"
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-lg pointer-events-none">🪄</span>
+                                                                        <SelectValue placeholder="Usar Modelo" />
+                                                                    </div>
+                                                                </SelectTrigger>
+                                                            </motion.div>
                                                             <SelectContent>
                                                                 <SelectItem value="none">Nenhum modelo</SelectItem>
                                                                 {templates.length === 0 ? (
@@ -575,7 +576,7 @@ export default function SendPage() {
                                                                 )}
                                                             </SelectContent>
                                                         </Select>
-
+                                                        
                                                         <Button 
                                                             variant="ghost" 
                                                             size="sm" 
@@ -623,6 +624,28 @@ export default function SendPage() {
                                                                 <Input type="datetime-local" className="rounded-xl" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} disabled={isSending} />
                                                             </motion.div>
                                                         )}
+                                                    </div>
+
+                                                    {/* Mobile Preview Button */}
+                                                    <div className="mt-4 lg:hidden">
+                                                        <Sheet>
+                                                            <SheetTrigger asChild>
+                                                                <Button variant="outline" className="w-full h-12 rounded-xl border-dashed border-2 flex items-center justify-center gap-2 font-bold text-muted-foreground hover:text-foreground bg-background">
+                                                                    <Eye className="w-5 h-5" />
+                                                                    Ver Preview da Mensagem
+                                                                </Button>
+                                                            </SheetTrigger>
+                                                            <SheetContent side="bottom" className="h-[90vh] p-0 flex flex-col items-center overflow-hidden rounded-t-3xl border-t border-border bg-[#ece5dd] dark:bg-[#0b141a]">
+                                                                <div className="sr-only">
+                                                                    <SheetTitle>Preview do WhatsApp</SheetTitle>
+                                                                    <SheetDescription>Visualize como sua mensagem aparecerá na tela do celular</SheetDescription>
+                                                                </div>
+                                                                <div className="w-full h-full flex flex-col p-6 items-center overflow-y-auto">
+                                                                    <div className="w-12 h-1.5 bg-muted-foreground/20 rounded-full mb-6 shrink-0" />
+                                                                    <WhatsAppMockup content={message} media={selectedFile} />
+                                                                </div>
+                                                            </SheetContent>
+                                                        </Sheet>
                                                     </div>
                                                 </div>
 
@@ -677,7 +700,7 @@ export default function SendPage() {
 
                                     {/* STEP 3: REAL-TIME FEEDBACK */}
                                     {currentStep === 3 && (
-                                        <div className="flex-1 flex flex-col items-center max-w-4xl mx-auto w-full space-y-6 flex-1 h-full relative">
+                                        <div className="flex-1 flex flex-col items-center max-w-4xl mx-auto w-full space-y-6 h-full relative">
                                             
                                             <AnimatePresence mode="wait">
                                                 {isSending ? (

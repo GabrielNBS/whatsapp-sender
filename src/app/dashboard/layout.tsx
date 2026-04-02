@@ -26,7 +26,7 @@ export default function DashboardLayout({
         <GlobalSheetProvider>
           <div className="flex h-screen bg-muted/20 relative">
             <main className="flex-1 overflow-auto">
-              <div className="container mx-auto p-6 md:p-8 max-w-7xl h-full">
+              <div className="container mx-auto p-4 sm:p-6 md:p-8 max-w-7xl h-full">
                 <DashboardContent>
                   {children}
                 </DashboardContent>
