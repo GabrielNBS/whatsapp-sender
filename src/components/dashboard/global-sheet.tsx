@@ -16,16 +16,20 @@ import { OverviewSheetContent } from "@/components/dashboard/sheets/overview-she
 
 import { MonitoringSheetContent } from "@/components/dashboard/sheets/monitoring-sheet-content";
 
+import { useMediaQuery } from "@/hooks/use-media-query";
+
 export function GlobalSheet() {
   const { activeSheet, closeSheet } = useGlobalSheet();
+  const isDesktop = useMediaQuery("(min-width: 640px)"); 
 
   return (
     <Sheet open={activeSheet !== null} onOpenChange={(open) => !open && closeSheet()}>
       <SheetContent 
-        side="right" 
+        side={isDesktop ? "right" : "bottom"} 
         className={cn(
-          "w-full sm:max-w-none overflow-y-auto border-l border-border bg-background shadow-2xl p-8 transition-all duration-500",
-          activeSheet === 'monitoring' ? "sm:w-[640px]" : "sm:w-[40vw]"
+          "w-full overflow-y-auto bg-background shadow-2xl transition-all duration-500",
+          !isDesktop ? "h-[90vh] rounded-t-2xl border-t border-border p-6" : "border-l border-border p-8",
+          activeSheet === 'monitoring' ? "sm:w-[60vw] sm:max-w-none" : "sm:w-[60vw] sm:max-w-none"
         )}
       >
         <div className="sr-only">

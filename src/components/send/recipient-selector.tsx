@@ -42,9 +42,11 @@ export function RecipientSelector({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredGroups = groups.filter((group) =>
-    group.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredGroups = groups.filter((group) => {
+    const matchesSearch = group.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const hasContacts = getContactsByGroup(group.id).length > 0;
+    return matchesSearch && hasContacts;
+  });
   const filteredContacts = contacts.filter(
     (contact) =>
       contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

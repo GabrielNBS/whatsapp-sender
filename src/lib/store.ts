@@ -12,6 +12,7 @@ interface AppState {
 
   addContact: (name: string, number: string, groupIds?: string[]) => void;
   importContacts: (newContacts: Omit<Contact, 'id'>[]) => void;
+  clearContacts: () => void;
   updateContactGroups: (contactId: string, groupIds: string[]) => void;
   deleteContact: (id: string) => void;
 
@@ -102,6 +103,8 @@ export const useAppStore = create<AppState>()(
         }));
         return { contacts: [...state.contacts, ...withIds] };
       }),
+
+      clearContacts: () => set({ contacts: [] }),
 
       updateContactGroups: (contactId, groupIds) => set((state) => ({
         contacts: state.contacts.map((c) =>

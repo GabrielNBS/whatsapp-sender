@@ -27,13 +27,13 @@ export function ActionMenu() {
   if (!isHydrated) return null;
 
   return (
-    <div className="fixed top-6 right-6 z-40">
+    <div className="fixed bottom-6 right-6 sm:top-6 sm:bottom-auto z-40">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button 
             size="icon" 
             className={cn(
-                "h-12 w-12 rounded-full shadow-2xl hover:shadow-primary/40 transition-all duration-300 bg-neutral-900 text-white border-none group relative overflow-hidden",
+                "h-14 w-14 sm:h-12 sm:w-12 rounded-full shadow-2xl hover:shadow-primary/40 transition-all duration-300 bg-neutral-900 text-white border-none group relative overflow-hidden",
                 open && "ring-4 ring-primary/20 scale-95"
             )}
           >
