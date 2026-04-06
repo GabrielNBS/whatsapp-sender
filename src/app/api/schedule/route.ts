@@ -10,6 +10,7 @@ export async function GET() {
             where: {
                 OR: [
                     { status: 'PENDING' },
+                    { status: 'PAUSED' },
                     { scheduledFor: { gte: new Date(Date.now() - 10 * 60 * 1000) } } // Fetch recent batches (last 10m) to detect completion/failure
                 ]
             },
@@ -57,6 +58,7 @@ export async function GET() {
                     batchName: msg.batchName || 'Sem Nome',
                     scheduledFor: msg.scheduledFor,
                     count: 0, // Pending count
+                    paused: 0, // Paused count
                     total: 0,
                     sent: 0,
                     failed: 0,
@@ -68,6 +70,7 @@ export async function GET() {
             batches[batchId].total++;
             
             if (msg.status === 'PENDING') batches[batchId].count++;
+            else if (msg.status === 'PAUSED') batches[batchId].paused++;
             else if (msg.status === 'SENT') batches[batchId].sent++;
             else if (msg.status === 'FAILED') batches[batchId].failed++;
 
@@ -113,7 +116,8 @@ export async function POST(req: Request) {
                 data: {
                     title: batchName || `Batch ${new Date().toISOString()}`,
                     content: message || '',
-                    media: media ? JSON.stringify(media) : null
+                    media: media ? JSON.stringify(media) : null,
+                    category: 'SYSTEM'
                 }
             });
             templateId = template.id;
@@ -160,7 +164,7 @@ export async function DELETE(req: Request) {
         const result = await prisma.scheduledMessage.deleteMany({
             where: {
                 batchId: batchId,
-                status: 'PENDING'
+                status: { in: ['PENDING', 'PAUSED'] }
             }
         });
 
@@ -184,10 +188,11 @@ export async function PUT(req: Request) {
         await prisma.scheduledMessage.updateMany({
             where: {
                 batchId: batchId,
-                status: 'PENDING'
+                status: { in: ['PENDING', 'PAUSED'] }
             },
             data: {
-                scheduledFor: new Date(newDate)
+                scheduledFor: new Date(newDate),
+                status: 'PENDING'
             }
         });
 

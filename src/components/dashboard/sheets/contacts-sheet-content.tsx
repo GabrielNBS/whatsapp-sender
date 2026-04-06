@@ -530,14 +530,14 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
 
    if (contacts.length === 0) {
       return (
-         <div className="flex items-center justify-center h-full text-muted-foreground bg-slate-50">
+         <div className="flex items-center justify-center h-full text-muted-foreground">
             Nenhum contato encontrado.
          </div>
       );
    }
 
    return (
-      <div className="flex flex-col h-full bg-white rounded-lg border border-slate-200 overflow-hidden">
+      <div className="flex flex-col h-full bg-secondary rounded-lg overflow-hidden">
          <div className="flex-1 overflow-auto relative">
             <table className="w-full caption-bottom text-sm text-left">
                <TableHeader className="bg-slate-50 sticky top-0 z-10 shadow-sm">

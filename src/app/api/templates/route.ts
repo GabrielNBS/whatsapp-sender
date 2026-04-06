@@ -5,6 +5,12 @@ import { Prisma } from '@prisma/client';
 export async function GET() {
     try {
         const templates = await prisma.template.findMany({
+            where: {
+                OR: [
+                    { category: null },
+                    { category: { not: 'SYSTEM' } }
+                ]
+            },
             orderBy: { createdAt: 'desc' },
         });
         return NextResponse.json(templates);
