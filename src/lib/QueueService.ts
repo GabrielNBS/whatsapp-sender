@@ -130,7 +130,8 @@ class QueueService {
           data: {
             title: campaignName,
             content: safeMessage,
-            media: stringifiedMedia
+            media: stringifiedMedia,
+            category: 'SYSTEM'
           }
         });
     }

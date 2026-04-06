@@ -13,6 +13,21 @@ export function startScheduler() {
 
     console.log('[Scheduler] Background Worker started.');
 
+    // 1. BLINDAGEM DE BOOT: Pausar campanhas interrompidas (>15min)
+    // Se o backend caiu e voltou, qualquer mensagem pendente antiga não deve ser processada
+    // automaticamente. Marcamos como PAUSED para requerer intervenção do usuário via frontend.
+    prisma.scheduledMessage.updateMany({
+        where: {
+            status: 'PENDING',
+            scheduledFor: { lte: new Date(Date.now() - 15 * 60 * 1000) }
+        },
+        data: { status: 'PAUSED' }
+    }).then(res => {
+        if (res.count > 0) {
+            console.log(`[Scheduler] Suspendidas ${res.count} mensagens antigas (PAUSED) por prevenção.`);
+        }
+    }).catch(err => console.error('[Scheduler] Erro ao suspender mensagens:', err));
+
     let workerTimeout: NodeJS.Timeout | null = null;
     let isProcessing = false;
 

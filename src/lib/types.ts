@@ -43,6 +43,7 @@ export interface ScheduledBatch {
     batchName: string;
     scheduledFor: Date | string; // Often string from JSON
     count: number; // Pending count (or Total?) - We will clarify this in route.ts
+    paused?: number; // Paused count
     total: number; // Total messages in batch
     sent: number; // Sent messages in batch
     failed: number; // Failed messages

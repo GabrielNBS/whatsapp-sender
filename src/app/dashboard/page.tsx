@@ -2,15 +2,15 @@
 
 import { useHydrated } from '@/hooks/use-hydrated';
 import { SendPageSkeleton } from '@/components/send/send-page-skeleton';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 
 import { AnimatedContent } from '@/components/ui/animated-content';
 import { useAppStore } from '@/lib/store';
 import { useGlobalSheet } from '@/components/dashboard/global-sheet-provider';
 import { Template } from '@/lib/types';
 import { nanoid } from 'nanoid';
-import { StaleBatchDialog } from '@/components/send/stale-batch-dialog';
 import { useScheduler } from '@/hooks/use-scheduler';
 import { useSender } from '@/hooks/use-sender';
 import { useSendForm } from '@/hooks/use-send-form';
@@ -78,6 +78,17 @@ const STEPS_NAV = [
 ];
 
 export default function SendPage() {
+    return (
+        <Suspense fallback={<SendPageSkeleton />}>
+            <SendPageInner />
+        </Suspense>
+    );
+}
+
+function SendPageInner() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
     const {
         groups: storeGroups,
         contacts: storeContacts,
@@ -98,9 +109,7 @@ export default function SendPage() {
 
     const {
         activeSchedules,
-        staleBatch,
         fetchSchedules,
-        handleConfirmStale
     } = useScheduler();
 
     const { handleSend, handleStop } = useSender();
@@ -144,6 +153,20 @@ export default function SendPage() {
         }, 10000);
         return () => clearInterval(interval);
     }, [words.length]);
+
+    useEffect(() => {
+        const stepParam = searchParams?.get('step');
+        if (stepParam === '3') {
+            setCurrentStep(3);
+            router.replace('/dashboard');
+        }
+    }, [searchParams, router]);
+
+    useEffect(() => {
+        const handleGoToStep = (e: CustomEvent) => setCurrentStep(e.detail);
+        window.addEventListener('go-to-step', handleGoToStep as EventListener);
+        return () => window.removeEventListener('go-to-step', handleGoToStep as EventListener);
+    }, []);
 
     const groups = storeGroups;
     const contacts = storeContacts;
@@ -291,10 +314,6 @@ export default function SendPage() {
     return (
         <div className="flex flex-col h-[calc(100vh-2rem)] bg-muted/30 -m-6 p-6 overflow-hidden">
 
-            <StaleBatchDialog
-                staleBatch={staleBatch}
-                onAction={handleConfirmStale}
-            />
 
             {/* Header Compact */}
             <div className="flex justify-between items-center mb-4 shrink-0">
@@ -495,7 +514,7 @@ export default function SendPage() {
 
                                     {/* STEP 1: RECIPIENTS */}
                                     {currentStep === 1 && (
-                                        <div className="max-w-xl mx-auto w-full space-y-6 pt-4">
+                                        <div className="max-w-xl mx-auto w-full space-y-6 pt-4 h-full overflow-y-auto no-scrollbar pb-10 px-2 lg:px-0">
                                             <div className="text-center space-y-2 mb-8">
                                                 <h2 className="text-2xl font-bold">Para quem vamos enviar?</h2>
                                                 <p className="text-muted-foreground">Escolha os contatos ou grupos que receberão a sua mensagem.</p>
@@ -531,63 +550,12 @@ export default function SendPage() {
 
                                     {/* STEP 2: MERGED MESSAGE + PREVIEW */}
                                     {currentStep === 2 && (
-                                        <div className="h-full flex flex-col overflow-hidden">
-                                            <div className="flex flex-col lg:flex-row gap-10 flex-1 min-h-0 pt-2">
-                                                <div className="flex-1 flex flex-col min-h-0 overflow-visible">
-                                                    <div className="mb-6 space-y-1">
+                                        <div className="h-full flex flex-col overflow-hidden pb-2">
+                                            <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 flex-1 min-h-0 pt-2">
+                                                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                                                    <div className="mb-6 space-y-1 [@media(max-height:1079px)]:hidden">
                                                         <h2 className="text-3xl font-black tracking-tight">Crie sua Mensagem</h2>
                                                         <p className="text-sm text-muted-foreground font-medium italic">Selecione um modelo ou escreva manualmente.</p>
-                                                    </div>
-
-                                                    {/* Template Selector (Select dropdown) */}
-                                                    <div className="mb-6 flex items-center gap-4">
-                                                        <Select onValueChange={handleTemplateSelect} disabled={isSending}>
-                                                            <motion.div
-                                                                initial={{ opacity: 0, y: 10 }}
-                                                                animate={{ 
-                                                                    opacity: 1, 
-                                                                    y: 0,
-                                                                    transition: { delay: 0.1 } 
-                                                                }}
-                                                                whileHover="hover"
-                                                                whileTap="tap"
-                                                                className="relative inline-block"
-                                                            >
-                                                                <SelectTrigger 
-                                                                    animatedBorder 
-                                                                    className="max-w-[260px] h-10 rounded-full bg-neutral-950 text-white border-transparent hover:bg-neutral-900 transition-all text-sm font-bold shadow-2xl px-4 gap-3 relative overflow-hidden group justify-start"
-                                                                >
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-lg pointer-events-none">🪄</span>
-                                                                        <SelectValue placeholder="Usar Modelo" />
-                                                                    </div>
-                                                                </SelectTrigger>
-                                                            </motion.div>
-                                                            <SelectContent>
-                                                                <SelectItem value="none">Nenhum modelo</SelectItem>
-                                                                {templates.length === 0 ? (
-                                                                    <SelectItem value="__empty__" disabled>Nenhum modelo disponível</SelectItem>
-                                                                ) : (
-                                                                    templates.map(template => (
-                                                                        <SelectItem key={template.id} value={template.id}>
-                                                                            {template.title}
-                                                                        </SelectItem>
-                                                                    ))
-                                                                )}
-                                                            </SelectContent>
-                                                        </Select>
-                                                        
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="sm" 
-                                                            onClick={() => openSheet('templates')}
-                                                            className="h-10 rounded-full px-4 text-xs font-bold text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all flex items-center gap-2 group"
-                                                        >
-                                                            <div className="bg-muted group-hover:bg-primary/10 p-1 rounded-full transition-colors">
-                                                                <Plus className="w-3 h-3 transition-transform group-hover:rotate-90" />
-                                                            </div>
-                                                            Criar modelo
-                                                        </Button>
                                                     </div>
 
                                                     {/* Message Editor */}
@@ -598,6 +566,40 @@ export default function SendPage() {
                                                             selectedFile={selectedFile}
                                                             onFileChange={setSelectedFile}
                                                             disabled={isSending}
+                                                            templateSlot={
+                                                                <div className="flex items-center gap-1">
+                                                                    <Select onValueChange={handleTemplateSelect} disabled={isSending}>
+                                                                        <SelectTrigger 
+                                                                            animatedBorder 
+                                                                            className="w-[160px] h-8 rounded-full bg-neutral-950 text-white border-transparent hover:bg-neutral-900 transition-all text-[11px] font-bold shadow-sm px-3 gap-2"
+                                                                        >
+                                                                            <span className="text-sm pointer-events-none">🪄</span>
+                                                                            <SelectValue placeholder="Usar Modelo" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="none">Nenhum modelo</SelectItem>
+                                                                            {templates.length === 0 ? (
+                                                                                <SelectItem value="__empty__" disabled>Nenhum modelo</SelectItem>
+                                                                            ) : (
+                                                                                templates.map(template => (
+                                                                                    <SelectItem key={template.id} value={template.id}>
+                                                                                        {template.title}
+                                                                                    </SelectItem>
+                                                                                ))
+                                                                            )}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                    
+                                                                    <Button 
+                                                                        variant="ghost" 
+                                                                        size="sm" 
+                                                                        onClick={() => openSheet('templates')}
+                                                                        className="h-8 rounded-full px-2 text-[11px] font-bold text-muted-foreground hover:bg-muted hover:text-primary transition-all"
+                                                                    >
+                                                                        <Plus className="w-3 h-3 mr-1" /> Criar
+                                                                    </Button>
+                                                                </div>
+                                                            }
                                                         />
                                                     </div>
 
@@ -626,8 +628,8 @@ export default function SendPage() {
                                                         )}
                                                     </div>
 
-                                                    {/* Mobile Preview Button */}
-                                                    <div className="mt-4 lg:hidden">
+                                                    {/* Mobile/Laptop Preview Button */}
+                                                    <div className="mt-4 lg:hidden [@media(max-height:1079px)]:block">
                                                         <Sheet>
                                                             <SheetTrigger asChild>
                                                                 <Button variant="outline" className="w-full h-12 rounded-xl border-dashed border-2 flex items-center justify-center gap-2 font-bold text-muted-foreground hover:text-foreground bg-background">
@@ -649,7 +651,7 @@ export default function SendPage() {
                                                     </div>
                                                 </div>
 
-                                                <div className="hidden lg:flex flex-col w-[340px] shrink-0">
+                                                <div className="hidden lg:flex flex-col w-[340px] shrink-0 [@media(max-height:1079px)]:!hidden">
                                                     <div className="flex items-center gap-2 mb-4 px-1">
                                                         <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                                                         <span className="text-[10px] font-black uppercase text-muted-foreground/80 tracking-widest">Preview em Tempo Real</span>
@@ -660,7 +662,7 @@ export default function SendPage() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex justify-center mt-6 mb-4 shrink-0 relative z-10">
+                                            <div className="flex justify-center mt-4 shrink-0 relative z-10">
                                                 <Button
                                                     onClick={handleSendAction}
                                                     disabled={isSending || isScheduling || (!message && !selectedFile)}

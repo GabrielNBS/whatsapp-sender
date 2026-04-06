@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { Users, Check } from "lucide-react";
+import { Users, Check, UserPlus, ExternalLink } from "lucide-react";
+import { useGlobalSheet } from "@/components/dashboard/global-sheet-provider";
+import { Button } from "@/components/ui/button";
 import { Group, Contact } from "@/lib/store";
 import { SearchTrigger, SearchInput, GroupList, ContactList } from "./recipient-selector/";
 
@@ -28,6 +30,7 @@ export function RecipientSelector({
   getContactsByGroup,
   disabled = false,
 }: RecipientSelectorProps) {
+  const { openSheet } = useGlobalSheet();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const searchRef = useRef<HTMLDivElement>(null);
@@ -112,8 +115,19 @@ export function RecipientSelector({
               />
 
               {filteredGroups.length === 0 && filteredContacts.length === 0 && (
-                <div className="px-2 py-4 text-center text-xs text-muted-foreground">
-                  Nenhum resultado encontrado.
+                <div className="p-4 flex flex-col items-center text-center space-y-4 bg-accent/30 rounded-lg border border-dashed border-accent-foreground/20 m-2 mt-4 anime-in fade-in zoom-in duration-300">
+                  <div className="p-3 bg-primary/10 rounded-full">
+                    <UserPlus className="w-6 h-6 text-primary" />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => openSheet('contacts')}
+                    className="group gap-2 h-9 text-xs w-full bg-background/50 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground border-primary/20 transition-all duration-300"
+                  >
+                    Gerenciar Contatos
+                    <ExternalLink className="w-3.5 h-3.5 opacity-70 transition-transform duration-300 group-hover:delay-150 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </Button>
                 </div>
               )}
             </div>

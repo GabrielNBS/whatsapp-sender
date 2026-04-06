@@ -19,6 +19,7 @@ interface MessageEditorProps {
     file: { data: string; mimetype: string; filename: string } | null
   ) => void;
   disabled?: boolean;
+  templateSlot?: React.ReactNode;
 }
 
 export function MessageEditor({
@@ -27,6 +28,7 @@ export function MessageEditor({
   selectedFile,
   onFileChange,
   disabled = false,
+  templateSlot,
 }: MessageEditorProps) {
   const insertVariable = (variable: string) => {
     if (disabled) return;
@@ -59,8 +61,13 @@ export function MessageEditor({
       disabled && "opacity-60 pointer-events-none"
     )}>
       {/* Toolbar - Pill-shaped buttons as per reference */}
-      <div className="px-5 py-4 flex flex-wrap gap-2 items-center bg-background">
-        <span className="text-xs font-bold text-foreground mr-2">Tipo sua mensagem</span>
+      <div className="px-3 md:px-5 py-3 md:py-4 flex flex-wrap gap-2 items-center bg-background border-b border-border/50">
+        
+        {templateSlot && (
+          <div className="mr-auto pr-2">
+            {templateSlot}
+          </div>
+        )}
         
         <div className="flex bg-muted/30 p-1 rounded-full border border-border/50 gap-1 overflow-x-auto no-scrollbar">
           <Button

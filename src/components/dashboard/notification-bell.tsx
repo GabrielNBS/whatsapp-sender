@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useHydrated } from "@/hooks/use-hydrated";
+import { useRouter } from "next/navigation";
 import {
     Popover,
     PopoverContent,
@@ -29,6 +30,7 @@ export function NotificationBell() {
     const { activeSchedules } = useScheduler();
     const { openSheet } = useGlobalSheet();
     const isHydrated = useHydrated();
+    const router = useRouter();
 
     if (!isHydrated) return null;
 
@@ -137,7 +139,7 @@ export function NotificationBell() {
                                 {/* LIVE SESSIONS */}
                                 {isActive && (
                                     <button 
-                                        onClick={() => openSheet('monitoring')}
+                                        onClick={() => router.push('/dashboard?step=3')}
                                         className="p-4 hover:bg-muted/50 transition-colors text-left group"
                                     >
                                         <div className="flex items-start gap-3">
