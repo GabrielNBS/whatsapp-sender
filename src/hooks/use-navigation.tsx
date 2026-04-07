@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useTransition, useCallback, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 
 interface NavigationContextType {
@@ -21,28 +21,19 @@ export function useNavigation() {
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [isNavigating, setIsNavigating] = useState(false);
   const [targetPath, setTargetPath] = useState<string | null>(null);
-  const prevPathname = useRef(pathname);
 
   const startNavigation = useCallback((path: string) => {
     if (path !== pathname) {
-      setIsNavigating(true);
       setTargetPath(path);
     }
   }, [pathname]);
 
-  // When the pathname changes, navigation is complete
-  useEffect(() => {
-    if (prevPathname.current !== pathname) {
-      setIsNavigating(false);
-      setTargetPath(null);
-      prevPathname.current = pathname;
-    }
-  }, [pathname]);
+  const activeTargetPath = targetPath && targetPath !== pathname ? targetPath : null;
+  const isNavigating = activeTargetPath !== null;
 
   return (
-    <NavigationContext.Provider value={{ isNavigating, targetPath, startNavigation }}>
+    <NavigationContext.Provider value={{ isNavigating, targetPath: activeTargetPath, startNavigation }}>
       {children}
     </NavigationContext.Provider>
   );

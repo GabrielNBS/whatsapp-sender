@@ -31,7 +31,7 @@ export function SnippetSettings() {
       if (res.ok) {
         setSnippets(await res.json());
       }
-    } catch (error) {
+    } catch {
       toast.error(`Erro ao carregar snippets`);
     } finally {
       setLoading(false);
@@ -60,7 +60,7 @@ export function SnippetSettings() {
       } else {
         toast.error(`Erro ao criar snippet`);
       }
-    } catch (error) {
+    } catch {
       toast.error(`Erro ao criar snippet`);
     } finally {
       setIsCreating(false);
@@ -77,7 +77,7 @@ export function SnippetSettings() {
         toast.success("Snippet removido");
         setSnippets(snippets.filter((s) => s.id !== id));
       }
-    } catch (error) {
+    } catch {
       toast.error(`Erro ao remover snippet`);
     }
   };

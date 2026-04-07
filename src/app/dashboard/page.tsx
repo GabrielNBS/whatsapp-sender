@@ -2,20 +2,21 @@
 
 import { useHydrated } from '@/hooks/use-hydrated';
 import { SendPageSkeleton } from '@/components/send/send-page-skeleton';
-import { useRouter, useSearchParams } from 'next/navigation';
 
 import { useState, useEffect, Suspense } from 'react';
 
 import { AnimatedContent } from '@/components/ui/animated-content';
 import { useAppStore } from '@/lib/store';
 import { useGlobalSheet } from '@/components/dashboard/global-sheet-provider';
-import { Template } from '@/lib/types';
 import { nanoid } from 'nanoid';
 import { useScheduler } from '@/hooks/use-scheduler';
 import { useSender } from '@/hooks/use-sender';
 import { useSendForm } from '@/hooks/use-send-form';
 import { useRealtimeMetrics } from '@/hooks/use-realtime-metrics';
 import { useScheduleMessages } from '@/hooks/use-schedule-messages';
+import { useRotatingIndex } from '@/hooks/use-rotating-index';
+import { useSendPageInitialStep } from '@/hooks/use-send-page-initial-step';
+import { useTemplateCatalog } from '@/hooks/use-template-catalog';
 import {
     MessageSquare,
     Calendar,
@@ -86,9 +87,6 @@ export default function SendPage() {
 }
 
 function SendPageInner() {
-    const searchParams = useSearchParams();
-    const router = useRouter();
-
     const {
         groups: storeGroups,
         contacts: storeContacts,
@@ -120,47 +118,17 @@ function SendPageInner() {
         scheduledFor: string;
         contactCount: number;
     } | null>(null);
-    const [templates, setTemplates] = useState<Template[]>([]);
     const [isScheduling, setIsScheduling] = useState(false);
 
-    const [currentStep, setCurrentStep] = useState<number>(0);
-    const [currentWordIndex, setCurrentWordIndex] = useState(0);
+    const initialStep = useSendPageInitialStep();
+    const [currentStep, setCurrentStep] = useState<number>(initialStep);
     const words = ["Engajamento", "Negócio", "Posicionamento", "Alcance"];
+    const currentWordIndex = useRotatingIndex(words.length, 10000);
+    const templates = useTemplateCatalog();
     const hydrated = useHydrated();
     const { openSheet } = useGlobalSheet();
     const { metrics } = useRealtimeMetrics({ pollingInterval: 5000 });
     const isConnected = metrics?.connection.status === 'connected';
-
-    useEffect(() => {
-        const fetchTemplates = async () => {
-            try {
-                const res = await fetch('/api/templates');
-                if (res.ok) {
-                    const data = await res.json();
-                    setTemplates(data);
-                }
-            } catch (error) {
-                console.error("Falha ao buscar modelos", error);
-            }
-        };
-
-        fetchTemplates();
-    }, []);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentWordIndex((prev) => (prev + 1) % words.length);
-        }, 10000);
-        return () => clearInterval(interval);
-    }, [words.length]);
-
-    useEffect(() => {
-        const stepParam = searchParams?.get('step');
-        if (stepParam === '3') {
-            setCurrentStep(3);
-            router.replace('/dashboard');
-        }
-    }, [searchParams, router]);
 
     useEffect(() => {
         const handleGoToStep = (e: CustomEvent) => setCurrentStep(e.detail);
@@ -190,7 +158,6 @@ function SendPageInner() {
         handleTemplateSelect,
         resetForm,
     } = useSendForm({
-        groups,
         contacts,
         getContactsByGroup,
         templates,

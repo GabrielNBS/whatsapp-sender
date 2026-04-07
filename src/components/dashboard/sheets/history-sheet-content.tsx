@@ -19,7 +19,7 @@ import {
   MessageSquare,
   ArrowDownNarrowWide,
   ArrowUpNarrowWide,
-  Image,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -346,7 +346,7 @@ function CampaignDetail({
                     {mediaObj.filename && (
                       <div className="absolute bottom-0 inset-x-0 bg-linear-to-t from-black/60 to-transparent px-3 py-2">
                         <p className="text-[11px] text-white font-medium truncate flex items-center gap-1">
-                          <Image className="w-3 h-3" />
+                          <ImageIcon className="w-3 h-3" />
                           {mediaObj.filename}
                         </p>
                       </div>
@@ -358,7 +358,7 @@ function CampaignDetail({
               {/* Non-image media indicator */}
               {mediaObj && !isImage && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground w-fit">
-                  <Image className="w-4 h-4" />
+                  <ImageIcon className="w-4 h-4" />
                   <span>{mediaObj.filename || 'Arquivo anexado'}</span>
                   <span className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground/70">
                     {mediaObj.mimetype?.split('/')[1] || 'arquivo'}

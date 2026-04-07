@@ -30,8 +30,8 @@ export function useScheduler() {
             if (res.ok) {
                 const data: ScheduledBatch[] = await res.json();
                 
-                // Filter for UI display (only show active/pending batches)
-                const pendingBatches = data.filter(b => b.count > 0);
+                // Filter for UI display (show pending and in-flight batches)
+                const pendingBatches = data.filter((batch) => batch.count > 0 || batch.processing > 0);
                 
                 // Detect completion by checking batches that were pending and are now zero-pending (completed)
                 // OR batches that purely disappeared (fallback, though API now returns recent completed)
@@ -39,7 +39,7 @@ export function useScheduler() {
                 
                 // Check for batches that finished in this tick (present in data but count == 0)
                 data.forEach(batch => {
-                    if (batch.count === 0 && prevBatchesRef.current.has(batch.batchId)) {
+                    if (batch.count === 0 && batch.processing === 0 && prevBatchesRef.current.has(batch.batchId)) {
                         // Was pending, now done
                         if (batch.failed > 0) {
                             addLog(`Agendamento concluído com ${batch.failed} falha(s).`, 'error');

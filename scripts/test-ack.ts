@@ -1,5 +1,3 @@
-
-import { WhatsAppService } from '../src/lib/whatsapp';
 import { PrismaClient } from '@prisma/client';
 
 // Mock Prisma

@@ -81,7 +81,11 @@ export class MetricsService implements IMetricsService {
     
     return {
       connection: {
-        status: whatsappMetrics.isConnected ? "connected" : "disconnected",
+        status: whatsappMetrics.isReady
+          ? "connected"
+          : whatsappMetrics.isAuthenticated
+            ? "initializing"
+            : "disconnected",
         uptimeSeconds: whatsappMetrics.uptimeSeconds,
         connectedSince: whatsappMetrics.connectedSince,
       },
@@ -180,8 +184,8 @@ export class MetricsService implements IMetricsService {
     // 1. Funil de Engajamento Global
     const analytics = await prisma.contactAnalytics.findMany();
     const validContacts = analytics.length;
-    const totalSent = analytics.reduce((sum: number, a: any) => sum + a.sentCount, 0);
-    const totalReads = analytics.reduce((sum: number, a: any) => sum + a.readCount, 0);
+    const totalSent = analytics.reduce((sum, analyticsItem) => sum + analyticsItem.sentCount, 0);
+    const totalReads = analytics.reduce((sum, analyticsItem) => sum + analyticsItem.readCount, 0);
     
     // Fallback: se houver mais leituras que envios (bugs antigos), cap
     const normalizedReads = Math.min(totalReads, totalSent);
@@ -214,7 +218,7 @@ export class MetricsService implements IMetricsService {
       trendsMap.set(dayStr, { sent: 0, read: 0, responses: 0 });
     }
 
-    campaigns.forEach((camp: any) => {
+    campaigns.forEach((camp) => {
       const dayStr = camp.startedAt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
       const current = trendsMap.get(dayStr);
       if (current) {
@@ -238,7 +242,8 @@ export class MetricsService implements IMetricsService {
    * Obtém métricas do WhatsAppService via API interna
    */
   private async getWhatsAppMetrics(): Promise<{
-    isConnected: boolean;
+    isAuthenticated: boolean;
+    isReady: boolean;
     uptimeSeconds: number | null;
     connectedSince: Date | null;
     polling: {
@@ -264,7 +269,8 @@ export class MetricsService implements IMetricsService {
       const uptime = instance.getUptime();
       
       return {
-        isConnected: status.isAuthenticated && status.isReady,
+        isAuthenticated: status.isAuthenticated,
+        isReady: status.isReady,
         uptimeSeconds: uptime.uptimeSeconds,
         connectedSince: uptime.connectedSince,
         polling,
@@ -276,7 +282,8 @@ export class MetricsService implements IMetricsService {
   
   private getDefaultWhatsAppMetrics() {
     return {
-      isConnected: false,
+      isAuthenticated: false,
+      isReady: false,
       uptimeSeconds: null,
       connectedSince: null,
       polling: {

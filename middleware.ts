@@ -1,7 +1,7 @@
 import { generateRequestId } from "@/lib/CorrelationId";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function middleware() {
   const requestId = generateRequestId();
 
   const response = NextResponse.next();

@@ -60,7 +60,7 @@ export const SmartTextarea = React.forwardRef<HTMLTextAreaElement, SmartTextarea
          const currentVal = textarea.value;
          const selectionStart = textarea.selectionStart;
          
-         let insertion = value;
+         const insertion = value;
          
          // If mode is variable, we might need to adjust logic if '{' was typed.
          // Current logic assumption: user typed '{', popup opens. 

@@ -119,7 +119,7 @@ export function ReportSettings() {
       } else {
         throw new Error('Failed to add');
       }
-    } catch (error) {
+    } catch {
       toast.error('Erro ao adicionar gestor');
     } finally {
       setIsAdding(false);
@@ -141,7 +141,7 @@ export function ReportSettings() {
         );
         toast.success(isActive ? 'Gestor desativado' : 'Gestor ativado');
       }
-    } catch (error) {
+    } catch {
       toast.error('Erro ao atualizar');
     }
   };
@@ -157,7 +157,7 @@ export function ReportSettings() {
         setRecipients(prev => prev.filter(r => r.id !== recipientId));
         toast.success('Gestor removido');
       }
-    } catch (error) {
+    } catch {
       toast.error('Erro ao remover');
     }
   };
@@ -176,7 +176,7 @@ export function ReportSettings() {
         setConfig(prev => prev ? { ...prev, ...updates } : null);
         toast.success('Configurações salvas');
       }
-    } catch (error) {
+    } catch {
       toast.error('Erro ao salvar');
     } finally {
       setIsSaving(false);

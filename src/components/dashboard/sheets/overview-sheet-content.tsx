@@ -2,7 +2,7 @@
 
 import { SplitText } from '@/components/ui/split-text';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
 import { 
@@ -15,7 +15,6 @@ import {
   Gauge,
   CheckCheck,
   MailCheck,
-  RefreshCw
 } from 'lucide-react';
 import { MetricsCard, formatters } from '@/components/dashboard/metrics-card';
 import { useRealtimeMetrics } from '@/hooks/use-realtime-metrics';
@@ -26,7 +25,7 @@ import { useGlobalSheet } from '@/components/dashboard/global-sheet-provider';
 
 export function OverviewSheetContent() {
   const { contacts, groups } = useAppStore();
-  const { metrics, isLoading, refresh } = useRealtimeMetrics({ pollingInterval: 3000 });
+  const { metrics, isLoading } = useRealtimeMetrics({ pollingInterval: 3000 });
   const { data: chartsData, isLoading: isChartsLoading } = useDashboardCharts();
   const { closeSheet } = useGlobalSheet();
 
@@ -36,15 +35,6 @@ export function OverviewSheetContent() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <SplitText text="Dashboard" as="h1" className="text-3xl font-bold tracking-tight" />
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={refresh}
-          className="gap-2"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Atualizar
-        </Button>
       </div>
 
       {/* Métricas em Tempo Real */}
@@ -143,7 +133,7 @@ export function OverviewSheetContent() {
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <Button 
+            <Button   
               className="w-full mt-1 " 
               size="sm"
               onClick={() => closeSheet()}
@@ -161,19 +151,6 @@ export function OverviewSheetContent() {
           <EngagementFunnelChart data={chartsData.funnel} />
         </div>
       )}
-
-      <div className="mt-8 bg-card shadow-md">
-        <Card className="bg-card text-card-foreground border-none">
-          <CardHeader>
-            <CardTitle className='text-foreground'>Bem-vindo ao WhatsApp Sender</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Sistema de disparos em massa e gerenciamento de contatos <br />
-              Utilize o menu lateral para gerenciar seus grupos de contatos ou iniciar um novo envio de mensagens.
-              Lembre-se de manter o WhatsApp conectado no dispositivo servidor.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
     </div>
   );
 }
