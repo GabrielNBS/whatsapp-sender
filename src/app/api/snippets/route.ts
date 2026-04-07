@@ -3,12 +3,11 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
     try {
-        // @ts-ignore
         const snippets = await prisma.snippet.findMany({
             orderBy: { trigger: 'asc' }
         });
         return NextResponse.json(snippets);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Error fetching snippets' }, { status: 500 });
     }
 }
@@ -27,13 +26,12 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Trigger and content required' }, { status: 400 });
         }
 
-        // @ts-ignore
         const snippet = await prisma.snippet.create({
             data: { trigger: cleanTrigger, content }
         });
 
         return NextResponse.json(snippet);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Error creating snippet' }, { status: 500 });
     }
 }
@@ -47,10 +45,9 @@ export async function DELETE(request: Request) {
     }
 
     try {
-        // @ts-ignore
         await prisma.snippet.delete({ where: { id } });
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Error deleting snippet' }, { status: 500 });
     }
 }

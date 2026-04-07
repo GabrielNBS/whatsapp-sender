@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export function QrDisplay() {
@@ -14,8 +14,6 @@ export function QrDisplay() {
   const router = useRouter();
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
     const fetchStatus = async () => {
       try {
         const res = await fetch('/api/qr');
@@ -36,7 +34,7 @@ export function QrDisplay() {
     };
 
     fetchStatus();
-    intervalId = setInterval(fetchStatus, 3000); // Poll every 3s
+    const intervalId = setInterval(fetchStatus, 3000); // Poll every 3s
 
     return () => clearInterval(intervalId);
   }, [router]);

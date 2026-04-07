@@ -60,14 +60,21 @@ class QueueService {
       }
     });
 
-    const isSending = activePendingCount > 0 && !campaign.completedAt && !this.abortSignal;
-    const isScheduled = pendingCount > 0 && activePendingCount === 0;
+    const processingCount = await prisma.scheduledMessage.count({
+      where: {
+        batchId: this.activeCampaignId!,
+        status: 'PROCESSING'
+      }
+    });
+
+    const isSending = (activePendingCount > 0 || processingCount > 0) && !campaign.completedAt && !this.abortSignal;
+    const isScheduled = pendingCount > 0 && activePendingCount === 0 && processingCount === 0;
 
     const sentCount = campaign.sentCount;
     const failedCount = campaign.failedCount;
     const total = campaign.totalContacts;
     
-    const currentContactIndex = total - pendingCount;
+    const currentContactIndex = Math.max(0, total - pendingCount - processingCount);
     const progress = total > 0 ? Math.round((currentContactIndex / total) * 100) : 100;
 
     const failedRecords = await prisma.scheduledMessage.findMany({
@@ -113,6 +120,7 @@ class QueueService {
       this.activeCampaignId = campaignId;
       this.abortSignal = false;
       this.logs = [];
+      this.totalLogs = 0;
 
       this.addLog('Processando lista de contatos...', 'info');
 

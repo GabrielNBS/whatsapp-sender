@@ -5,7 +5,7 @@
  * Follows SRP: handles only campaign lifecycle and metrics.
  */
 
-import { PrismaClient, Campaign } from '@prisma/client';
+import { PrismaClient, Campaign, Prisma } from '@prisma/client';
 
 // ============================================
 // INTERFACES (DIP)
@@ -52,6 +52,10 @@ export interface CampaignHistoryItem extends Campaign {
   templateContent?: string;
   templateMedia?: string | null;
 }
+
+type ScheduledMessageWithTemplate = Prisma.ScheduledMessageGetPayload<{
+  include: { template: true };
+}>;
 
 // ============================================
 // IMPLEMENTATION
@@ -136,38 +140,50 @@ export class CampaignService implements ICampaignService {
       take: limit,
     });
 
-    // For each campaign, fetch failed messages to allow triage
-    const history = await Promise.all(
-      campaigns.map(async (camp) => {
-        let failedMessages: FailedMessageDetail[] = [];
-        if (camp.failedCount > 0) {
-           const dbFailed = await this.prisma.scheduledMessage.findMany({
-             where: { batchId: camp.id, status: 'FAILED' },
-             select: { contactName: true, contactPhone: true, templateId: true }
-           });
-           failedMessages = dbFailed as FailedMessageDetail[];
-        }
-        
-        // Try to get the template used from the first message of this batch
-        let templateData = null;
-        const firstMsg = await this.prisma.scheduledMessage.findFirst({
-            where: { batchId: camp.id },
-            include: { template: true }
-        });
-        if (firstMsg && firstMsg.template) {
-            templateData = firstMsg.template;
-        }
+    if (campaigns.length === 0) {
+      return [];
+    }
 
-        return {
-          ...camp,
-          failedDetails: failedMessages,
-          templateId: templateData?.id,
-          templateTitle: templateData?.title,
-          templateContent: templateData?.content,
-          templateMedia: templateData?.media ?? null,
-        };
-      })
-    );
+    const campaignIds = campaigns.map((campaign) => campaign.id);
+    const scheduledMessages = await this.prisma.scheduledMessage.findMany({
+      where: {
+        batchId: { in: campaignIds },
+      },
+      include: { template: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    const messagesByBatch = scheduledMessages.reduce<Map<string, ScheduledMessageWithTemplate[]>>((map, message) => {
+      if (!message.batchId) {
+        return map;
+      }
+
+      const currentMessages = map.get(message.batchId) ?? [];
+      currentMessages.push(message);
+      map.set(message.batchId, currentMessages);
+      return map;
+    }, new Map());
+
+    const history = campaigns.map((camp) => {
+      const batchMessages = messagesByBatch.get(camp.id) ?? [];
+      const failedMessages = batchMessages
+        .filter((message) => message.status === 'FAILED')
+        .map((message) => ({
+          contactName: message.contactName,
+          contactPhone: message.contactPhone,
+          templateId: message.templateId,
+        }));
+      const templateData = batchMessages[0]?.template;
+
+      return {
+        ...camp,
+        failedDetails: failedMessages,
+        templateId: templateData?.id,
+        templateTitle: templateData?.title,
+        templateContent: templateData?.content,
+        templateMedia: templateData?.media ?? null,
+      };
+    });
     
     return history;
   }

@@ -30,11 +30,39 @@ export interface Template {
   media?: string; // JSON string
 }
 
+export interface TemplateMediaPayload {
+    data: string;
+    mimetype: string;
+    filename?: string;
+}
+
+export type ScheduledMessageStatus =
+    | 'PENDING'
+    | 'PROCESSING'
+    | 'PAUSED'
+    | 'SENT'
+    | 'FAILED';
+
+export interface ScheduleRecipientInput {
+    name: string;
+    number?: string;
+    phone?: string;
+}
+
+export interface ScheduleRequestBody {
+    recipients: ScheduleRecipientInput[];
+    message?: string;
+    media?: TemplateMediaPayload | null;
+    scheduledFor: string;
+    batchName?: string;
+    templateId?: string;
+}
+
 export interface MessageStatus {
     id: string;
     name: string;
     phone: string;
-    status: 'PENDING' | 'SENT' | 'FAILED';
+    status: ScheduledMessageStatus;
 }
 
 export interface ScheduledBatch {
@@ -43,6 +71,7 @@ export interface ScheduledBatch {
     batchName: string;
     scheduledFor: Date | string; // Often string from JSON
     count: number; // Pending count (or Total?) - We will clarify this in route.ts
+    processing: number;
     paused?: number; // Paused count
     total: number; // Total messages in batch
     sent: number; // Sent messages in batch
@@ -64,5 +93,5 @@ export interface Campaign {
 }
 
 export interface IMessageSender {
-    sendMessage(to: string, message: string, media?: { mimetype: string; data: string; filename?: string }): Promise<unknown>;
+    sendMessage(to: string, message: string, media?: TemplateMediaPayload): Promise<unknown>;
 }

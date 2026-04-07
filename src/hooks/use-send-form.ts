@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback, ChangeEvent } from 'react';
-import { Contact, Group, Template } from '@/lib/types';
+import { useState, useMemo, useCallback, ChangeEvent, useEffect } from 'react';
+import { Contact, Template } from '@/lib/types';
 
 /**
  * File data structure for media uploads
@@ -23,7 +23,6 @@ export interface RecipientConfig {
  * Hook parameters
  */
 interface UseSendFormParams {
-  groups: Group[];
   contacts: Contact[];
   getContactsByGroup: (groupId: string) => Contact[];
   templates: Template[];
@@ -65,7 +64,6 @@ interface UseSendFormReturn {
  * reducing prop drilling and component complexity.
  */
 export function useSendForm({
-  groups,
   contacts,
   getContactsByGroup,
   templates,
@@ -81,6 +79,7 @@ export function useSendForm({
   const [isScheduleMode, setIsScheduleMode] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
 
   // Computed: recipients based on selection
   const recipients = useMemo(() => {
@@ -99,6 +98,14 @@ export function useSendForm({
     return Math.ceil((recipientsCount * 20) / 60);
   }, [recipientsCount]);
 
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setNowTimestamp(Date.now());
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
   // Validation: can submit form
   const canSubmit = useMemo(() => {
     // Must have recipients
@@ -111,12 +118,12 @@ export function useSendForm({
     if (isScheduleMode) {
       if (!scheduleDate) return false;
       const scheduledTime = new Date(scheduleDate).getTime();
-      const minTime = Date.now() + 2 * 60 * 1000; // 2 minutes from now
+      const minTime = nowTimestamp + 2 * 60 * 1000; // 2 minutes from now
       if (scheduledTime < minTime) return false;
     }
     
     return true;
-  }, [recipientsCount, message, selectedFile, isScheduleMode, scheduleDate]);
+  }, [recipientsCount, message, selectedFile, isScheduleMode, scheduleDate, nowTimestamp]);
 
   // Handlers
   const handleTemplateSelect = useCallback((templateId: string) => {

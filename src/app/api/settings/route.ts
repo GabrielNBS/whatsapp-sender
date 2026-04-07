@@ -3,12 +3,11 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
     try {
-        // @ts-ignore: Prisma client might not be regenerated yet due to file lock
         const settings = await prisma.settings.findUnique({
             where: { id: 'default' }
         });
         return NextResponse.json(settings || { defaultLink: '', defaultCTA: '' });
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Error fetching settings' }, { status: 500 });
     }
 }
@@ -18,7 +17,6 @@ export async function PUT(request: Request) {
         const body = await request.json();
         const { defaultLink, defaultCTA } = body;
 
-        // @ts-ignore: Prisma client might not be regenerated yet due to file lock
         const settings = await prisma.settings.upsert({
             where: { id: 'default' },
             update: { defaultLink, defaultCTA },
@@ -26,7 +24,7 @@ export async function PUT(request: Request) {
         });
 
         return NextResponse.json(settings);
-    } catch (error) {
+    } catch {
         return NextResponse.json({ error: 'Error updating settings' }, { status: 500 });
     }
 }

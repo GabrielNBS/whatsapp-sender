@@ -4,6 +4,40 @@ import whatsappService from './whatsapp';
 import { getCampaignService } from './CampaignService';
 import { getQueueService } from './QueueService';
 
+async function claimNextScheduledMessage(now: Date) {
+    while (true) {
+        const candidate = await prisma.scheduledMessage.findFirst({
+            where: {
+                status: 'PENDING',
+                scheduledFor: { lte: now }
+            },
+            orderBy: { scheduledFor: 'asc' },
+            select: { id: true }
+        });
+
+        if (!candidate) {
+            return null;
+        }
+
+        const claimResult = await prisma.scheduledMessage.updateMany({
+            where: {
+                id: candidate.id,
+                status: 'PENDING'
+            },
+            data: { status: 'PROCESSING' }
+        });
+
+        if (claimResult.count === 0) {
+            continue;
+        }
+
+        return prisma.scheduledMessage.findUnique({
+            where: { id: candidate.id },
+            include: { template: true }
+        });
+    }
+}
+
 export function startScheduler() {
     const globalObj = global as unknown as { isSchedulerRunning?: boolean, wakeUpScheduler?: () => void };
     if (globalObj.isSchedulerRunning) {
@@ -18,7 +52,7 @@ export function startScheduler() {
     // automaticamente. Marcamos como PAUSED para requerer intervenção do usuário via frontend.
     prisma.scheduledMessage.updateMany({
         where: {
-            status: 'PENDING',
+            status: { in: ['PENDING', 'PROCESSING'] },
             scheduledFor: { lte: new Date(Date.now() - 15 * 60 * 1000) }
         },
         data: { status: 'PAUSED' }
@@ -35,17 +69,9 @@ export function startScheduler() {
         if (isProcessing) return;
         isProcessing = true;
         try {
-            const now = new Date();
             
             // Pega APENAS 1 mensagem pendente mais prioritária (horário vencido ou imediato)
-            const msg = await prisma.scheduledMessage.findFirst({
-                where: {
-                    status: 'PENDING',
-                    scheduledFor: { lte: now }
-                },
-                orderBy: { scheduledFor: 'asc' },
-                include: { template: true }
-            });
+            const msg = await claimNextScheduledMessage(new Date());
 
             if (!msg) {
                 // Sem mensagens, repousa curto antes de buscar novamente
@@ -56,6 +82,10 @@ export function startScheduler() {
             const queueLogs = getQueueService();
             const status = whatsappService.getStatus();
             if (!status.isReady) {
+                await prisma.scheduledMessage.update({
+                    where: { id: msg.id },
+                    data: { status: 'PENDING' }
+                });
                 console.log(`[Scheduler] WhatsApp not ready (Status: ${status.status} - Auth: ${status.isAuthenticated}). Sleeping 10s...`);
                 queueLogs.pushLog('WhatsApp desconectado. Aguardando reconexão...', 'warning');
                 workerTimeout = setTimeout(workerLoop, 10000);
@@ -90,7 +120,7 @@ export function startScheduler() {
                 
                 // Checa se a campanha terminou
                 const pendingLeft = await prisma.scheduledMessage.count({
-                   where: { batchId: msg.batchId, status: 'PENDING' }
+                   where: { batchId: msg.batchId, status: { in: ['PENDING', 'PROCESSING'] } }
                 });
 
                 if (pendingLeft === 0) {

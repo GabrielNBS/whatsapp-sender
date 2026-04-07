@@ -96,7 +96,6 @@ export function StatusPanel({
             isSending={isSending}
             showCompletion={showCompletion}
             progress={progress}
-            currentContactIndex={currentContactIndex}
             totalRecipients={totalRecipients}
             statusMessage={statusMessage}
           />
