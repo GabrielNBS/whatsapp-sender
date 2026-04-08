@@ -40,41 +40,50 @@ function resolveDesktopAssetsDir() {
   return path.join(resolveProjectRoot(), 'desktop-assets');
 }
 
-function collectFiles(directoryPath, fileName, matches = []) {
-  if (!fs.existsSync(directoryPath)) {
-    return matches;
-  }
-
-  const entries = fs.readdirSync(directoryPath, { withFileTypes: true });
-  for (const entry of entries) {
-    const entryPath = path.join(directoryPath, entry.name);
-    if (entry.isDirectory()) {
-      collectFiles(entryPath, fileName, matches);
-    } else if (entry.name.toLowerCase() === fileName.toLowerCase()) {
-      matches.push(entryPath);
+function findFirstExistingPath(candidates) {
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(candidate)) {
+      return candidate;
     }
   }
 
-  return matches;
+  return null;
 }
 
-function resolveBundledChromeExecutable(desktopAssetsDir) {
-  const chromeRoot = path.join(desktopAssetsDir, 'chrome');
-  if (!fs.existsSync(chromeRoot)) {
-    return null;
+function resolveInstalledBrowserExecutable() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
   }
 
   if (process.platform === 'win32') {
-    return collectFiles(chromeRoot, 'chrome.exe')[0] ?? null;
+    const programFiles = process.env.PROGRAMFILES;
+    const programFilesX86 = process.env['PROGRAMFILES(X86)'];
+    const localAppData = process.env.LOCALAPPDATA;
+
+    return findFirstExistingPath([
+      programFiles && path.join(programFiles, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      programFilesX86 && path.join(programFilesX86, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      localAppData && path.join(localAppData, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+      programFiles && path.join(programFiles, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      programFilesX86 && path.join(programFilesX86, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+      localAppData && path.join(localAppData, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+    ]);
   }
 
   if (process.platform === 'darwin') {
-    return collectFiles(chromeRoot, 'Chromium')[0]
-      ?? collectFiles(chromeRoot, 'Google Chrome for Testing')[0]
-      ?? null;
+    return findFirstExistingPath([
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    ]);
   }
 
-  return collectFiles(chromeRoot, 'chrome')[0] ?? null;
+  return findFirstExistingPath([
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/microsoft-edge',
+    '/usr/bin/chromium',
+    '/snap/bin/chromium',
+  ]);
 }
 
 function toDatabaseUrl(filePath) {
@@ -158,7 +167,12 @@ async function startNextServer() {
   const databasePath = path.join(dataDirectory, 'app.db');
   copyFileIfMissing(templateDatabasePath, databasePath);
 
-  const bundledChromeExecutable = resolveBundledChromeExecutable(desktopAssetsDir);
+  const browserExecutable = resolveInstalledBrowserExecutable();
+  if (!browserExecutable) {
+    throw new Error(
+      'Nenhum navegador compatível foi encontrado. Instale Google Chrome ou Microsoft Edge nesta máquina para usar o WhatsApp Sender.',
+    );
+  }
 
   activePort = await reservePort();
   process.env.NODE_ENV = 'production';
@@ -168,9 +182,7 @@ async function startNextServer() {
   process.env.APP_DESKTOP_ASSETS_DIR = desktopAssetsDir;
   process.env.APP_DATABASE_FILENAME = 'app.db';
   process.env.DATABASE_URL = toDatabaseUrl(databasePath);
-  if (bundledChromeExecutable) {
-    process.env.PUPPETEER_EXECUTABLE_PATH = bundledChromeExecutable;
-  }
+  process.env.PUPPETEER_EXECUTABLE_PATH = browserExecutable;
 
   process.chdir(standaloneDir);
   require(serverPath);

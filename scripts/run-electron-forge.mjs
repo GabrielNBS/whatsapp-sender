@@ -14,7 +14,7 @@ if (forgeArgs.length === 0) {
 
 const isWindows = process.platform === 'win32';
 const tempRoot = isWindows ? 'C:\\wstmp' : path.join(projectRoot, '.tmp');
-const outRoot = isWindows ? 'C:\\wsdist' : path.join(projectRoot, 'out');
+const outRoot = path.join(projectRoot, 'out');
 
 mkdirSync(tempRoot, { recursive: true });
 mkdirSync(outRoot, { recursive: true });
