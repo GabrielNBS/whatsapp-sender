@@ -11,7 +11,6 @@ interface StatusPanelProps {
   isScheduleMode: boolean;
   estimatedTime: number;
   progress: number;
-  currentContactIndex: number;
   totalRecipients: number;
   statusMessage: string | null;
   logs: LogEntry[];
@@ -25,7 +24,6 @@ export function StatusPanel({
   isScheduleMode,
   estimatedTime,
   progress,
-  currentContactIndex,
   totalRecipients,
   statusMessage,
   logs,

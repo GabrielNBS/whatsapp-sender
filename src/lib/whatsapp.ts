@@ -35,6 +35,7 @@ import { Client, LocalAuth, MessageMedia } from "whatsapp-web.js";
 import { prisma } from "./db";
 import { AnalyticsService, IAnalyticsService } from "./AnalyticsService";
 import { MessageFormatter, IMessageFormatter, ContactInfo } from "./MessageFormatter";
+import { ensureRuntimeEnvironment } from "./runtime-paths";
 import {
   MessageAckStatus,
   ConnectionStatus,
@@ -171,12 +172,18 @@ export class WhatsAppService {
     private analyticsService: IAnalyticsService,
     private messageFormatter: IMessageFormatter
   ) {
+    const runtimePaths = ensureRuntimeEnvironment();
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+
     console.log("Initializing WhatsApp Service...");
     this.client = new Client({
-      authStrategy: new LocalAuth(),
+      authStrategy: new LocalAuth({
+        dataPath: runtimePaths.authDir,
+      }),
       puppeteer: {
         headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        ...(executablePath ? { executablePath } : {}),
       },
       webVersionCache: {
         type: "remote",
@@ -816,24 +823,32 @@ export class WhatsAppService {
  * 2. Em testes, pode criar instância com mocks
  * 3. Composição raiz (composition root) fica clara
  */
-if (!global.whatsappClientInstance) {
+function createWhatsAppService(): WhatsAppService {
   // Criar instâncias das dependências
   const analyticsService = new AnalyticsService(prisma);
   const messageFormatter = new MessageFormatter();
   
   // Injetar dependências no WhatsAppService
-  global.whatsappClientInstance = new WhatsAppService(
-    analyticsService,
-    messageFormatter
-  );
+  return new WhatsAppService(analyticsService, messageFormatter);
 }
 
-const service = global.whatsappClientInstance;
+const service = new Proxy({} as WhatsAppService, {
+  get(_target, property, receiver) {
+    const instance = getWhatsAppInstance();
+    const value = Reflect.get(instance, property, receiver);
+
+    return typeof value === "function" ? value.bind(instance) : value;
+  },
+});
 
 /**
  * Retorna a instância do WhatsAppService para uso em outros módulos
  */
-export function getWhatsAppInstance(): WhatsAppService | undefined {
+export function getWhatsAppInstance(): WhatsAppService {
+  if (!global.whatsappClientInstance) {
+    global.whatsappClientInstance = createWhatsAppService();
+  }
+
   return global.whatsappClientInstance;
 }
 

@@ -2,11 +2,20 @@
   "name": "whatsapp-sender",
   "version": "0.1.0",
   "private": true,
+  "description": "Desktop application for scheduling and sending WhatsApp campaign messages.",
+  "author": "WhatsApp Sender Team",
+  "license": "UNLICENSED",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "desktop:prepare-db": "node scripts/prepare-desktop-db.mjs",
+    "desktop:prepare-bundle": "npm run build && node scripts/prepare-electron-bundle.mjs",
+    "desktop:install-browser": "npx puppeteer browsers install chrome --path desktop-assets/chrome",
+    "desktop:package": "npm run desktop:prepare-db && npm run desktop:prepare-bundle && node scripts/run-electron-forge.mjs package",
+    "desktop:make": "npm run desktop:prepare-db && npm run desktop:prepare-bundle && node scripts/run-electron-forge.mjs make"
   },
   "dependencies": {
     "@prisma/client": "^5.10.2",
@@ -54,7 +63,11 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/recharts": "^2.0.1",
+    "@electron-forge/cli": "^7.8.1",
+    "@electron-forge/maker-squirrel": "^7.8.1",
+    "@electron-forge/maker-zip": "^7.8.1",
     "eslint": "^9",
+    "electron": "^35.1.5",
     "eslint-config-next": "16.1.1",
     "prisma": "^5.10.2",
     "tailwindcss": "^4",

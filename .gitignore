@@ -49,3 +49,10 @@ next-env.d.ts
 # sqlite
 *.db
 *.db-journal
+
+# desktop packaging artifacts
+/desktop-assets/chrome/
+/desktop-assets/template.db
+/\.desktop-stage/
+/out/
+/runtime/
