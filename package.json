@@ -13,9 +13,8 @@
     "lint": "eslint",
     "desktop:prepare-db": "node scripts/prepare-desktop-db.mjs",
     "desktop:prepare-bundle": "npm run build && node scripts/prepare-electron-bundle.mjs",
-    "desktop:install-browser": "npx puppeteer browsers install chrome --path desktop-assets/chrome",
-    "desktop:package": "npm run desktop:prepare-db && npm run desktop:prepare-bundle && node scripts/run-electron-forge.mjs package",
-    "desktop:make": "npm run desktop:prepare-db && npm run desktop:prepare-bundle && node scripts/run-electron-forge.mjs make"
+    "desktop:package": "npm run desktop:prepare-db && npm run desktop:prepare-bundle && node scripts/package-portable.mjs",
+    "desktop:make": "npm run desktop:prepare-db && npm run desktop:prepare-bundle && node scripts/package-portable.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.10.2",
