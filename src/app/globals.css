@@ -182,3 +182,45 @@
 }
 
 /* @keyframes glow-shift is referenced by inline style in SelectTrigger when animatedBorder=true */
+
+/* Holographic effect */
+@keyframes holographic-shift {
+  0%   { background-position: 0% 50%; }
+  25%  { background-position: 100% 50%; }
+  50%  { background-position: 100% 0%; }
+  75%  { background-position: 0% 100%; }
+  100% { background-position: 0% 50%; }
+}
+
+.holographic-bg {
+  background: linear-gradient(
+    135deg,
+    #a8edea 0%,
+    #fed6e3 15%,
+    #d299f5 30%,
+    #89f7fe 45%,
+    #f6d365 60%,
+    #fda085 75%,
+    #a8edea 90%,
+    #fed6e3 100%
+  );
+  background-size: 400% 400%;
+  animation: holographic-shift 6s ease infinite;
+}
+
+.surface-container-low {
+  background-color: var(--muted);
+}
+
+.dark .surface-container-low {
+  background-color: oklch(0.22 0 0);
+}
+
+.font-headline {
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.text-on-surface-variant {
+  color: var(--muted-foreground);
+}

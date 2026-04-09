@@ -42,7 +42,6 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { AnimatedPaperPlane } from "@/components/ui/animated-paper-plane";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 import { Switch } from "@/components/ui/switch";
@@ -346,23 +345,16 @@ function SendPageInner() {
                             <AnimatedContent activeKey={currentStep} spring="snappy" className="h-full flex flex-col">
                                     {/* STEP 0: INTRO */}
                                     {currentStep === 0 && (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-center max-w-2xl mx-auto space-y-6 py-4 overflow-visible">
-                                            <motion.div
-                                                animate={{ 
-                                                    scale: [1, 1.05, 1],
-                                                    y: [0, -6, 0]
-                                                }}
-                                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                                                className="w-32 h-32 flex items-center justify-center -mb-4 overflow-visible relative"
-                                            >
-                                                <AnimatedPaperPlane className="w-full h-full" />
-                                            </motion.div>
-                                            <div className="space-y-2 overflow-visible">
-                                                <h2 className="text-5xl font-black tracking-tighter flex flex-col items-center gap-0 mb-1">
-                                                    <span className="bg-clip-text text-transparent bg-linear-to-r from-[#25D366] via-[#128C7E] to-[#075E54] animate-gradient-x">
+                                        <div className="flex-1 flex flex-col items-center justify-center text-center max-w-lg mx-auto space-y-4 py-8">
+                                            <div className="w-14 h-14 rounded-xl bg-primary/[0.06] border border-primary/10 flex items-center justify-center">
+                                                <MessageSquare className="w-6 h-6 text-primary/80" />
+                                            </div>
+                                            <div className="space-y-3">
+                                                <h2 className="text-4xl font-extrabold tracking-tight leading-[1.15]">
+                                                    <span className="text-foreground">
                                                         Escale seu
                                                     </span>
-                                                    <div className="h-[1.2em] relative w-full flex justify-center overflow-visible">
+                                                    <div className="h-[1.2em] relative w-full flex justify-center overflow-hidden">
                                                         <AnimatePresence mode="wait">
                                                             <motion.div
                                                                 key={currentWordIndex}
@@ -371,22 +363,15 @@ function SendPageInner() {
                                                                 {words[currentWordIndex].split('').map((char, i) => (
                                                                     <motion.span
                                                                         key={`${currentWordIndex}-${i}`}
-                                                                        initial={{ opacity: 0, scale: 0.5, filter: "blur(8px)", y: 20 }}
-                                                                        animate={{ opacity: 1, scale: 1, filter: "blur(0px)", y: 0 }}
-                                                                        exit={{ 
-                                                                            opacity: 0, 
-                                                                            scale: 1.2,
-                                                                            filter: "blur(15px)",
-                                                                            x: (i % 2 === 0 ? 1 : -1) * (20 + i * 2),
-                                                                            y: -40 - (i * 2),
-                                                                            rotate: (i % 2 === 0 ? 1 : -1) * 20
-                                                                        }}
+                                                                        initial={{ opacity: 0, y: 10, filter: "blur(2px)" }}
+                                                                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                                                                        exit={{ opacity: 0, y: -10, filter: "blur(2px)" }}
                                                                         transition={{ 
-                                                                            duration: 0.6, 
-                                                                            delay: i * 0.02,
+                                                                            duration: 0.3, 
+                                                                            delay: i * 0.015,
                                                                             ease: [0.4, 0, 0.2, 1]
                                                                         }}
-                                                                        className="inline-block bg-clip-text text-transparent py-3 px-0.5 bg-linear-to-r from-[#25D366] via-[#128C7E] to-[#075E54] animate-gradient-x"
+                                                                        className="inline-block text-primary py-1 px-px"
                                                                     >
                                                                         {char === ' ' ? '\u00A0' : char}
                                                                     </motion.span>
@@ -395,25 +380,19 @@ function SendPageInner() {
                                                         </AnimatePresence>
                                                     </div>
                                                 </h2>
-                                                <p className="text-lg text-muted-foreground">
-                                                    Campanhas <strong className='font-medium text-primary'>personalizadas</strong> e disparos <strong className='font-medium text-primary'>precisos</strong>. Comece agora a alcançar seu público de forma <strong className='font-medium text-primary'>profissional</strong>.
+                                                <p className="text-[15px] text-muted-foreground leading-relaxed max-w-md mx-auto">
+                                                    Campanhas personalizadas e disparos precisos.
+                                                    Alcance seu público de forma profissional.
                                                 </p>
                                             </div>
                                             <motion.button 
                                                 onClick={() => setCurrentStep(1)}
-                                                whileHover="hover"
-                                                whileTap="tap"
-                                                className="mt-8 px-10 py-4 bg-primary text-primary-foreground text-lg font-bold rounded-full shadow-xl transition-all flex items-center gap-3 group"
+                                                whileHover={{ scale: 1.015 }}
+                                                whileTap={{ scale: 0.985 }}
+                                                className="mt-4 px-8 py-3.5 bg-primary text-primary-foreground text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2"
                                             >
                                                 Iniciar Campanha
-                                                <motion.div
-                                                    variants={{
-                                                        hover: { x: 5 },
-                                                        tap: { x: 2 }
-                                                    }}
-                                                >
-                                                    <ChevronRight className="w-5 h-5 transition-transform" />
-                                                </motion.div>
+                                                <ChevronRight className="w-4 h-4" />
                                             </motion.button>
 
                                             {/* Method 4: Dashboard Status Card (Active/Scheduled) - Compacted */}
@@ -482,9 +461,10 @@ function SendPageInner() {
                                     {/* STEP 1: RECIPIENTS */}
                                     {currentStep === 1 && (
                                         <div className="max-w-xl mx-auto w-full space-y-6 pt-4 h-full overflow-y-auto no-scrollbar pb-10 px-2 lg:px-0">
-                                            <div className="text-center space-y-2 mb-8">
-                                                <h2 className="text-2xl font-bold">Para quem vamos enviar?</h2>
-                                                <p className="text-muted-foreground">Escolha os contatos ou grupos que receberão a sua mensagem.</p>
+                                            <div className="space-y-1 mb-6">
+                                                <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Passo 1</p>
+                                                <h2 className="text-2xl font-bold tracking-tight">Para quem vamos enviar?</h2>
+                                                <p className="text-sm text-muted-foreground">Escolha os contatos ou grupos que receberão a mensagem.</p>
                                             </div>
                                             
                                             <RecipientSelector
@@ -498,18 +478,16 @@ function SendPageInner() {
 
                                             {recipients.length > 0 && (
                                                 <motion.div 
-                                                    initial={{ opacity: 0, y: 10 }}
+                                                    initial={{ opacity: 0, y: 8 }}
                                                     animate={{ opacity: 1, y: 0 }}
-                                                    className="bg-primary/5 border border-primary/20 rounded-2xl p-4 flex items-center justify-between"
+                                                    className="bg-primary/[0.04] border border-primary/10 rounded-xl p-3.5 flex items-center gap-3"
                                                 >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="bg-primary/10 p-2 rounded-full">
-                                                            <Users className="w-5 h-5 text-primary" />
-                                                        </div>
-                                                        <p className="font-bold text-sm">
-                                                            {recipients.length} {recipients.length === 1 ? 'contato selecionado' : 'contatos selecionados'}
-                                                        </p>
+                                                    <div className="bg-primary/10 p-2 rounded-lg">
+                                                        <Users className="w-4 h-4 text-primary" />
                                                     </div>
+                                                    <p className="font-semibold text-sm">
+                                                        {recipients.length} {recipients.length === 1 ? 'contato selecionado' : 'contatos selecionados'}
+                                                    </p>
                                                 </motion.div>
                                             )}
                                         </div>
@@ -521,8 +499,9 @@ function SendPageInner() {
                                             <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 flex-1 min-h-0 pt-2">
                                                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                                                     <div className="mb-6 space-y-1 [@media(max-height:1079px)]:hidden">
-                                                        <h2 className="text-3xl font-black tracking-tight">Crie sua Mensagem</h2>
-                                                        <p className="text-sm text-muted-foreground font-medium italic">Selecione um modelo ou escreva manualmente.</p>
+                                                        <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Passo 2</p>
+                                                        <h2 className="text-2xl font-bold tracking-tight">Crie sua Mensagem</h2>
+                                                        <p className="text-sm text-muted-foreground">Selecione um modelo ou escreva manualmente.</p>
                                                     </div>
 
                                                     {/* Message Editor */}
@@ -570,7 +549,7 @@ function SendPageInner() {
                                                         />
                                                     </div>
 
-                                                    <div className="mt-4 p-4 bg-muted/20 border border-border/50 rounded-[24px] space-y-3">
+                                                    <div className="mt-4 p-4 bg-muted/20 border border-border/50 rounded-xl space-y-3">
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-3">
                                                                 <div className="bg-primary/10 p-2 rounded-full">
@@ -635,27 +614,22 @@ function SendPageInner() {
                                                     disabled={isSending || isScheduling || (!message && !selectedFile)}
                                                     asChild
                                                     className={cn(
-                                                        "h-14 px-12 rounded-full font-black text-lg shadow-xl transition-all text-white border-none group",
-                                                        (isSending || isScheduling || (!message && !selectedFile)) ? "opacity-50 grayscale cursor-not-allowed" : "cursor-pointer"
+                                                        "h-12 px-10 rounded-xl font-semibold text-sm bg-primary text-primary-foreground shadow-sm hover:shadow-md transition-all gap-2",
+                                                        (isSending || isScheduling || (!message && !selectedFile)) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                                                     )}
-                                                    style={{ 
-                                                        background: (isSending || isScheduling || (!message && !selectedFile)) 
-                                                            ? 'linear-gradient(135deg, #4b5563, #374151)' // Grayish gradient
-                                                            : 'linear-gradient(135deg, #044950, #609000)' // Original green gradient
-                                                    }}
                                                 >
                                                     <motion.button
                                                         whileHover={!(isSending || isScheduling || (!message && !selectedFile)) ? "hover" : ""}
                                                         whileTap={!(isSending || isScheduling || (!message && !selectedFile)) ? "tap" : ""}
                                                     >
-                                                        <span className="flex items-center gap-2 group-hover:gap-4 transition-all duration-300 uppercase">
+                                                        <span className="flex items-center gap-2 transition-all">
                                                             {isSending || isScheduling ? (
                                                                 <>
                                                                     <RefreshCw className="w-5 h-5 animate-spin mr-1" />
-                                                                    {isScheduling ? 'AGENDANDO...' : 'ENVIANDO...'}
+                                                                    {isScheduling ? 'Agendando...' : 'Enviando...'}
                                                                 </>
                                                             ) : (
-                                                                'REVISAR E ENVIAR'
+                                                                'Revisar e Enviar'
                                                             )}
                                                             <motion.div variants={{ hover: { x: 4 } }}>
                                                                 <ChevronRight className="w-5 h-5" />
