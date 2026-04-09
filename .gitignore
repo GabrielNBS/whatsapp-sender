@@ -56,3 +56,4 @@ next-env.d.ts
 /\.desktop-stage/
 /out/
 /runtime/
+/docs/
