@@ -17,7 +17,7 @@ interface WizardStepperProps {
 export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepperProps) {
   return (
     <div className="flex items-center justify-center w-full my-6">
-      <div className="flex items-center gap-1 p-1 bg-muted/30 border border-border/50 rounded-full shadow-sm backdrop-blur-sm">
+      <div className="flex items-center gap-1 p-1 bg-muted/20 border border-border/30 rounded-full">
         {steps.map((step, index) => {
           const isActive = 
             (step.id === 0 && currentStep === 0) ||
@@ -37,8 +37,8 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
                   color: isActive ? "var(--primary-foreground)" : "var(--muted-foreground)",
                 }}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-1.5 rounded-full transition-all duration-300",
-                  isActive ? "shadow-md cursor-default" : "cursor-pointer"
+                  "flex items-center gap-2 px-4 py-1.5 rounded-full transition-all duration-200",
+                  isActive ? "shadow-sm cursor-default" : "cursor-pointer"
                 )}
               >
                 <motion.div
@@ -47,7 +47,7 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
                 >
                   <step.icon className="w-3.5 h-3.5" />
                 </motion.div>
-                <span className="text-xs font-bold whitespace-nowrap">
+                <span className="text-xs font-semibold whitespace-nowrap">
                   {index + 1}. {step.label}
                 </span>
               </motion.button>
