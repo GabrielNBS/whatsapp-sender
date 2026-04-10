@@ -36,7 +36,7 @@ rmSync(zipPath, { recursive: true, force: true });
 mkdirSync(packagedRoot, { recursive: true });
 mkdirSync(zipDir, { recursive: true });
 
-const packagedAppPaths = await packager({
+const packagedAppPaths = await packager.packager({
   arch: 'x64',
   asar: false,
   dir: desktopStageDir,
