@@ -22,7 +22,7 @@ mkdirSync(outRoot, { recursive: true });
 const runner = isWindows
   ? path.join(projectRoot, 'node_modules', '.bin', 'electron-forge.cmd')
   : path.join(projectRoot, 'node_modules', '.bin', 'electron-forge');
-const args = [...forgeArgs, '--outDir', outRoot];
+const args = [...forgeArgs];
 const result = spawnSync(runner, args, {
   cwd: projectRoot,
   env: {
