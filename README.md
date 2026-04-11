@@ -29,8 +29,35 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+## Executando Localmente
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Para rodar o projeto localmente, você pode usar os scripts facilitadores na raiz do projeto:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **`setup_database.bat`**: Instala dependências, gera o cliente do banco de dados e configura o SQLite. Execute isso na primeira vez.
+2. **`iniciar_projeto.bat`**: Constrói o projeto (build) e inicia o servidor. Use este script no dia a dia.
+3. **`clean_install.bat`**: Remove `node_modules` e reinstala tudo do zero. Use caso tenha problemas estranhos.
+
+### Requisitos
+
+- Node.js 18+ instalado
+- Google Chrome instalado (para o WhatsApp Web)
+
+### Comandos Manuais
+
+Se preferir usar o terminal:
+
+```bash
+# Instalar dependências
+npm install
+
+# Configurar banco de dados
+npx prisma generate
+npx prisma db push
+
+# Rodar em modo de desenvolvimento
+npm run dev
+
+# Rodar em modo de produção (mais rápido)
+npm run build
+npm start
+```

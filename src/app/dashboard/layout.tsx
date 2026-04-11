@@ -1,4 +1,19 @@
-import { Sidebar } from '@/components/dashboard/sidebar';
+'use client';
+
+import { DashboardContent } from '@/components/dashboard/dashboard-content';
+import { DashboardShell } from '@/components/dashboard/dashboard-shell';
+import { NavigationProvider } from '@/hooks/use-navigation';
+import { GlobalSheetProvider } from '@/components/dashboard/global-sheet-provider';
+import { GlobalSheet } from '@/components/dashboard/global-sheet';
+import { ActionMenu } from '@/components/dashboard/action-menu';
+import { TransmissionPill } from '@/components/dashboard/transmission-pill';
+import { NotificationBell } from '@/components/dashboard/notification-bell';
+import { useSendPolling } from '@/hooks/use-send-polling';
+
+function PollingManager() {
+  useSendPolling();
+  return null;
+}
 
 export default function DashboardLayout({
   children,
@@ -6,13 +21,25 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen bg-muted/20">
-      <Sidebar />
-      <main className="flex-1 overflow-auto">
-        <div className="container mx-auto p-6 md:p-8 max-w-7xl">
-          {children}
-        </div>
-      </main>
-    </div>
+    <NavigationProvider>
+      <DashboardShell>
+        <GlobalSheetProvider>
+          <div className="flex h-screen bg-muted/20 relative">
+            <main className="flex-1 overflow-auto">
+              <div className="container mx-auto p-4 sm:p-6 md:p-8 max-w-7xl h-full">
+                <DashboardContent>
+                  {children}
+                </DashboardContent>
+              </div>
+            </main>
+            <NotificationBell />
+            <ActionMenu />
+            <GlobalSheet />
+            <TransmissionPill />
+            <PollingManager />
+          </div>
+        </GlobalSheetProvider>
+      </DashboardShell>
+    </NavigationProvider>
   );
 }

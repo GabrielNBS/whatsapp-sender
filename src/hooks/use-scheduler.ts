@@ -4,14 +4,15 @@ import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/lib/store';
 import { nanoid } from 'nanoid';
 import { ScheduledBatch, LogType } from '@/lib/types';
+import { toast } from 'sonner';
 
 export function useScheduler() {
     const { addLog: storeAddLog } = useAppStore();
     const [activeSchedules, setActiveSchedules] = useState<ScheduledBatch[]>([]);
-    const [staleBatch, setStaleBatch] = useState<ScheduledBatch | null>(null);
     
     // Track previous batches to detect completion
     const prevBatchesRef = useRef<Set<string>>(new Set());
+    const toastedPausedRef = useRef<Set<string>>(new Set());
 
     const addLog = (message: string, type: LogType = 'info', expiresAt?: number) => {
         storeAddLog({
@@ -29,8 +30,8 @@ export function useScheduler() {
             if (res.ok) {
                 const data: ScheduledBatch[] = await res.json();
                 
-                // Filter for UI display (only show active/pending batches)
-                const pendingBatches = data.filter(b => b.count > 0);
+                // Filter for UI display (show pending and in-flight batches)
+                const pendingBatches = data.filter((batch) => batch.count > 0 || batch.processing > 0);
                 
                 // Detect completion by checking batches that were pending and are now zero-pending (completed)
                 // OR batches that purely disappeared (fallback, though API now returns recent completed)
@@ -38,7 +39,7 @@ export function useScheduler() {
                 
                 // Check for batches that finished in this tick (present in data but count == 0)
                 data.forEach(batch => {
-                    if (batch.count === 0 && prevBatchesRef.current.has(batch.batchId)) {
+                    if (batch.count === 0 && batch.processing === 0 && prevBatchesRef.current.has(batch.batchId)) {
                         // Was pending, now done
                         if (batch.failed > 0) {
                             addLog(`Agendamento concluído com ${batch.failed} falha(s).`, 'error');
@@ -58,9 +59,28 @@ export function useScheduler() {
 
                 prevBatchesRef.current = currentPendingIds;
                 setActiveSchedules(pendingBatches);
+
+                // Check for paused batches and prompt via Sonner
+                const pausedBatches = data.filter(b => (b.paused ?? 0) > 0);
+                pausedBatches.forEach(batch => {
+                    if (!toastedPausedRef.current.has(batch.batchId)) {
+                        toastedPausedRef.current.add(batch.batchId);
+                        toast(`Campanha "${batch.batchName}" foi interrompida com ${batch.paused} pendências.`, {
+                            duration: Infinity,
+                            action: {
+                                label: 'Retomar Envio',
+                                onClick: () => handleConfirmStale(batch, true)
+                            },
+                            cancel: {
+                                label: 'Cancelar Envios',
+                                onClick: () => handleConfirmStale(batch, false)
+                            }
+                        });
+                    }
+                });
             }
-        } catch (error) {
-            console.error("Failed to fetch schedules", error);
+        } catch {
+            console.error("Failed to fetch schedules");
         }
     };
 
@@ -70,13 +90,13 @@ export function useScheduler() {
             await fetch(`/api/schedule?batchId=${batchId}`, { method: 'DELETE' });
             fetchSchedules();
             addLog('Agendamento cancelado.', 'warning');
-        } catch (error) {
+        } catch {
             addLog('Erro ao cancelar agendamento.', 'error');
         }
     };
 
-    const handleConfirmStale = async (keep: boolean) => {
-        if (!staleBatch) return;
+    const handleConfirmStale = async (batch: ScheduledBatch, keep: boolean) => {
+        if (!batch) return;
 
         if (keep) {
             try {
@@ -84,49 +104,35 @@ export function useScheduler() {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        batchId: staleBatch.batchId, // Ensure we use correct ID field from ScheduledBatch type
+                        batchId: batch.batchId,
                         newDate: new Date().toISOString()
                     })
                 });
+                toast.success('Envio retomado com sucesso!');
                 addLog('Agendamento atrasado atualizado para envio imediato.', 'info');
-            } catch (e) {
+            } catch {
+                toast.error('Erro ao retomar o envio.');
                 addLog('Erro ao atualizar agendamento.', 'error');
             }
         } else {
-            await handleCancelSchedule(staleBatch.batchId);
+            await handleCancelSchedule(batch.batchId);
+            toast.info('Envios da campanha cancelados.');
             addLog('Agendamento atrasado cancelado automaticamente.', 'warning');
         }
-        setStaleBatch(null);
         fetchSchedules();
     };
-
-    // Stale check effect
-    useEffect(() => {
-        if (activeSchedules.length > 0) {
-            const now = new Date();
-            const stale = activeSchedules.find(batch => {
-                const batchDate = new Date(batch.scheduledFor);
-                return (now.getTime() - batchDate.getTime()) > 60 * 60 * 1000;
-            });
-
-            if (stale) {
-                setStaleBatch(stale);
-            }
-        }
-    }, [activeSchedules]);
 
     // Polling effect
     useEffect(() => {
         fetchSchedules();
         const interval = setInterval(fetchSchedules, 10000);
         return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     return {
         activeSchedules,
-        staleBatch,
         fetchSchedules,
         handleCancelSchedule,
-        handleConfirmStale
     };
 }

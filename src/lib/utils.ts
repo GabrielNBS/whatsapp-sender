@@ -95,3 +95,13 @@ export const formatPhoneNumber = (phone: string) => {
   }
   return phone;
 };
+
+/**
+ * Returns true when the schedule date is at least 2 minutes from now.
+ * Use this instead of inlining Date.now() comparisons in render to avoid
+ * "impure function" lint errors and keep the logic in one place.
+ */
+export function isScheduleDateValid(date: string): boolean {
+  if (!date) return false;
+  return new Date(date).getTime() >= Date.now() + 2 * 60 * 1000;
+}
