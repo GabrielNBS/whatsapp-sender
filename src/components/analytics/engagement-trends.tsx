@@ -11,6 +11,7 @@ import {
   Legend
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useHydrated } from '@/hooks/use-hydrated';
 
 interface TrendData {
   date: string;
@@ -24,6 +25,8 @@ interface EngagementTrendsProps {
 }
 
 export function EngagementTrendsChart({ data }: EngagementTrendsProps) {
+  const hydrated = useHydrated();
+
   if (!data || data.length === 0) return null;
 
   return (
@@ -34,6 +37,7 @@ export function EngagementTrendsChart({ data }: EngagementTrendsProps) {
       </CardHeader>
       <CardContent>
         <div className="h-[250px] w-full mt-4">
+          {hydrated ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
@@ -89,6 +93,7 @@ export function EngagementTrendsChart({ data }: EngagementTrendsProps) {
               />
             </AreaChart>
           </ResponsiveContainer>
+          ) : null}
         </div>
       </CardContent>
     </Card>

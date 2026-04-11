@@ -387,12 +387,17 @@ function SendPageInner() {
                                             </div>
                                             <motion.button 
                                                 onClick={() => setCurrentStep(1)}
-                                                whileHover={{ scale: 1.015 }}
+                                                whileHover="hover"
                                                 whileTap={{ scale: 0.985 }}
-                                                className="mt-4 px-8 py-3.5 bg-primary text-primary-foreground text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2"
+                                                className="cursor-pointer mt-4 px-8 py-3.5 bg-primary text-primary-foreground text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2"
                                             >
                                                 Iniciar Campanha
-                                                <ChevronRight className="w-4 h-4" />
+                                                <motion.div
+                                                    variants={{ hover: { x: 4 } }}
+                                                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                                                >
+                                                    <ChevronRight className="w-4 h-4" />
+                                                </motion.div>
                                             </motion.button>
 
                                             {/* Method 4: Dashboard Status Card (Active/Scheduled) - Compacted */}
@@ -556,7 +561,7 @@ function SendPageInner() {
                                                                     <Users className="w-5 h-5 text-primary" />
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-sm font-bold">{recipients.length} contatos alvo</p>
+                                                                    <p className="text-sm font-bold">{recipients.length} {recipients.length === 1 ? 'contato' : 'contatos'} alvo</p>
                                                                     <p className="text-[10px] text-muted-foreground uppercase font-black">Público Selecionado</p>
                                                                 </div>
                                                             </div>
@@ -631,7 +636,7 @@ function SendPageInner() {
                                                             ) : (
                                                                 'Revisar e Enviar'
                                                             )}
-                                                            <motion.div variants={{ hover: { x: 4 } }}>
+                                                            <motion.div variants={{ hover: { x: 4 } }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
                                                                 <ChevronRight className="w-5 h-5" />
                                                             </motion.div>
                                                         </span>

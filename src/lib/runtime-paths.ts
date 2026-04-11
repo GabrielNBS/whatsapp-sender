@@ -31,9 +31,9 @@ function resolveDesktopAssetsDir(): string | null {
 
 export function resolveRuntimePaths(): RuntimePaths {
   const configuredRuntimeDir = process.env.APP_RUNTIME_DIR;
-  const appRuntimeDir = path.resolve(
-    configuredRuntimeDir || path.join(process.cwd(), DEFAULT_RUNTIME_FOLDER),
-  );
+  const appRuntimeDir = configuredRuntimeDir
+    ? path.resolve(configuredRuntimeDir)
+    : path.resolve(DEFAULT_RUNTIME_FOLDER);
   const dataDir = path.join(appRuntimeDir, 'data');
   const databaseFileName = process.env.APP_DATABASE_FILENAME || 'app.db';
 

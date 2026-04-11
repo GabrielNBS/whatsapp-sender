@@ -35,7 +35,7 @@ export function apiHandler(
         method: req.method,
         url: req.nextUrl.pathname,
         error: errorMessage,
-        stack: error instanceof Error ? error.stack : undefined,
+        stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined,
       });
 
       const response: ApiErrorResponse = {

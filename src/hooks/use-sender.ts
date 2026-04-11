@@ -56,6 +56,31 @@ export function useSender() {
     });
 
     try {
+      const statusRes = await fetch('/api/campaigns/status');
+      if (statusRes.ok) {
+        const status = await statusRes.json();
+        if (status.isSending || status.isPaused) {
+          const cancelCurrent = window.confirm(
+            status.isSending
+              ? 'Ja existe uma transmissao em andamento. Clique OK para cancelar a atual e iniciar a nova. Clique Cancelar para continuar a atual.'
+              : 'Existe uma transmissao pausada. Clique OK para cancelar a pausada e iniciar uma nova. Clique Cancelar para manter a pausada.'
+          );
+
+          if (!cancelCurrent) {
+            setSendingStatus({
+              isSending: true,
+              statusMessage: status.statusMessage || 'Continuando transmissao atual...',
+              isPaused: !!status.isPaused,
+            });
+            addLog('Transmissao atual mantida.', 'info');
+            return false;
+          }
+
+          await fetch('/api/campaigns/stop', { method: 'POST' });
+          addLog('Transmissao atual pausada para iniciar uma nova.', 'warning');
+        }
+      }
+
       const res = await fetch("/api/campaigns/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

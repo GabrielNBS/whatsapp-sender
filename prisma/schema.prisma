@@ -58,6 +58,10 @@ model ScheduledMessage {
 
   batchId   String?  // UUID of the broadcast batch
   batchName String?  // Optional name for grouping
+
+  @@index([status, scheduledFor])
+  @@index([batchId, status])
+  @@index([scheduledFor])
 }
 
 model ContactAnalytics {
