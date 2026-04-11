@@ -1,4 +1,26 @@
-import { QrDisplay } from '@/components/qr-display';
+import { QrDisplay as QrDisplayContent } from '@/components/qr-display';
+import { ErrorBoundary } from 'react-error-boundary';
+import { ErrorState } from '@/components/ui/error-state';
+
+export function QrDisplay() {
+  return (
+    <ErrorBoundary
+      fallback={
+        <div className="w-full max-w-sm mx-auto p-4 border rounded-lg bg-card">
+            <ErrorState 
+                title="Erro no QR Code" 
+                description="Falha ao carregar o componente de conexão."
+                showHomeButton={false}
+                minHeight="min-h-[200px]"
+            />
+        </div>
+      }
+    >
+      <QrDisplayContent />
+    </ErrorBoundary>
+  );
+}
+
 
 export default function Home() {
   return (

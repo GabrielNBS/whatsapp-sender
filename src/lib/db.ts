@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client'
+import { ensureRuntimeEnvironment } from './runtime-paths'
 
-console.log('DB_URL_DEBUG:', process.env.DATABASE_URL);
-
+ensureRuntimeEnvironment()
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 

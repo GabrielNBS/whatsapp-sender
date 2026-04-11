@@ -35,6 +35,7 @@ import { Client, LocalAuth, MessageMedia } from "whatsapp-web.js";
 import { prisma } from "./db";
 import { AnalyticsService, IAnalyticsService } from "./AnalyticsService";
 import { MessageFormatter, IMessageFormatter, ContactInfo } from "./MessageFormatter";
+import { ensureRuntimeEnvironment } from "./runtime-paths";
 import {
   MessageAckStatus,
   ConnectionStatus,
@@ -123,6 +124,8 @@ export class WhatsAppService {
   // Polling Queue
   private pendingMessages: Map<string, PendingMessageData> = new Map();
   private pollingInterval: NodeJS.Timeout | null = null;
+  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private waitReadyPromise: Promise<boolean> | null = null;
   
   /**
    * MELHORIA #4: Métricas de polling para observabilidade
@@ -135,6 +138,12 @@ export class WhatsAppService {
     currentIntervalMs: TIMING.ADAPTIVE_POLLING.IDLE_INTERVAL_MS,
     lastPollingTime: null,
   };
+
+  private debugLog(...args: unknown[]) {
+    if (process.env.LOG_LEVEL === "debug") {
+      console.log(...args);
+    }
+  }
 
   /**
    * MUDANÇA PRINCIPAL: Injeção de Dependência (DIP)
@@ -171,12 +180,18 @@ export class WhatsAppService {
     private analyticsService: IAnalyticsService,
     private messageFormatter: IMessageFormatter
   ) {
+    const runtimePaths = ensureRuntimeEnvironment();
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+
     console.log("Initializing WhatsApp Service...");
     this.client = new Client({
-      authStrategy: new LocalAuth(),
+      authStrategy: new LocalAuth({
+        dataPath: runtimePaths.authDir,
+      }),
       puppeteer: {
         headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        ...(executablePath ? { executablePath } : {}),
       },
       webVersionCache: {
         type: "remote",
@@ -228,9 +243,9 @@ export class WhatsAppService {
 
     this.client.on("message_create", (msg) => {
       if (msg.fromMe) {
-        console.log("[DEBUG] Outgoing message created to:", msg.to);
+        this.debugLog("[DEBUG] Outgoing message created to:", msg.to);
       } else {
-        console.log("[DEBUG] Incoming message from:", msg.from);
+        this.debugLog("[DEBUG] Incoming message from:", msg.from);
       }
     });
 
@@ -239,13 +254,19 @@ export class WhatsAppService {
       this.isAuthenticated = false;
       this.isReady = false;
       this.status = ConnectionStatus.DISCONNECTED;
+      this.pendingMessages.clear();
+      this.metrics.currentPendingCount = 0;
 
       /**
        * MUDANÇA: Timeout agora usa constante descritiva
        * ANTES: setTimeout(() => {...}, 5000)
        * DEPOIS: setTimeout(() => {...}, TIMING.RECONNECT_DELAY_MS)
        */
-      setTimeout(() => {
+      if (this.reconnectTimeout) {
+        clearTimeout(this.reconnectTimeout);
+      }
+
+      this.reconnectTimeout = setTimeout(() => {
         console.log("Attempting to reconnect...");
         this.status = ConnectionStatus.INITIALIZING;
         this.client.initialize().catch((err) => {
@@ -257,7 +278,7 @@ export class WhatsAppService {
 
     this.client.on("message_ack", async (msg, ack) => {
       const phone = msg.to.replace("@c.us", "");
-      console.log(
+      this.debugLog(
         `[ACK DEBUG] Message to ${phone} status update: ${ack} (${MessageAckStatus.READ}=Read, ${MessageAckStatus.DELIVERED}=Delivered, ${MessageAckStatus.SENT}=Sent)`,
       );
       
@@ -266,7 +287,7 @@ export class WhatsAppService {
       const isOurMessage = this.pendingMessages.has(msg.id._serialized);
       
       if (!isOurMessage) {
-        console.log(`[ACK DEBUG] Ignoring ACK for message not sent by app: ${msg.id._serialized}`);
+        this.debugLog(`[ACK DEBUG] Ignoring ACK for message not sent by app: ${msg.id._serialized}`);
         return;
       }
       
@@ -291,7 +312,7 @@ export class WhatsAppService {
        */
       // Cast ack to number because whatsapp-web.js uses MessageAck enum
       if ((ack as number) === MessageAckStatus.READ) {
-        console.log(`[ACK DEBUG] Marking as READ for ${phone}`);
+        this.debugLog(`[ACK DEBUG] Marking as READ for ${phone}`);
         
         /**
          * MUDANÇA: Usa AnalyticsService injetado ao invés de import dinâmico
@@ -311,7 +332,7 @@ export class WhatsAppService {
         this.metrics.readsFoundByEvent++;
         
         await this.analyticsService.trackMessageRead(phone);
-        console.log(`[ACK DEBUG] Database updated for ${phone}`);
+        this.debugLog(`[ACK DEBUG] Database updated for ${phone}`);
       }
     });
   }
@@ -336,7 +357,7 @@ export class WhatsAppService {
   private startPolling() {
     if (this.pollingInterval) return;
     
-    console.log("[POLLING] Starting adaptive ack check service...");
+    this.debugLog("[POLLING] Starting adaptive ack check service...");
     
     /**
      * MELHORIA #2: setTimeout recursivo ao invés de setInterval
@@ -368,7 +389,7 @@ export class WhatsAppService {
       this.metrics.pollingCycles++;
       this.metrics.lastPollingTime = new Date();
       
-      console.log(`[POLLING] Cycle #${this.metrics.pollingCycles}: Checking ${this.pendingMessages.size} messages (next in ${nextInterval}ms)...`);
+      this.debugLog(`[POLLING] Cycle #${this.metrics.pollingCycles}: Checking ${this.pendingMessages.size} messages (next in ${nextInterval}ms)...`);
       
       // Snapshot das entries para evitar modificação durante iteração
       const entries = Array.from(this.pendingMessages.entries());
@@ -405,7 +426,7 @@ export class WhatsAppService {
           }
           return { msgId, phone: data.phone, read: false };
         } catch (e) {
-          console.warn(`[POLLING] Error checking message ${msgId}`, e);
+          this.debugLog(`[POLLING] Error checking message ${msgId}`, e);
           return { msgId, phone: data.phone, read: false, error: e };
         }
       });
@@ -424,7 +445,7 @@ export class WhatsAppService {
       for (const result of results) {
         if (result.status === "fulfilled" && result.value.read) {
           const { msgId, phone } = result.value;
-          console.log(`[POLLING] Found READ message ${msgId} for ${phone}`);
+          this.debugLog(`[POLLING] Found READ message ${msgId} for ${phone}`);
           readPhones.push(phone);
           readMsgIds.push(msgId);
         }
@@ -450,6 +471,20 @@ export class WhatsAppService {
     // Iniciar primeiro ciclo
     const initialInterval = getAdaptivePollingInterval(this.pendingMessages.size);
     this.pollingInterval = setTimeout(runPollingCycle, initialInterval);
+  }
+
+  private trackPendingMessage(sentMsg: unknown, finalId: string): void {
+    const msg = sentMsg as { id?: { _serialized?: string } } | null;
+    const msgId = msg?.id?._serialized;
+    if (!msgId) {
+      return;
+    }
+
+    this.pendingMessages.set(msgId, {
+      phone: finalId.replace("@c.us", ""),
+      timestamp: Date.now(),
+    });
+    this.metrics.currentPendingCount = this.pendingMessages.size;
   }
   
   /**
@@ -542,21 +577,31 @@ export class WhatsAppService {
    */
   private async waitForReady(timeoutMs: number = TIMING.WAIT_READY_TIMEOUT_MS): Promise<boolean> {
     if (this.isReady) return true;
+    if (this.waitReadyPromise) return this.waitReadyPromise;
 
-    return new Promise((resolve) => {
-      console.log(`Waiting ${timeoutMs}ms for client to become ready...`);
+    this.waitReadyPromise = new Promise((resolve) => {
+      this.debugLog(`Waiting ${timeoutMs}ms for client to become ready...`);
+
+      const onReady = () => {
+        this.debugLog("Client reached ready state while waiting");
+        clearTimeout(timeout);
+        resolve(true);
+      };
 
       const timeout = setTimeout(() => {
+        this.client.off("ready", onReady);
         console.warn("Timeout waiting for client readiness");
         resolve(false);
       }, timeoutMs);
 
-      this.client.once("ready", () => {
-        console.log("Client reached ready state while waiting");
-        clearTimeout(timeout);
-        resolve(true);
-      });
+      this.client.once("ready", onReady);
     });
+
+    try {
+      return await this.waitReadyPromise;
+    } finally {
+      this.waitReadyPromise = null;
+    }
   }
 
   public async sendMessage(
@@ -567,7 +612,7 @@ export class WhatsAppService {
   ) {
     if (!this.isReady) {
       if (this.status === ConnectionStatus.AUTHENTICATED) {
-        console.log("Client authenticated but not ready. Waiting for sync...");
+        this.debugLog("Client authenticated but not ready. Waiting for sync...");
         const isNowReady = await this.waitForReady();
         if (!isNowReady) {
           throw new Error(
@@ -585,7 +630,7 @@ export class WhatsAppService {
     const number = to.replace(/\D/g, "");
     const candidateId = `${number}@c.us`;
 
-    console.log(
+    this.debugLog(
       `Attempting to send message to ${to} (candidate: ${candidateId})`,
     );
 
@@ -657,7 +702,7 @@ export class WhatsAppService {
           name: contact.name,
           fallbackName: options?.fallbackName,
         };
-        console.log(
+        this.debugLog(
           `Smart Substitution: Contact info for ${finalId} (Push: ${contact.pushname}, Name: ${contact.name}, Fallback: ${options?.fallbackName})`,
         );
       } catch (error) {
@@ -672,7 +717,7 @@ export class WhatsAppService {
     // MUDANÇA: Usa MessageFormatter para formatar a mensagem
     const finalMessage = this.messageFormatter.formatMessage(message, number, contactInfo);
 
-    console.log(`Sending to final ID: ${finalId}`);
+    this.debugLog(`Sending to final ID: ${finalId}`);
 
     try {
       if (mediaData) {
@@ -681,36 +726,25 @@ export class WhatsAppService {
           mediaData.data,
           mediaData.filename,
         );
-        await this.client.sendMessage(finalId, media, {
+        const sentMsg = await this.client.sendMessage(finalId, media, {
           caption: finalMessage,
           sendSeen: false,
-        }).then((sentMsg) => {
-          if (sentMsg && sentMsg.id) {
-            this.pendingMessages.set(sentMsg.id._serialized, {
-              phone: finalId.replace("@c.us", ""),
-              timestamp: Date.now()
-            });
-          }
         });
+        this.trackPendingMessage(sentMsg, finalId);
       } else {
         const sendOptions = { linkPreview: false, sendSeen: false };
 
         try {
           const chat = await this.client.getChatById(finalId);
-          await chat.sendMessage(finalMessage, sendOptions);
+          const sentMsg = await chat.sendMessage(finalMessage, sendOptions);
+          this.trackPendingMessage(sentMsg, finalId);
         } catch (chatError) {
           console.warn(
             "Could not get chat object, falling back to client.sendMessage",
             chatError,
           );
-          await this.client.sendMessage(finalId, finalMessage, sendOptions).then((sentMsg) => {
-            if (sentMsg && sentMsg.id) {
-              this.pendingMessages.set(sentMsg.id._serialized, {
-                phone: finalId.replace("@c.us", ""),
-                timestamp: Date.now()
-              });
-            }
-          });
+          const sentMsg = await this.client.sendMessage(finalId, finalMessage, sendOptions);
+          this.trackPendingMessage(sentMsg, finalId);
         }
       }
     } catch (sendError: unknown) {
@@ -758,7 +792,26 @@ export class WhatsAppService {
     return { success: true };
   }
 
+  public async getProfilePicUrl(number: string): Promise<string | null> {
+    if (!this.isReady) return null;
+
+    try {
+      const contactId = `${number.replace(/\D/g, "")}@c.us`;
+      const profilePicUrl = await this.client.getProfilePicUrl(contactId);
+      return profilePicUrl || null;
+    } catch (error) {
+      console.warn(`Failed to get profile pic for ${number}`, error);
+      return null;
+    }
+  }
+
   public async logout() {
+    this.pendingMessages.clear();
+    this.metrics.currentPendingCount = 0;
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
     await this.client.logout();
     this.isAuthenticated = false;
     this.isReady = false;
@@ -803,24 +856,32 @@ export class WhatsAppService {
  * 2. Em testes, pode criar instância com mocks
  * 3. Composição raiz (composition root) fica clara
  */
-if (!global.whatsappClientInstance) {
+function createWhatsAppService(): WhatsAppService {
   // Criar instâncias das dependências
   const analyticsService = new AnalyticsService(prisma);
   const messageFormatter = new MessageFormatter();
   
   // Injetar dependências no WhatsAppService
-  global.whatsappClientInstance = new WhatsAppService(
-    analyticsService,
-    messageFormatter
-  );
+  return new WhatsAppService(analyticsService, messageFormatter);
 }
 
-const service = global.whatsappClientInstance;
+const service = new Proxy({} as WhatsAppService, {
+  get(_target, property, receiver) {
+    const instance = getWhatsAppInstance();
+    const value = Reflect.get(instance, property, receiver);
+
+    return typeof value === "function" ? value.bind(instance) : value;
+  },
+});
 
 /**
  * Retorna a instância do WhatsAppService para uso em outros módulos
  */
-export function getWhatsAppInstance(): WhatsAppService | undefined {
+export function getWhatsAppInstance(): WhatsAppService {
+  if (!global.whatsappClientInstance) {
+    global.whatsappClientInstance = createWhatsAppService();
+  }
+
   return global.whatsappClientInstance;
 }
 

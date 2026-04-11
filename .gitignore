@@ -45,3 +45,16 @@ next-env.d.ts
 .wwebjs_cache
 
 /src/generated/prisma
+
+# sqlite
+*.db
+*.db-journal
+
+# desktop packaging artifacts
+/desktop-assets/chrome/
+/desktop-assets/template.db
+/\.desktop-stage/
+/out/
+/runtime/
+/docs/
+.forge-temp/

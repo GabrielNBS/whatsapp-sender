@@ -9,15 +9,6 @@ async function main() {
   console.log('🔍 Buscando registros problemáticos...\n');
   
   // 1. Buscar registros onde readCount > sentCount
-  const problematic = await prisma.contactAnalytics.findMany({
-    where: {
-      OR: [
-        { sentCount: 0 },
-        // Prisma doesn't support comparing columns directly, so we fetch all and filter
-      ]
-    }
-  });
-  
   const allRecords = await prisma.contactAnalytics.findMany();
   const toFix = allRecords.filter(r => r.readCount > r.sentCount);
   

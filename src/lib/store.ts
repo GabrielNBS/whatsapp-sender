@@ -12,6 +12,7 @@ interface AppState {
 
   addContact: (name: string, number: string, groupIds?: string[]) => void;
   importContacts: (newContacts: Omit<Contact, 'id'>[]) => void;
+  clearContacts: () => void;
   updateContactGroups: (contactId: string, groupIds: string[]) => void;
   deleteContact: (id: string) => void;
 
@@ -29,12 +30,21 @@ interface AppState {
     currentContactIndex: number;
     totalContacts: number;
     statusMessage: string | null;
+    failedContacts: { name: string; number: string }[];
+    stoppedByUser: boolean;
+    isPaused: boolean;
+    sentCount: number;
+    failedCount: number;
   };
   setSendingStatus: (status: Partial<AppState['sendingStatus']>) => void;
 
   // History
   history: Campaign[];
   addCampaign: (campaign: Campaign) => void;
+
+  // Avatar Cache
+  avatars: Record<string, string | null>;
+  fetchAvatar: (phone: string) => Promise<string | null>;
 }
 
 export const useAppStore = create<AppState>()(
@@ -52,7 +62,12 @@ export const useAppStore = create<AppState>()(
         progress: 0,
         currentContactIndex: 0,
         totalContacts: 0,
-        statusMessage: null
+        statusMessage: null,
+        failedContacts: [],
+        stoppedByUser: false,
+        isPaused: false,
+        sentCount: 0,
+        failedCount: 0,
       },
 
       history: [],
@@ -89,6 +104,8 @@ export const useAppStore = create<AppState>()(
         return { contacts: [...state.contacts, ...withIds] };
       }),
 
+      clearContacts: () => set({ contacts: [] }),
+
       updateContactGroups: (contactId, groupIds) => set((state) => ({
         contacts: state.contacts.map((c) =>
           c.id === contactId ? { ...c, groupIds: groupIds.length > 0 ? groupIds : ['default'] } : c
@@ -123,10 +140,46 @@ export const useAppStore = create<AppState>()(
 
       addCampaign: (campaign) => set((state) => ({
         history: [campaign, ...state.history].slice(0, 50) // Keep last 50 campaigns
-      }))
+      })),
+
+      // Avatar Logic
+      avatars: {},
+      fetchAvatar: async (phone) => {
+        const { avatars } = get();
+        // Return cached if exists (undefined check because null is a valid "no avatar" state)
+        if (avatars[phone] !== undefined) {
+            return avatars[phone];
+        }
+
+        try {
+            const res = await fetch(`/api/contacts/avatar?phone=${encodeURIComponent(phone)}`);
+            if (res.ok) {
+                const data = await res.json();
+                const url = data.url || null;
+                
+                set((state) => ({
+                    avatars: { ...state.avatars, [phone]: url }
+                }));
+                return url;
+            }
+        } catch (error) {
+            console.error('Failed to fetch avatar', error);
+        }
+
+        // Cache failure as null to avoid retry loop in short term
+        set((state) => ({
+            avatars: { ...state.avatars, [phone]: null }
+        }));
+        return null;
+      },
     }),
     {
       name: 'whatsapp-sender-storage',
+      partialize: (state) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { sendingStatus, logs, ...rest } = state;
+        return rest;
+      },
     }
   )
 );
