@@ -5,7 +5,6 @@ import {
   User as UserIcon,
   Calendar as CalendarIcon,
   Variable,
-  Heart,
   Briefcase,
   Zap,
 } from "lucide-react";
