@@ -9,7 +9,7 @@ export interface RuntimePaths {
   desktopAssetsDir: string | null;
 }
 
-const DEFAULT_RUNTIME_FOLDER = 'runtime';
+const DEFAULT_APP_FOLDER = 'whatsapp-sender';
 
 function toPosixPath(filePath: string): string {
   return filePath.replace(/\\/g, '/');
@@ -31,9 +31,12 @@ function resolveDesktopAssetsDir(): string | null {
 
 export function resolveRuntimePaths(): RuntimePaths {
   const configuredRuntimeDir = process.env.APP_RUNTIME_DIR;
+  const defaultRuntimeDir = process.env.LOCALAPPDATA
+    ? path.join(process.env.LOCALAPPDATA, DEFAULT_APP_FOLDER, 'runtime')
+    : path.resolve('runtime');
   const appRuntimeDir = configuredRuntimeDir
     ? path.resolve(configuredRuntimeDir)
-    : path.resolve(DEFAULT_RUNTIME_FOLDER);
+    : defaultRuntimeDir;
   const dataDir = path.join(appRuntimeDir, 'data');
   const databaseFileName = process.env.APP_DATABASE_FILENAME || 'app.db';
 
