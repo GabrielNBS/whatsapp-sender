@@ -114,21 +114,37 @@ export class MetricsService implements IMetricsService {
    * Obtém estatísticas gerais de engajamento
    */
   async getEngagementStats(): Promise<EngagementStats> {
-    const analytics = await prisma.contactAnalytics.findMany({
-      orderBy: { readCount: "desc" },
-    });
-    
-    const totalContacts = analytics.length;
-    const totalMessagesSent = analytics.reduce((sum, a) => sum + a.sentCount, 0);
-    const totalMessagesRead = analytics.reduce((sum, a) => sum + a.readCount, 0);
-    
-    // Contatos inativos: não leram nos últimos 30 dias
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    const inactive = analytics.filter(a => 
-      !a.lastReadAt || new Date(a.lastReadAt) < thirtyDaysAgo
-    ).length;
+
+    const [totalContacts, totals, inactive, topEngaged] = await Promise.all([
+      prisma.contactAnalytics.count(),
+      prisma.contactAnalytics.aggregate({
+        _sum: {
+          sentCount: true,
+          readCount: true,
+        },
+      }),
+      prisma.contactAnalytics.count({
+        where: {
+          OR: [
+            { lastReadAt: null },
+            { lastReadAt: { lt: thirtyDaysAgo } },
+          ],
+        },
+      }),
+      prisma.contactAnalytics.findMany({
+        orderBy: { readCount: "desc" },
+        take: 5,
+        select: {
+          phone: true,
+          readCount: true,
+        },
+      }),
+    ]);
+
+    const totalMessagesSent = totals._sum.sentCount ?? 0;
+    const totalMessagesRead = totals._sum.readCount ?? 0;
     
     return {
       totalContacts,
@@ -137,10 +153,7 @@ export class MetricsService implements IMetricsService {
       averageEngagementRate: totalMessagesSent > 0 
         ? Math.round((totalMessagesRead / totalMessagesSent) * 100) 
         : 0,
-      topEngaged: analytics.slice(0, 5).map(a => ({
-        phone: a.phone,
-        readCount: a.readCount,
-      })),
+      topEngaged,
       inactive,
     };
   }
@@ -152,26 +165,20 @@ export class MetricsService implements IMetricsService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const todayAnalytics = await prisma.contactAnalytics.findMany({
+    const aggregate = await prisma.campaign.aggregate({
       where: {
-        OR: [
-          { lastSentAt: { gte: today } },
-          { lastReadAt: { gte: today } },
-        ],
+        startedAt: { gte: today },
+      },
+      _sum: {
+        sentCount: true,
+        readCount: true,
       },
     });
-    
-    // Contamos quantos foram atualizados hoje
-    // Isso é uma aproximação - idealmente teríamos um log de eventos
-    const sentToday = todayAnalytics.filter(a => 
-      a.lastSentAt && new Date(a.lastSentAt) >= today
-    ).length;
-    
-    const readToday = todayAnalytics.filter(a => 
-      a.lastReadAt && new Date(a.lastReadAt) >= today
-    ).length;
-    
-    return { sent: sentToday, read: readToday };
+
+    return {
+      sent: aggregate._sum.sentCount ?? 0,
+      read: aggregate._sum.readCount ?? 0,
+    };
   }
 
   /**
@@ -182,10 +189,18 @@ export class MetricsService implements IMetricsService {
     trends: Array<{ date: string; sent: number; read: number; responses: number }>;
   }> {
     // 1. Funil de Engajamento Global
-    const analytics = await prisma.contactAnalytics.findMany();
-    const validContacts = analytics.length;
-    const totalSent = analytics.reduce((sum, analyticsItem) => sum + analyticsItem.sentCount, 0);
-    const totalReads = analytics.reduce((sum, analyticsItem) => sum + analyticsItem.readCount, 0);
+    const [validContacts, totals] = await Promise.all([
+      prisma.contactAnalytics.count(),
+      prisma.contactAnalytics.aggregate({
+        _sum: {
+          sentCount: true,
+          readCount: true,
+        },
+      }),
+    ]);
+
+    const totalSent = totals._sum.sentCount ?? 0;
+    const totalReads = totals._sum.readCount ?? 0;
     
     // Fallback: se houver mais leituras que envios (bugs antigos), cap
     const normalizedReads = Math.min(totalReads, totalSent);

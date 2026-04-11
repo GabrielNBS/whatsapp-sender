@@ -5,11 +5,44 @@ import {
   User as UserIcon,
   Calendar as CalendarIcon,
   Variable,
+  Heart,
+  Briefcase,
+  Zap,
 } from "lucide-react";
 import Image from "next/image";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+
+const EMOJI_CATEGORIES = [
+  {
+    id: 'faces',
+    label: 'Rostos',
+    icon: Smile,
+    emojis: ['😊', '😂', '😍', '🥰', '😎', '🤩', '😒', '😔', '😭', '🤔', '🙄', '😤', '😮', '😴', '🥳', '😇', '😜', '🤫', '🤨', '😬']
+  },
+  {
+    id: 'gestures',
+    label: 'Gestos',
+    icon: UserIcon,
+    emojis: ['👍', '👎', '👌', '✌️', '🤞', '🫡', '👋', '👏', '🙌', '🙏', '🤝', '💪', '🤳', '✍️', '👇', '👉', '👈']
+  },
+  {
+    id: 'business',
+    label: 'Negócios',
+    icon: Briefcase,
+    emojis: ['✅', '❌', '⚠️', '🚀', '💡', '💰', '✉️', '📞', '📍', '💬', '📅', '⌛', '🔔', '📈', '🏢', '🏷️', '📦']
+  },
+  {
+    id: 'others',
+    label: 'Extras',
+    icon: Zap,
+    emojis: ['🔥', '✨', '🌟', '💯', '🎉', '🎁', '❤️', '💙', '💚', '💛', '💜', '💥', '🎈', '🏆', '🌈', '🌍', '⚡']
+  }
+];
 
 interface MessageEditorProps {
   message: string;
@@ -30,9 +63,33 @@ export function MessageEditor({
   disabled = false,
   templateSlot,
 }: MessageEditorProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertAtCursor = (text: string) => {
+    if (disabled || !textareaRef.current) return;
+    
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = textarea.value;
+    
+    const newText = currentText.substring(0, start) + text + currentText.substring(end);
+    onMessageChange(newText);
+    
+    // Devolve o foco e seta a posição do cursor após o texto inserido
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + text.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
   const insertVariable = (variable: string) => {
-    if (disabled) return;
-    onMessageChange(message + ` {${variable}}`);
+    insertAtCursor(` {${variable}}`);
+  };
+
+  const insertEmoji = (emoji: string) => {
+    insertAtCursor(emoji);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,16 +127,60 @@ export function MessageEditor({
         )}
         
         <div className="flex bg-muted/30 p-1 rounded-full border border-border/50 gap-1 overflow-x-auto no-scrollbar">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 rounded-full px-3 text-[11px] font-bold gap-1.5 hover:bg-background hover:shadow-sm"
-            onClick={() => {/* Open emoji picker logic or placeholder */}}
-            disabled={disabled}
-          >
-            <Smile className="w-3.5 h-3.5" />
-            Emojis
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 rounded-full px-3 text-[11px] font-bold gap-1.5 hover:bg-background hover:shadow-sm"
+                disabled={disabled}
+              >
+                <Smile className="w-3.5 h-3.5" />
+                Emojis
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent 
+              side="top" 
+              align="start" 
+              className="w-[calc(100vw-2rem)] sm:w-72 p-0 shadow-xl border-border overflow-hidden rounded-xl"
+            >
+              <Tabs defaultValue="faces" className="w-full">
+                <TabsList className="w-full h-10 grid grid-cols-4 bg-muted/40 rounded-none border-b border-border/50 p-0">
+                  {EMOJI_CATEGORIES.map(cat => (
+                    <TabsTrigger 
+                      key={cat.id} 
+                      value={cat.id}
+                      aria-label={`Categoria ${cat.label}`}
+                      className="rounded-none h-full data-[state=active]:bg-background data-[state=active]:shadow-none border-r border-border/20 last:border-0"
+                    >
+                      <cat.icon className="w-3.5 h-3.5" />
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {EMOJI_CATEGORIES.map(cat => (
+                  <TabsContent key={cat.id} value={cat.id} className="p-3 mt-0">
+                    <div 
+                      className="grid grid-cols-7 gap-1"
+                      role="grid"
+                      aria-label={`Grade de emojis de ${cat.label}`}
+                    >
+                      {cat.emojis.map((emoji, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => insertEmoji(emoji)}
+                          aria-label={emoji}
+                          type="button"
+                          className="w-8 h-8 flex items-center justify-center text-lg hover:bg-primary/10 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </PopoverContent>
+          </Popover>
           
           <Button
             variant="ghost"
@@ -119,6 +220,7 @@ export function MessageEditor({
       {/* Editor Area */}
       <div className="flex-1 relative group min-h-0">
         <Textarea
+          ref={textareaRef}
           value={message}
           onChange={(e) => onMessageChange(e.target.value)}
           className="w-full h-full border-0 resize-none p-6 text-base focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50 leading-relaxed font-roboto"

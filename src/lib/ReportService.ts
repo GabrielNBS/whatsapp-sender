@@ -1,16 +1,11 @@
-/**
+﻿/**
  * ReportService
- * 
+ *
  * Responsible for formatting and sending campaign reports via WhatsApp.
- * Follows SRP: handles only report generation and delivery.
  */
 
 import { PrismaClient, Campaign, ReportRecipient, ReportConfig } from '@prisma/client';
 import { IMessageSender } from './types';
-
-// ============================================
-// INTERFACES
-// ============================================
 
 export interface IReportService {
   formatImmediateReport(campaign: Campaign): string;
@@ -32,17 +27,13 @@ export interface SendReportResult {
   failed: string[];
 }
 
-// ============================================
-// REPORT FORMATTERS
-// ============================================
-
 function formatDuration(startedAt: Date, completedAt: Date | null): string {
   if (!completedAt) return 'Em andamento';
-  
+
   const diffMs = completedAt.getTime() - startedAt.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffSecs = Math.floor((diffMs % 60000) / 1000);
-  
+
   if (diffMins > 0) {
     return `${diffMins}min ${diffSecs}s`;
   }
@@ -50,121 +41,112 @@ function formatDuration(startedAt: Date, completedAt: Date | null): string {
 }
 
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString('pt-BR', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  return date.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit'
   });
 }
 
 function calculateSpeed(totalSent: number, startedAt: Date, completedAt: Date | null): string {
   if (!completedAt || totalSent === 0) return '0';
-  
+
   const diffMins = (completedAt.getTime() - startedAt.getTime()) / 60000;
   if (diffMins < 1) return `${totalSent}`;
-  
+
   return (totalSent / diffMins).toFixed(1);
 }
 
-// ============================================
-// IMPLEMENTATION
-// ============================================
-
 export class ReportService implements IReportService {
+  private static readonly REPORT_SEND_CONCURRENCY = 2;
+  private readonly debugEnabled = process.env.LOG_LEVEL === 'debug';
+
   constructor(
     private prisma: PrismaClient,
     private messageSender?: IMessageSender
   ) {}
 
-  /**
-   * Set the message sender instance
-   */
   setSender(sender: IMessageSender) {
     this.messageSender = sender;
   }
 
-  /**
-   * Format immediate report (sent right after campaign completion)
-   */
   formatImmediateReport(campaign: Campaign): string {
-    const successRate = campaign.totalContacts > 0 
+    const successRate = campaign.totalContacts > 0
       ? ((campaign.sentCount / campaign.totalContacts) * 100).toFixed(0)
       : '0';
-    
+
     const speed = calculateSpeed(
-      campaign.sentCount, 
-      campaign.startedAt, 
+      campaign.sentCount,
+      campaign.startedAt,
       campaign.completedAt
     );
-    
+
     const duration = formatDuration(campaign.startedAt, campaign.completedAt);
-    
+
     const report = `
-📊 *RELATÓRIO DE CAMPANHA*
-━━━━━━━━━━━━━━━━━━━
+RELATORIO DE CAMPANHA
+-------------------
 
-📝 *${campaign.name}*
-${campaign.templateName ? `📋 Template: ${campaign.templateName}` : ''}
+${campaign.name}
+${campaign.templateName ? `Template: ${campaign.templateName}` : ''}
 
-⏱️ *Tempo de Execução*
-• Início: ${formatTime(campaign.startedAt)}
-• Fim: ${campaign.completedAt ? formatTime(campaign.completedAt) : 'N/A'}
-• Duração: ${duration}
+Tempo de Execucao
+- Inicio: ${formatTime(campaign.startedAt)}
+- Fim: ${campaign.completedAt ? formatTime(campaign.completedAt) : 'N/A'}
+- Duracao: ${duration}
 
-📈 *Métricas de Envio*
-• Total de contatos: ${campaign.totalContacts}
-• Enviados: ${campaign.sentCount} ✅
-• Falhas: ${campaign.failedCount} ❌
-• Taxa de sucesso: ${successRate}%
-• Velocidade: ${speed} msgs/min
+Metricas de Envio
+- Total de contatos: ${campaign.totalContacts}
+- Enviados: ${campaign.sentCount}
+- Falhas: ${campaign.failedCount}
+- Taxa de sucesso: ${successRate}%
+- Velocidade: ${speed} msgs/min
 
-━━━━━━━━━━━━━━━━━━━
-_Relatório gerado automaticamente_
+-------------------
+Relatorio gerado automaticamente
 `.trim();
 
     return report;
   }
 
-  /**
-   * Format engagement report (sent after delay)
-   */
   formatEngagementReport(campaign: Campaign): string {
-    const readRate = campaign.sentCount > 0 
+    const readRate = campaign.sentCount > 0
       ? ((campaign.readCount / campaign.sentCount) * 100).toFixed(0)
       : '0';
-    
-    const responseRate = campaign.sentCount > 0 
+
+    const responseRate = campaign.sentCount > 0
       ? ((campaign.responseCount / campaign.sentCount) * 100).toFixed(0)
       : '0';
-    
+
+    const scoreMessage = parseInt(readRate, 10) >= 70
+      ? 'Excelente engajamento!'
+      : parseInt(readRate, 10) >= 40
+        ? 'Bom engajamento'
+        : 'Engajamento abaixo do esperado';
+
     const report = `
-📈 *RELATÓRIO DE ENGAJAMENTO*
-━━━━━━━━━━━━━━━━━━━
+RELATORIO DE ENGAJAMENTO
+-------------------
 
-📝 *${campaign.name}*
-📅 Enviado em: ${campaign.startedAt.toLocaleDateString('pt-BR')}
+${campaign.name}
+Enviado em: ${campaign.startedAt.toLocaleDateString('pt-BR')}
 
-👁️ *Leituras*
-• Lidos: ${campaign.readCount} de ${campaign.sentCount}
-• Taxa de abertura: ${readRate}%
+Leituras
+- Lidos: ${campaign.readCount} de ${campaign.sentCount}
+- Taxa de abertura: ${readRate}%
 
-💬 *Respostas*
-• Total: ${campaign.responseCount}
-• Taxa de resposta: ${responseRate}%
+Respostas
+- Total: ${campaign.responseCount}
+- Taxa de resposta: ${responseRate}%
 
-${parseInt(readRate) >= 70 ? '🎉 *Excelente engajamento!*' : 
-  parseInt(readRate) >= 40 ? '👍 *Bom engajamento*' : 
-  '⚠️ *Engajamento abaixo do esperado*'}
+${scoreMessage}
 
-━━━━━━━━━━━━━━━━━━━
-_Relatório gerado automaticamente_
+-------------------
+Relatorio gerado automaticamente
 `.trim();
 
     return report;
   }
 
-  /**
-   * Helper param builder for QuickChart.io visual charts
-   */
   getImmediateChartUrl(campaign: Campaign): string {
     const config = {
       type: 'doughnut',
@@ -175,10 +157,10 @@ _Relatório gerado automaticamente_
           backgroundColor: ['#10b981', '#ef4444']
         }]
       },
-      options: { 
-        plugins: { 
-          doughnutlabel: { labels: [{ text: campaign.sentCount.toString(), font: { size: 20 } }, { text: 'Enviados' }]} 
-        } 
+      options: {
+        plugins: {
+          doughnutlabel: { labels: [{ text: campaign.sentCount.toString(), font: { size: 20 } }, { text: 'Enviados' }]}
+        }
       }
     };
     return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=400&h=400`;
@@ -190,7 +172,7 @@ _Relatório gerado automaticamente_
       data: {
         labels: ['Enviados', 'Lidos', 'Respostas'],
         datasets: [{
-          label: 'Conversão',
+          label: 'Conversao',
           data: [campaign.sentCount, campaign.readCount, campaign.responseCount],
           backgroundColor: ['#3b82f6', '#10b981', '#f59e0b']
         }]
@@ -203,9 +185,6 @@ _Relatório gerado automaticamente_
     return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=500&h=300`;
   }
 
-  /**
-   * Get report configuration with recipients
-   */
   async getConfig(): Promise<ReportConfigWithRecipients | null> {
     return this.prisma.reportConfig.findUnique({
       where: { id: 'default' },
@@ -213,69 +192,77 @@ _Relatório gerado automaticamente_
     });
   }
 
-  /**
-   * Get active recipients only
-   */
   async getActiveRecipients(): Promise<ReportRecipient[]> {
     return this.prisma.reportRecipient.findMany({
       where: { isActive: true },
     });
   }
 
-  /**
-   * Send report message to all active recipients
-   */
   async sendReportToAllRecipients(message: string, chartUrl?: string): Promise<SendReportResult> {
     const recipients = await this.getActiveRecipients();
-    
+
     if (recipients.length === 0) {
       console.log('[ReportService] No active recipients configured');
       return { success: false, sentTo: [], failed: [] };
     }
 
-    const sentTo: string[] = [];
-    const failed: string[] = [];
+    if (!this.messageSender) {
+      console.error('[ReportService] Message sender not configured, cannot send report');
+      return {
+        success: false,
+        sentTo: [],
+        failed: recipients.map((recipient) => recipient.phone),
+      };
+    }
 
-    for (const recipient of recipients) {
+    let mediaData: { mimetype: string; data: string; filename?: string } | undefined;
+    if (chartUrl) {
       try {
-        console.log(`[ReportService] Sending report to ${recipient.name} (${recipient.phone})`);
-        
-        let mediaData;
-        if (chartUrl) {
-          try {
-            const chartRes = await fetch(chartUrl);
-            if (chartRes.ok) {
-              const arrayBuffer = await chartRes.arrayBuffer();
-              const buffer = Buffer.from(arrayBuffer);
-              mediaData = {
-                mimetype: 'image/png',
-                data: buffer.toString('base64'),
-                filename: 'report-chart.png'
-              };
-            }
-          } catch (e) {
-            console.error('[ReportService] Error fetching chart image:', e);
-          }
+        const chartRes = await fetch(chartUrl);
+        if (chartRes.ok) {
+          const arrayBuffer = await chartRes.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          mediaData = {
+            mimetype: 'image/png',
+            data: buffer.toString('base64'),
+            filename: 'report-chart.png'
+          };
+        } else {
+          console.error('[ReportService] Chart request failed with status:', chartRes.status);
         }
-
-        if (!this.messageSender) {
-          console.error('[ReportService] Message sender not configured, cannot send report');
-          failed.push(recipient.phone);
-          continue;
-        }
-
-        await this.messageSender.sendMessage(recipient.phone, message, mediaData);
-        sentTo.push(recipient.phone);
-        console.log(`[ReportService] ✅ Report sent to ${recipient.name}`);
-
-        // Small delay between sends to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
       } catch (error) {
-        console.error(`[ReportService] Error sending to ${recipient.name}:`, error);
-        failed.push(recipient.phone);
+        console.error('[ReportService] Error fetching chart image:', error);
       }
     }
+
+    const sentTo: string[] = [];
+    const failed: string[] = [];
+    const queue = [...recipients];
+
+    const workers = Array.from(
+      { length: Math.min(ReportService.REPORT_SEND_CONCURRENCY, queue.length) },
+      async () => {
+        while (queue.length > 0) {
+          const recipient = queue.shift();
+          if (!recipient) {
+            break;
+          }
+
+          try {
+            if (this.debugEnabled) {
+              console.log(`[ReportService] Sending report to ${recipient.name} (${recipient.phone})`);
+            }
+            await this.messageSender!.sendMessage(recipient.phone, message, mediaData);
+            sentTo.push(recipient.phone);
+          } catch (error) {
+            console.error(`[ReportService] Error sending to ${recipient.name}:`, error);
+            failed.push(recipient.phone);
+          }
+        }
+      }
+    );
+
+    await Promise.all(workers);
 
     return {
       success: failed.length === 0,
@@ -284,9 +271,6 @@ _Relatório gerado automaticamente_
     };
   }
 
-  /**
-   * Ensure default config exists
-   */
   async ensureDefaultConfig(): Promise<ReportConfig> {
     const existing = await this.prisma.reportConfig.findUnique({
       where: { id: 'default' },
@@ -299,10 +283,6 @@ _Relatório gerado automaticamente_
     });
   }
 }
-
-// ============================================
-// SINGLETON FACTORY
-// ============================================
 
 import { prisma } from './db';
 

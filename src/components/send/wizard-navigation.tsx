@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ArrowRight, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 interface WizardNavigationProps {
   currentStep: number;
@@ -38,19 +39,36 @@ export function WizardNavigation({
         onClick={onNext}
         disabled={isNextDisabled || isSending}
         variant={isLastStep ? "success" : "default"}
-        className="rounded-full px-6"
+        className="rounded-full px-4"
+        asChild
       >
-        {isLastStep ? (
-          <>
-            {isSending ? "Enviando..." : "Confirmar Envio"}
-            <Send className="w-4 h-4 ml-2" />
-          </>
-        ) : (
-          <>
-            Próximo
-            <ArrowRight className="w-4 h-4" />
-          </>
-        )}
+        <motion.button
+          whileHover={!(isNextDisabled || isSending) ? "hover" : ""}
+          whileTap={!(isNextDisabled || isSending) ? { scale: 0.98 } : {}}
+          className="flex items-center gap-2"
+        >
+          {isLastStep ? (
+            <>
+              {isSending ? "Enviando..." : "Confirmar Envio"}
+              <motion.div
+                variants={{ hover: { x: 4 } }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <Send className="w-4 h-4" />
+              </motion.div>
+            </>
+          ) : (
+            <>
+              Próximo
+              <motion.div
+                variants={{ hover: { x: 4 } }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <ArrowRight className="w-4 h-4" />
+              </motion.div>
+            </>
+          )}
+        </motion.button>
       </Button>
     </div>
   );

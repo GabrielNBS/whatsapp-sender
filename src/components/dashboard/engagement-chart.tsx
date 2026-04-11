@@ -15,6 +15,7 @@ import {
   Bar,
 } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useHydrated } from "@/hooks/use-hydrated";
 
 interface EngagementDataPoint {
   date: string;
@@ -35,6 +36,8 @@ export function EngagementChart({
   description = "Acompanhamento diário da taxa de abertura de mensagens.",
   type = "area"
 }: EngagementChartProps) {
+  const hydrated = useHydrated();
+
   return (
     <Card className="col-span-1 md:col-span-2">
       <CardHeader>
@@ -43,6 +46,7 @@ export function EngagementChart({
       </CardHeader>
       <CardContent>
         <div className="h-[300px] w-full mt-4">
+          {hydrated ? (
           <ResponsiveContainer width="100%" height="100%">
             {type === "area" ? (
               <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -86,6 +90,7 @@ export function EngagementChart({
               </LineChart>
             )}
           </ResponsiveContainer>
+          ) : null}
         </div>
       </CardContent>
     </Card>

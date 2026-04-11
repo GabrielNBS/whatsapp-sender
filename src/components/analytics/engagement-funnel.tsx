@@ -11,6 +11,7 @@ import {
   Cell
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useHydrated } from '@/hooks/use-hydrated';
 
 interface FunnelData {
   name: string;
@@ -24,6 +25,8 @@ interface EngagementFunnelProps {
 const COLORS = ['#94a3b8', '#3b82f6', '#10b981']; // Gray, Blue, Green
 
 export function EngagementFunnelChart({ data }: EngagementFunnelProps) {
+  const hydrated = useHydrated();
+
   if (!data || data.length === 0) return null;
 
   // Calculate conversion rates
@@ -42,6 +45,7 @@ export function EngagementFunnelChart({ data }: EngagementFunnelProps) {
       </CardHeader>
       <CardContent>
         <div className="h-[250px] w-full mt-4">
+          {hydrated ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={metrics}
@@ -81,6 +85,7 @@ export function EngagementFunnelChart({ data }: EngagementFunnelProps) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          ) : null}
         </div>
       </CardContent>
     </Card>
