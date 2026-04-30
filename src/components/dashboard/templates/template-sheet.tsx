@@ -161,14 +161,13 @@ export function TemplateSheet({
 
     try {
       const isEditing = template && !isDuplicate;
-      const url = isEditing ? "/api/templates" : "/api/templates";
+      const url = isEditing ? `/api/templates?id=${template?.id}` : "/api/templates";
       const method = isEditing ? "PUT" : "POST";
       const body = {
-        id: isEditing ? template?.id : undefined, 
-        title: isDuplicate ? `${title} (Cópia)` : title,
+        title, // title already includes "(Cópia)" if it was a duplicate from useEffect
         content: finalContent,
         media: selectedFile,
-        category // Include category in payload
+        category 
       };
 
       const res = await fetch(url, {
@@ -209,12 +208,7 @@ export function TemplateSheet({
                 Configure o conteúdo e visualize como ficará no WhatsApp.
                 </SheetDescription>
             </SheetHeader>
-            <div className="flex items-center gap-3">
-                 <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                 <Button onClick={handleSaveInternal} disabled={isSaving} size="sm" className="bg-blue-600 hover:bg-blue-700 min-w-[100px]">
-                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Salvar</>}
-                 </Button>
-            </div>
+           
         </div>
 
         {/* Content Area - 2 Columns */}
@@ -268,7 +262,7 @@ export function TemplateSheet({
                         <div className="absolute top-6 left-6 flex items-center gap-2">
                             <Skeleton className="h-4 w-24" />
                         </div>
-                        <Skeleton className="w-full max-w-[300px] aspect-[9/19.5] rounded-[2.5rem]" />
+                        <Skeleton className="w-full max-w-[300px] aspect-9/19.5 rounded-[2.5rem]" />
                         <Skeleton className="h-3 w-48 mt-6" />
                     </div>
                 </div>
@@ -405,6 +399,12 @@ export function TemplateSheet({
                                     onCheckedChange={handleToggleFooter}
                                     disabled={!settings.link && !settings.cta}
                                 />
+                                <div className="flex items-center gap-3">
+                                    <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                                    <Button onClick={handleSaveInternal} disabled={isSaving} size="sm" className="bg-blue-600 hover:bg-blue-700 min-w-[100px]">
+                                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Salvar</>}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
 

@@ -47,7 +47,7 @@ export function TemplatesSheetContent() {
 
     const fetchTemplates = async () => {
         try {
-            const res = await fetch('/api/templates');
+            const res = await fetch(`/api/templates?t=${Date.now()}`, { cache: 'no-store' });
             if (res.ok) {
                 const data = await res.json();
                 setTemplates(data);
@@ -86,6 +86,8 @@ export function TemplatesSheetContent() {
             await fetch(`/api/templates?id=${id}`, { method: 'DELETE' });
             setTemplates(prev => prev.filter(t => t.id !== id));
             toast.success("Modelo excluído com sucesso");
+            // Dispara evento para atualizar outros componentes (ex: seletor no dashboard)
+            window.dispatchEvent(new Event('templates-updated'));
         } catch (error) {
             console.error('Failed to delete', error);
             toast.error("Erro ao excluir modelo");
@@ -98,7 +100,14 @@ export function TemplatesSheetContent() {
     };
 
     const handleSaveSuccess = () => {
-        fetchTemplates();
+        setFilter('all');
+        setSelectedCategory(null);
+        // Small delay to ensure database sync in dev environment
+        setTimeout(() => {
+            fetchTemplates();
+            // Dispara evento para atualizar outros componentes (ex: seletor no dashboard)
+            window.dispatchEvent(new Event('templates-updated'));
+        }, 500);
     };
 
     const filteredTemplates = templates.filter(t => {
@@ -247,7 +256,15 @@ export function TemplatesSheetContent() {
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-bold text-gray-900 truncate">{template.title}</h3>
                                         <p className="text-xs text-muted-foreground">
-                                            {mediaObj ? 'Criado: 12/01/2024' : 'Última edição: 2h atrás'}
+                                            {template.createdAt 
+                                                ? new Date(template.createdAt).toLocaleString('pt-BR', {
+                                                    day: '2-digit',
+                                                    month: '2-digit',
+                                                    year: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })
+                                                : 'Agora mesmo'}
                                         </p>
                                     </div>
                                 </div>

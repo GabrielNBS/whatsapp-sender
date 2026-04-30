@@ -106,6 +106,7 @@ export function useSendForm({
     return () => window.clearInterval(intervalId);
   }, []);
 
+
   // Validation: can submit form
   const canSubmit = useMemo(() => {
     // Must have recipients
@@ -177,6 +178,16 @@ export function useSendForm({
     setScheduleDate('');
     setSelectedTemplateId(null);
   }, []);
+
+  // Monitor templates list to reset form if selected template is deleted
+  useEffect(() => {
+    if (selectedTemplateId && templates.length > 0) {
+      const templateExists = templates.some(t => t.id === selectedTemplateId);
+      if (!templateExists) {
+        resetForm();
+      }
+    }
+  }, [templates, selectedTemplateId, resetForm]);
 
   return {
     // State

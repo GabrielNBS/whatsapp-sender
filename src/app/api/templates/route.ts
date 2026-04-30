@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db';
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         const templates = await prisma.template.findMany({
@@ -13,7 +15,16 @@ export async function GET() {
             },
             orderBy: { createdAt: 'desc' },
         });
-        return NextResponse.json(templates);
+
+        console.log(`[API] GET /api/templates - Found ${templates.length} templates. Latest: ${templates[0]?.title || 'None'}`);
+
+        return NextResponse.json(templates, {
+            headers: {
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+            },
+        });
     } catch (error) {
         console.error('[templates/route] Error fetching templates:', error);
         return NextResponse.json({ error: 'Error fetching templates' }, { status: 500 });
@@ -23,7 +34,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { title, content, media } = body;
+        const { title, content, media, category } = body;
 
         if (!title || !content) {
             return NextResponse.json({ error: 'Title and content are required' }, { status: 400 });
@@ -33,6 +44,7 @@ export async function POST(request: Request) {
             data: {
                 title,
                 content,
+                category,
                 media: media ? JSON.stringify(media) : undefined,
             },
         });
@@ -50,7 +62,7 @@ export async function PUT(request: Request) {
 
     try {
         const body = await request.json();
-        const { title, content, media } = body;
+        const { title, content, media, category } = body;
 
         if (!id || !title || !content) {
             return NextResponse.json({ error: 'ID, Title and content are required' }, { status: 400 });
@@ -61,6 +73,7 @@ export async function PUT(request: Request) {
             data: {
                 title,
                 content,
+                category,
                 media: media ? JSON.stringify(media) : media === null ? null : undefined, // null to remove, undefined to keep
             },
         });

@@ -4,6 +4,7 @@ import { useHydrated } from '@/hooks/use-hydrated';
 import { SendPageSkeleton } from '@/components/send/send-page-skeleton';
 
 import { useState, useEffect, Suspense } from 'react';
+import GradientText from '@/components/ui/gradient-text';
 
 import { AnimatedContent } from '@/components/ui/animated-content';
 import { useAppStore } from '@/lib/store';
@@ -30,7 +31,8 @@ import {
     RefreshCw,
     Play,
     Plus,
-    Eye
+    Eye,
+    Square
 } from 'lucide-react';
 import {
     Select,
@@ -202,7 +204,7 @@ function SendPageInner() {
              toast.success("Agendamento realizado com sucesso!");
              resetForm();
              fetchSchedules();
-             setCurrentStep(0);
+             setCurrentStep(3);
              setIsScheduling(false);
         },
         onError: (error) => {
@@ -280,36 +282,11 @@ function SendPageInner() {
     return (
         <div className="flex flex-col h-[calc(100vh-2rem)] bg-muted/30 -m-6 p-6 overflow-hidden">
 
-
-            {/* Header Compact */}
-            <div className="flex justify-between items-center mb-4 shrink-0">
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => openSheet('settings')}
-                        className="w-10 h-10 rounded-full bg-linear-to-tr from-primary to-primary/60 flex items-center justify-center text-white shadow-md hover:shadow-lg transition-shadow"
-                    >
-                        <User className="w-5 h-5" />
-                    </button>
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight text-foreground">
-                            {currentStep > 0 && currentStep < 3
-                                ? STEPS_NAV.find(s => s.id === currentStep)?.label
-                                : currentStep === 3 ? "Transmissão" : "Nova Campanha"}
-                        </h1>
-                        <p className="text-muted-foreground text-xs">
-                            {currentStep > 0 && currentStep < 3
-                                ? `Passo ${currentStep} de 2 • Nova Campanha`
-                                : "Command Center"}
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             {/* Main Grid Content */}
             <div className="flex gap-6 flex-1 min-h-0 overflow-hidden">
 
                 <motion.div layout className="flex flex-col min-h-0 flex-1" transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}>
-                    <div className="bg-card rounded-xl shadow-lg border border-border flex flex-col h-full overflow-hidden relative">
+                    <div className="bg-card rounded-xl shadow-lg border border-border flex flex-col h-full pt-4 overflow-hidden relative">
 
                         {currentStep < 3 && (
                             <WizardStepper
@@ -346,15 +323,83 @@ function SendPageInner() {
                                     {/* STEP 0: INTRO */}
                                     {currentStep === 0 && (
                                         <div className="flex-1 flex flex-col items-center justify-center text-center max-w-lg mx-auto space-y-4 py-8">
-                                            <div className="w-14 h-14 rounded-xl bg-primary/[0.06] border border-primary/10 flex items-center justify-center">
-                                                <MessageSquare className="w-6 h-6 text-primary/80" />
+                                            <div className="relative w-28 h-28 mb-10 flex items-center justify-center">
+                                                {/* Ultra-Premium Gradual Pulse broadcast with Tones */}
+                                                {[...Array(5)].map((_, i) => (
+                                                    <motion.div
+                                                        key={i}
+                                                        className="absolute inset-0 rounded-full border border-emerald-500/20 bg-emerald-500/5"
+                                                        animate={{ 
+                                                            scale: [1, 2.2],
+                                                            opacity: [0, 0.3, 0]
+                                                        }}
+                                                        transition={{
+                                                            duration: 5,
+                                                            repeat: Infinity,
+                                                            delay: i * 1,
+                                                            ease: "linear"
+                                                        }}
+                                                    />
+                                                ))}
+                                                <div className="absolute inset-0 bg-emerald-500/10 blur-2xl rounded-full animate-pulse" />
+                                                
+                                                <motion.svg 
+                                                    viewBox="0 0 100 100" 
+                                                    className="w-24 h-24 rounded-full relative z-10"
+                                                    initial="initial"
+                                                    animate="animate"
+                                                >
+                                                    <motion.path 
+                                                        d="M30 35 H70 C75 35 80 40 80 45 V65 C80 70 75 75 70 75 H45 L32 85 V75 C27 75 22 70 22 65 V45 C22 40 27 35 30 35Z" 
+                                                        fill="none" 
+                                                        stroke="currentColor" 
+                                                        strokeWidth="2.5" 
+                                                        className="text-primary"
+                                                        variants={{
+                                                            animate: { y: [0, -3, 0] }
+                                                        }}
+                                                        transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                                                    />
+                                                    <motion.path d="M38 50 H62" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-primary/40" animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ repeat: Infinity, duration: 2 }} />
+                                                    <motion.path d="M38 60 H54" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-primary/40" animate={{ opacity: [0.3, 0.8, 0.3] }} transition={{ repeat: Infinity, duration: 2, delay: 0.5 }} />
+
+                                                    {[...Array(3)].map((_, i) => (
+                                                        <motion.circle
+                                                            key={i}
+                                                            cx="50" cy="55" r="2"
+                                                            className="text-success/60"
+                                                            fill="currentColor"
+                                                            variants={{
+                                                                initial: { x: 0, y: 0, opacity: 0, scale: 0 },
+                                                                animate: { 
+                                                                    x: [0, 35 + i * 5], 
+                                                                    y: [0, -25 + i * 15], 
+                                                                    opacity: [0, 1, 0],
+                                                                    scale: [0, 1, 0.5]
+                                                                }
+                                                            }}
+                                                            transition={{ repeat: Infinity, duration: 3, delay: i * 1, ease: "easeOut" }}
+                                                        />
+                                                    ))}
+                                                    <motion.path 
+                                                        d="M82 40 C88 45 88 65 82 70" 
+                                                        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" 
+                                                        className="text-primary/20"
+                                                        animate={{ opacity: [0, 1, 0], x: [0, 5, 0] }}
+                                                        transition={{ repeat: Infinity, duration: 4 }}
+                                                    />
+                                                </motion.svg>
                                             </div>
-                                            <div className="space-y-3">
-                                                <h2 className="text-4xl font-extrabold tracking-tight leading-[1.15]">
-                                                    <span className="text-foreground">
+                                            <div className="space-y-6">
+                                                <h2 className="text-[3.25rem] font-light tracking-tighter leading-[0.9] flex flex-col items-center">
+                                                    <GradientText
+                                                        colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]}
+                                                        animationSpeed={4}
+                                                        className="text-2xl font-medium tracking-tight mb-2 opacity-80"
+                                                    >
                                                         Escale seu
-                                                    </span>
-                                                    <div className="h-[1.2em] relative w-full flex justify-center overflow-hidden">
+                                                    </GradientText>
+                                                    <div className="h-[1.3em] relative w-full flex justify-center">
                                                         <AnimatePresence mode="wait">
                                                             <motion.div
                                                                 key={currentWordIndex}
@@ -363,15 +408,15 @@ function SendPageInner() {
                                                                 {words[currentWordIndex].split('').map((char, i) => (
                                                                     <motion.span
                                                                         key={`${currentWordIndex}-${i}`}
-                                                                        initial={{ opacity: 0, y: 10, filter: "blur(2px)" }}
+                                                                        initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
                                                                         animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                                                                        exit={{ opacity: 0, y: -10, filter: "blur(2px)" }}
+                                                                        exit={{ opacity: 0, y: -20, filter: "blur(4px)" }}
                                                                         transition={{ 
-                                                                            duration: 0.3, 
-                                                                            delay: i * 0.015,
+                                                                            duration: 0.4, 
+                                                                            delay: i * 0.02,
                                                                             ease: [0.4, 0, 0.2, 1]
                                                                         }}
-                                                                        className="inline-block text-primary py-1 px-px"
+                                                                        className="inline-block text-primary font-black py-2 px-px"
                                                                     >
                                                                         {char === ' ' ? '\u00A0' : char}
                                                                     </motion.span>
@@ -380,23 +425,23 @@ function SendPageInner() {
                                                         </AnimatePresence>
                                                     </div>
                                                 </h2>
-                                                <p className="text-[15px] text-muted-foreground leading-relaxed max-w-md mx-auto">
-                                                    Campanhas personalizadas e disparos precisos.
+                                                <p className="text-base text-muted-foreground/70 leading-relaxed max-w-[380px] mx-auto font-medium">
+                                                    Campanhas <span className="text-foreground font-bold">personalizadas</span> e disparos <span className="text-foreground font-bold">precisos</span> e <span className="text-foreground font-bold">programados</span>.
                                                     Alcance seu público de forma profissional.
                                                 </p>
                                             </div>
                                             <motion.button 
                                                 onClick={() => setCurrentStep(1)}
                                                 whileHover="hover"
-                                                whileTap={{ scale: 0.985 }}
-                                                className="cursor-pointer mt-4 px-8 py-3.5 bg-primary text-primary-foreground text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2"
+                                                whileTap={{ scale: 0.98 }}
+                                                className="cursor-pointer mt-10 px-10 py-4.5 bg-primary text-primary-foreground text-sm font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center gap-3"
                                             >
                                                 Iniciar Campanha
                                                 <motion.div
-                                                    variants={{ hover: { x: 4 } }}
+                                                    variants={{ hover: { x: 5 } }}
                                                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
                                                 >
-                                                    <ChevronRight className="w-4 h-4" />
+                                                    <ChevronRight className="w-5 h-5" />
                                                 </motion.div>
                                             </motion.button>
 
@@ -466,10 +511,16 @@ function SendPageInner() {
                                     {/* STEP 1: RECIPIENTS */}
                                     {currentStep === 1 && (
                                         <div className="max-w-xl mx-auto w-full space-y-6 pt-4 h-full overflow-y-auto no-scrollbar pb-10 px-2 lg:px-0">
-                                            <div className="space-y-1 mb-6">
-                                                <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Passo 1</p>
-                                                <h2 className="text-2xl font-bold tracking-tight">Para quem vamos enviar?</h2>
-                                                <p className="text-sm text-muted-foreground">Escolha os contatos ou grupos que receberão a mensagem.</p>
+                                            <div className="space-y-1 mb-10">
+                                                <GradientText
+                                                    colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]}
+                                                    animationSpeed={6}
+                                                    className="text-[10px] font-black uppercase tracking-[0.2rem] opacity-60 mb-4"
+                                                >
+                                                    Passo 01
+                                                </GradientText>
+                                                <h2 className="text-[3.25rem] font-light tracking-tighter leading-[1.05] mb-2">Para quem vamos <GradientText colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]} className="inline font-black text-foreground" showBorder={false}>enviar?</GradientText></h2>
+                                                <p className="text-base text-muted-foreground/80 leading-relaxed font-medium">Escolha os contatos ou grupos que receberão a mensagem.</p>
                                             </div>
                                             
                                             <RecipientSelector
@@ -485,14 +536,17 @@ function SendPageInner() {
                                                 <motion.div 
                                                     initial={{ opacity: 0, y: 8 }}
                                                     animate={{ opacity: 1, y: 0 }}
-                                                    className="bg-primary/[0.04] border border-primary/10 rounded-xl p-3.5 flex items-center gap-3"
+                                                    className="bg-primary/[0.03] border border-primary/10 rounded-2xl p-4 flex items-center gap-4 group"
                                                 >
-                                                    <div className="bg-primary/10 p-2 rounded-lg">
-                                                        <Users className="w-4 h-4 text-primary" />
+                                                    <div className="bg-primary/10 p-2.5 rounded-xl group-hover:scale-110 transition-transform duration-500">
+                                                        <Users className="w-5 h-5 text-primary" />
                                                     </div>
-                                                    <p className="font-semibold text-sm">
-                                                        {recipients.length} {recipients.length === 1 ? 'contato selecionado' : 'contatos selecionados'}
-                                                    </p>
+                                                    <div>
+                                                        <p className="text-xs font-black uppercase tracking-widest text-primary/50 leading-none mb-1">Público Ativo</p>
+                                                        <p className="font-bold text-base text-foreground leading-none">
+                                                            {recipients.length} {recipients.length === 1 ? 'contato selecionado' : 'contatos selecionados'}
+                                                        </p>
+                                                    </div>
                                                 </motion.div>
                                             )}
                                         </div>
@@ -503,10 +557,16 @@ function SendPageInner() {
                                         <div className="h-full flex flex-col overflow-hidden pb-2">
                                             <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 flex-1 min-h-0 pt-2">
                                                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                                                    <div className="mb-6 space-y-1 [@media(max-height:1079px)]:hidden">
-                                                        <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Passo 2</p>
-                                                        <h2 className="text-2xl font-bold tracking-tight">Crie sua Mensagem</h2>
-                                                        <p className="text-sm text-muted-foreground">Selecione um modelo ou escreva manualmente.</p>
+                                                    <div className="mb-10 space-y-1 [@media(max-height:1079px)]:hidden">
+                                                        <GradientText
+                                                            colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]}
+                                                            animationSpeed={6}
+                                                            className="text-[10px] font-black uppercase tracking-[0.2rem] opacity-60 mb-4"
+                                                        >
+                                                            Passo 02
+                                                        </GradientText>
+                                                        <h2 className="text-[3.25rem] font-light tracking-tighter leading-[1.05] mb-2">Crie sua <GradientText colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]} className="inline font-black text-foreground">mensagem</GradientText></h2>
+                                                        <p className="text-base text-muted-foreground/80 leading-relaxed font-medium">Selecione um modelo ou escreva manualmente.</p>
                                                     </div>
 
                                                     {/* Message Editor */}
@@ -619,7 +679,7 @@ function SendPageInner() {
                                                     disabled={isSending || isScheduling || (!message && !selectedFile)}
                                                     asChild
                                                     className={cn(
-                                                        "h-12 px-10 rounded-xl font-semibold text-sm bg-primary text-primary-foreground shadow-sm hover:shadow-md transition-all gap-2",
+                                                        "h-14 px-12 rounded-2xl font-black text-xs bg-primary text-primary-foreground shadow-xl shadow-primary/20 transition-all gap-3 uppercase tracking-[0.2rem]",
                                                         (isSending || isScheduling || (!message && !selectedFile)) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                                                     )}
                                                 >
@@ -627,16 +687,16 @@ function SendPageInner() {
                                                         whileHover={!(isSending || isScheduling || (!message && !selectedFile)) ? "hover" : ""}
                                                         whileTap={!(isSending || isScheduling || (!message && !selectedFile)) ? "tap" : ""}
                                                     >
-                                                        <span className="flex items-center gap-2 transition-all">
+                                                        <span className="flex items-center gap-3 transition-all">
                                                             {isSending || isScheduling ? (
                                                                 <>
-                                                                    <RefreshCw className="w-5 h-5 animate-spin mr-1" />
-                                                                    {isScheduling ? 'Agendando...' : 'Enviando...'}
+                                                                    <RefreshCw className="w-5 h-5 animate-spin" />
+                                                                    <span>{isScheduling ? 'Agendando...' : 'Enviando...'}</span>
                                                                 </>
                                                             ) : (
                                                                 'Revisar e Enviar'
                                                             )}
-                                                            <motion.div variants={{ hover: { x: 4 } }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
+                                                            <motion.div variants={{ hover: { x: 5 } }} transition={{ type: "spring", stiffness: 400, damping: 10 }}>
                                                                 <ChevronRight className="w-5 h-5" />
                                                             </motion.div>
                                                         </span>
@@ -660,39 +720,50 @@ function SendPageInner() {
                                                         className="flex flex-col items-center gap-6 w-full max-w-md text-center py-10"
                                                     >
                                                         {/* Animated SVG illustration */}
-                                                        <svg viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-48 h-36">
-                                                            <rect x="20" y="20" width="80" height="140" rx="14" fill="var(--primary-foreground)" stroke="var(--primary)" strokeWidth="2.5" className="opacity-10"/>
-                                                            <rect x="30" y="38" width="60" height="104" rx="6" fill="var(--primary)" className="opacity-5"/>
-                                                            <circle cx="60" cy="152" r="6" fill="var(--primary)" stroke="var(--primary)" strokeWidth="1.5" className="opacity-20"/>
-                                                            <motion.g animate={{ x: [0, 8, 0], opacity: [1, 0.7, 1] }} transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}>
-                                                                <rect x="110" y="55" width="70" height="28" rx="12" fill="var(--primary)"/>
-                                                                <path d="M110 72 L102 80 L118 72" fill="var(--primary)"/>
-                                                                <rect x="118" y="63" width="54" height="6" rx="3" fill="white" opacity="0.8"/>
-                                                                <rect x="118" y="73" width="36" height="4" rx="2" fill="white" opacity="0.5"/>
-                                                            </motion.g>
-                                                            <motion.g animate={{ x: [0, 10, 0], opacity: [0.8, 0.5, 0.8] }} transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut", delay: 0.3 }}>
-                                                                <rect x="115" y="100" width="58" height="24" rx="10" fill="var(--primary)" className="opacity-70"/>
-                                                                <path d="M115 116 L107 123 L122 116" fill="var(--primary)" className="opacity-70"/>
-                                                                <rect x="122" y="107" width="44" height="5" rx="2.5" fill="white" opacity="0.7"/>
-                                                                <rect x="122" y="115" width="28" height="3.5" rx="1.75" fill="white" opacity="0.45"/>
-                                                            </motion.g>
-                                                            <motion.g animate={{ x: [0, 6, 0], opacity: [0.6, 0.3, 0.6] }} transition={{ repeat: Infinity, duration: 2.1, ease: "easeInOut", delay: 0.7 }}>
-                                                                <rect x="120" y="136" width="46" height="20" rx="8" fill="var(--primary)" className="opacity-40"/>
-                                                                <path d="M120 150 L113 156 L127 150" fill="var(--primary)" className="opacity-40"/>
-                                                                <rect x="127" y="142" width="32" height="4" rx="2" fill="white" opacity="0.6"/>
-                                                                <rect x="127" y="149" width="20" height="3" rx="1.5" fill="white" opacity="0.4"/>
-                                                            </motion.g>
-                                                            <circle cx="195" cy="48" r="4" fill="#fbbf24" opacity="0.8"/>
-                                                            <circle cx="205" cy="90" r="2.5" fill="var(--primary)" opacity="0.7"/>
-                                                            <circle cx="198" cy="128" r="3" fill="#fbbf24" opacity="0.6"/>
-                                                        </svg>
+                                                        <div className="relative mb-8">
+                                                            <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full" />
+                                                            <svg viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-56 h-40 relative z-10">
+                                                                <rect x="20" y="20" width="80" height="140" rx="20" fill="currentColor" className="text-primary/10" stroke="currentColor" strokeWidth="2.5" />
+                                                                <rect x="30" y="38" width="60" height="104" rx="8" fill="currentColor" className="text-primary/5" />
+                                                                <circle cx="60" cy="152" r="6" fill="currentColor" className="text-primary/20" />
+                                                                
+                                                                <motion.g animate={{ x: [0, 8, 0], opacity: [1, 0.7, 1] }} transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}>
+                                                                    <rect x="110" y="55" width="70" height="28" rx="14" fill="var(--primary)"/>
+                                                                    <path d="M110 72 L102 80 L118 72" fill="var(--primary)"/>
+                                                                    <rect x="118" y="63" width="54" height="6" rx="3" fill="white" opacity="0.8"/>
+                                                                    <rect x="118" y="73" width="36" height="4" rx="2" fill="white" opacity="0.5"/>
+                                                                </motion.g>
+                                                                
+                                                                <motion.g animate={{ x: [0, 10, 0], opacity: [0.8, 0.5, 0.8] }} transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut", delay: 0.3 }}>
+                                                                    <rect x="115" y="100" width="58" height="24" rx="12" fill="var(--primary)" className="opacity-70"/>
+                                                                    <path d="M115 116 L107 123 L122 116" fill="var(--primary)" className="opacity-70"/>
+                                                                    <rect x="122" y="107" width="44" height="5" rx="2.5" fill="white" opacity="0.7"/>
+                                                                    <rect x="122" y="115" width="28" height="3.5" rx="1.75" fill="white" opacity="0.45"/>
+                                                                </motion.g>
+                                                                
+                                                                <motion.g animate={{ x: [0, 6, 0], opacity: [0.6, 0.3, 0.6] }} transition={{ repeat: Infinity, duration: 2.1, ease: "easeInOut", delay: 0.7 }}>
+                                                                    <rect x="120" y="136" width="46" height="20" rx="10" fill="var(--primary)" className="opacity-40"/>
+                                                                    <path d="M120 150 L113 156 L127 150" fill="var(--primary)" className="opacity-40"/>
+                                                                    <rect x="127" y="142" width="32" height="4" rx="2" fill="white" opacity="0.6"/>
+                                                                    <rect x="127" y="149" width="20" height="3" rx="1.5" fill="white" opacity="0.4"/>
+                                                                </motion.g>
+
+                                                                <motion.circle cx="195" cy="48" r="4" fill="#fbbf24" animate={{ opacity: [0.2, 0.8, 0.2] }} transition={{ repeat: Infinity, duration: 2 }} />
+                                                                <motion.circle cx="205" cy="90" r="2.5" fill="var(--primary)" animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ repeat: Infinity, duration: 2, delay: 0.5 }} />
+                                                                <motion.circle cx="198" cy="128" r="3" fill="#fbbf24" animate={{ opacity: [0.1, 0.6, 0.1] }} transition={{ repeat: Infinity, duration: 2, delay: 1 }} />
+                                                            </svg>
+                                                        </div>
 
                                                         {/* Title + status */}
-                                                        <div className="space-y-1">
-                                                            <h3 className="text-2xl font-bold text-foreground">Enviando mensagens...</h3>
-                                                            <p className="text-sm text-muted-foreground bg-muted/50 px-4 py-1.5 rounded-full inline-block">
-                                                                {sendingStatus.statusMessage || 'Transmissão em andamento. Não feche esta janela.'}
-                                                            </p>
+                                                        <div className="space-y-4 mb-8">
+                                                            <h3 className="text-[2.5rem] font-light tracking-tighter leading-[1.1]">
+                                                                Enviando <span className="font-black text-primary">mensagens...</span>
+                                                            </h3>
+                                                            <div className="flex justify-center">
+                                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 bg-muted/20 border border-border/40 px-5 py-2 rounded-full backdrop-blur-md">
+                                                                    {sendingStatus.statusMessage || 'Transmissão em andamento. Não feche esta janela.'}
+                                                                </p>
+                                                            </div>
                                                         </div>
 
                                                         {/* Big progress counter */}
@@ -741,13 +812,105 @@ function SendPageInner() {
                                                             </div>
                                                         </div>
 
-                                                        <Button 
-                                                            variant="destructive" 
-                                                            className="mt-4 w-full h-12 rounded-xl font-bold shadow-lg shadow-destructive/10"
+                                                        <motion.button 
+                                                            whileHover="hover"
+                                                            whileTap={{ scale: 0.98 }}
+                                                            className="mt-10 w-full h-14 rounded-2xl font-black text-xs bg-destructive text-destructive-foreground shadow-xl shadow-destructive/20 flex items-center justify-center gap-3 group transition-all tracking-[0.2em] uppercase"
                                                             onClick={() => setShowStopConfirmation(true)}
                                                         >
-                                                            Parar Operação
-                                                        </Button>
+                                                            <motion.div
+                                                                variants={{ hover: { rotate: 180, scale: 1.2 } }}
+                                                                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                                                            >
+                                                                <Square className="w-4 h-4 fill-current" />
+                                                            </motion.div>
+                                                            Interromper Agora
+                                                        </motion.button>
+                                                    </motion.div>
+                                                ) : scheduledOverlayData ? (
+                                                    <motion.div
+                                                        key="scheduled-ui"
+                                                        initial={{ opacity: 0, scale: 0.95 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0, scale: 1.05 }}
+                                                        className="flex flex-col items-center w-full max-w-md text-center py-6"
+                                                    >
+                                                        {/* Scheduled SVG Illustration */}
+                                                        <div className="relative mb-8">
+                                                            <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full" />
+                                                            <svg viewBox="0 0 200 160" fill="none" className="w-48 h-40 relative z-10">
+                                                                <rect x="60" y="20" width="80" height="120" rx="20" fill="currentColor" className="text-blue-100 dark:text-blue-900/20" />
+                                                                <rect x="72" y="38" width="56" height="84" rx="8" fill="currentColor" className="text-white dark:text-blue-950/40" />
+                                                                <motion.g 
+                                                                    initial={{ rotate: 0 }} 
+                                                                    animate={{ rotate: 360 }} 
+                                                                    transition={{ repeat: Infinity, duration: 25, ease: "linear" }}
+                                                                    style={{ originX: '100px', originY: '77px' }}
+                                                                >
+                                                                    <circle cx="100" cy="77" r="32" stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="6 6" className="opacity-30" />
+                                                                    <circle cx="100" cy="45" r="3" fill="#3b82f6" />
+                                                                </motion.g>
+                                                                <motion.path 
+                                                                    d="M100 62 L100 77 L112 77" 
+                                                                    stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" 
+                                                                    animate={{ rotate: [0, 360] }} transition={{ repeat: Infinity, duration: 60, ease: "linear" }}
+                                                                    style={{ originX: '100px', originY: '77px' }}
+                                                                />
+                                                                <circle cx="100" cy="77" r="2" fill="#3b82f6" />
+                                                            </svg>
+                                                        </div>
+
+                                                        <div className="space-y-4 mb-8">
+                                                            <h3 className="text-[2.5rem] font-light tracking-tighter leading-[1.1]">
+                                                                Campanha <span className="font-black text-blue-500">agendada!</span>
+                                                            </h3>
+                                                            <div className="flex justify-center">
+                                                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 bg-blue-500/5 border border-blue-500/10 px-5 py-2 rounded-full">
+                                                                    Tudo pronto para o disparo automático.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="w-full bg-card/40 backdrop-blur-md border border-border/40 rounded-2xl p-6 text-left space-y-6 shadow-xs mb-10">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-50">{scheduledOverlayData.batchName}</span>
+                                                                <div className="h-[2px] w-12 bg-blue-500/30 rounded-full" />
+                                                            </div>
+                                                            
+                                                            <div className="grid grid-cols-2 gap-8">
+                                                                <div className="space-y-2">
+                                                                    <div className="flex items-center gap-2 text-blue-500/80">
+                                                                        <Calendar className="w-3.5 h-3.5" />
+                                                                        <span className="text-[9px] uppercase font-black tracking-widest">DATA E HORA</span>
+                                                                    </div>
+                                                                    <p className="text-sm font-black text-foreground tracking-tight">
+                                                                        {new Date(scheduledOverlayData.scheduledFor).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <div className="flex items-center gap-2 text-blue-500/80">
+                                                                        <Users className="w-3.5 h-3.5" />
+                                                                        <span className="text-[9px] uppercase font-black tracking-widest">PÚBLICO</span>
+                                                                    </div>
+                                                                    <p className="text-sm font-black text-foreground tracking-tight">{scheduledOverlayData.contactCount} contatos</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <motion.button
+                                                            whileHover="hover"
+                                                            whileTap={{ scale: 0.98 }}
+                                                            onClick={handleNewTransmission}
+                                                            className="w-full h-14 rounded-2xl font-black text-xs bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center justify-center gap-3 group tracking-[0.2em] uppercase"
+                                                        >
+                                                            <span>NOVA TRANSMISSÃO</span>
+                                                            <motion.div
+                                                                variants={{ hover: { rotate: 90, scale: 1.2 } }}
+                                                                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                                                            >
+                                                                <Plus className="w-4 h-4" />
+                                                            </motion.div>
+                                                        </motion.button>
                                                     </motion.div>
                                                 ) : (
                                                     // COMPLETED STATE (INLINE)
@@ -755,93 +918,156 @@ function SendPageInner() {
                                                         key="completed-ui"
                                                         initial={{ opacity: 0, scale: 0.95 }}
                                                         animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0, scale: 1.05 }}
                                                         className="flex flex-col items-center gap-6 w-full max-w-md text-center py-6"
                                                     >
-                                                        {/* Icon: 3 states */}
-                                                        {sendingStatus.stoppedByUser ? (
-                                                            <div className="w-20 h-20 rounded-full flex items-center justify-center bg-slate-100 border-4 border-slate-200">
-                                                                <svg viewBox="0 0 40 40" fill="none" className="w-9 h-9">
-                                                                    <rect x="11" y="11" width="7" height="18" rx="2" fill="#64748b"/>
-                                                                    <rect x="22" y="11" width="7" height="18" rx="2" fill="#64748b"/>
+                                                        {/* Status Illustration: Animated SVG based on final state */}
+                                                        <div className="relative mb-4">
+                                                            {sendingStatus.stoppedByUser ? (
+                                                                /* Interrupted Illustration */
+                                                                <svg viewBox="0 0 200 160" fill="none" className="w-48 h-40">
+                                                                    <rect x="60" y="20" width="80" height="120" rx="12" fill="currentColor" className="text-slate-200 dark:text-slate-800" />
+                                                                    <rect x="70" y="35" width="60" height="85" rx="4" fill="currentColor" className="text-slate-100 dark:text-slate-900" />
+                                                                    <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}>
+                                                                        <rect x="85" y="60" width="8" height="30" rx="4" fill="#64748b" />
+                                                                        <rect x="107" y="60" width="8" height="30" rx="4" fill="#64748b" />
+                                                                    </motion.g>
+                                                                    <circle cx="100" cy="130" r="4" fill="#64748b" opacity="0.3" />
+                                                                    <motion.circle 
+                                                                        cx="40" cy="80" r="6" fill="#64748b" opacity="0.2"
+                                                                        animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                                                                    />
+                                                                    <motion.circle 
+                                                                        cx="160" cy="110" r="4" fill="#64748b" opacity="0.15"
+                                                                        animate={{ y: [0, 15, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut", delay: 0.5 }}
+                                                                    />
                                                                 </svg>
-                                                            </div>
-                                                        ) : sendingStatus.failedContacts.length === 0 ? (
-                                                            <div className="w-20 h-20 rounded-full flex items-center justify-center bg-success shadow-lg shadow-success/20">
-                                                                <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
-                                                                    <path d="M8 20 L17 29 L32 12" stroke="white" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                                            ) : sendingStatus.failedContacts.length === 0 ? (
+                                                                /* Success Illustration */
+                                                                <svg viewBox="0 0 200 160" fill="none" className="w-48 h-40">
+                                                                    <rect x="60" y="20" width="80" height="120" rx="12" fill="currentColor" className="text-emerald-100 dark:text-emerald-900/30" />
+                                                                    <rect x="70" y="35" width="60" height="85" rx="4" fill="currentColor" className="text-emerald-50 dark:text-emerald-950/40" />
+                                                                    <motion.path 
+                                                                        d="M85 80 L97 92 L120 68" 
+                                                                        stroke="#10b981" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"
+                                                                        initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.8, ease: "easeOut" }}
+                                                                    />
+                                                                    <motion.g animate={{ y: [0, -5, 0], opacity: [0.4, 0.7, 0.4] }} transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}>
+                                                                        <circle cx="160" cy="50" r="5" fill="#10b981" />
+                                                                        <circle cx="40" cy="100" r="4" fill="#10b981" />
+                                                                    </motion.g>
+                                                                    <motion.path 
+                                                                        d="M150 100 L170 80" stroke="#10b981" strokeWidth="2" strokeDasharray="4 4" className="opacity-30"
+                                                                        animate={{ strokeDashoffset: [0, -8] }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                                                                    />
                                                                 </svg>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-20 h-20 rounded-full flex items-center justify-center bg-amber-500 shadow-lg shadow-amber-500/20">
-                                                                <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
-                                                                    <path d="M20 12 L20 22" stroke="white" strokeWidth="3.5" strokeLinecap="round"/>
-                                                                    <circle cx="20" cy="29" r="2" fill="white"/>
+                                                            ) : (
+                                                                /* Alert Illustration */
+                                                                <svg viewBox="0 0 200 160" fill="none" className="w-48 h-40">
+                                                                    <rect x="60" y="20" width="80" height="120" rx="12" fill="currentColor" className="text-amber-100 dark:text-amber-900/30" />
+                                                                    <rect x="70" y="35" width="60" height="85" rx="4" fill="currentColor" className="text-amber-50 dark:text-amber-950/40" />
+                                                                    <motion.g animate={{ rotate: [0, -3, 3, 0] }} transition={{ repeat: Infinity, duration: 0.5, delay: 2 }}>
+                                                                        <path d="M100 55 L100 85" stroke="#f59e0b" strokeWidth="6" strokeLinecap="round" />
+                                                                        <circle cx="100" cy="100" r="4" fill="#f59e0b" />
+                                                                    </motion.g>
+                                                                    <motion.circle 
+                                                                        cx="160" cy="120" r="5" fill="#ef4444" opacity="0.5"
+                                                                        animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}
+                                                                    />
+                                                                    <circle cx="45" cy="60" r="3" fill="#f59e0b" opacity="0.4" />
                                                                 </svg>
-                                                            </div>
-                                                        )}
-
-                                                        <div className="space-y-1">
-                                                            <h3 className="text-3xl font-black tracking-tight text-foreground">
-                                                                {sendingStatus.stoppedByUser ? 'Interrompido' : 'Concluído!'}
-                                                            </h3>
-                                                            {(() => {
-                                                                const sent = sendingStatus.sentCount;
-                                                                const failed = sendingStatus.failedCount;
-                                                                return (
-                                                                    <p className="text-muted-foreground font-medium">
-                                                                        {sent} enviadas • {failed} falhas
-                                                                    </p>
-                                                                );
-                                                            })()}
+                                                            )}
                                                         </div>
 
-                                                        {/* Detailed Metrics Panel */}
-                                                        <div className="w-full grid grid-cols-2 gap-4">
-                                                            <div className="bg-card border border-border p-4 rounded-2xl text-left">
-                                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Taxa de Sucesso</p>
-                                                                <p className="text-2xl font-black text-success">
-                                                                    {Math.round((sendingStatus.sentCount / (sendingStatus.sentCount + sendingStatus.failedCount || 1)) * 100)}%
+                                                        {/* Title + status */}
+                                                        <div className="space-y-4 mb-8">
+                                                            <h3 className="text-[2.5rem] font-light tracking-tighter leading-[1.1]">
+                                                                {sendingStatus.stoppedByUser ? (
+                                                                    <>Envio <span className="font-black text-slate-500">interrompido</span></>
+                                                                ) : sendingStatus.failedContacts.length > 0 ? (
+                                                                    <>Envio com <span className="font-black text-amber-500">alertas</span></>
+                                                                ) : (
+                                                                    <>Envio <span className="font-black text-emerald-500">concluído!</span></>
+                                                                )}
+                                                            </h3>
+                                                            <div className="flex justify-center">
+                                                                <p className={cn(
+                                                                    "text-[10px] font-black uppercase tracking-[0.2em] px-5 py-2 rounded-full border backdrop-blur-md",
+                                                                    sendingStatus.stoppedByUser 
+                                                                        ? "text-muted-foreground/60 bg-muted/20 border-border/40" 
+                                                                        : sendingStatus.failedContacts.length > 0
+                                                                        ? "text-amber-600 dark:text-amber-400 bg-amber-500/5 border-amber-500/10"
+                                                                        : "text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 border-emerald-500/10"
+                                                                )}>
+                                                                    {sendingStatus.stoppedByUser ? 'A campanha foi pausada manualmente.' : 'Todas as mensagens foram processadas.'}
                                                                 </p>
                                                             </div>
-                                                            <div className="bg-card border border-border p-4 rounded-2xl text-left">
-                                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total de Contatos</p>
-                                                                <p className="text-2xl font-black text-foreground">{sendingStatus.totalContacts}</p>
+                                                        </div>
+
+                                                        {/* Metrics Cards */}
+                                                        <div className="w-full grid grid-cols-2 gap-4 mb-8">
+                                                            <div className="bg-card/40 backdrop-blur-md border border-border/40 p-6 rounded-2xl text-left shadow-xs transition-all hover:bg-card/60 group">
+                                                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-50 group-hover:opacity-100 transition-opacity">Taxa de Sucesso</p>
+                                                                <div className="flex items-baseline gap-1">
+                                                                    <p className={cn(
+                                                                        "text-4xl font-black tracking-tighter leading-none",
+                                                                        sendingStatus.failedContacts.length === 0 ? "text-emerald-500" : "text-amber-500"
+                                                                    )}>
+                                                                        {Math.round((sendingStatus.sentCount / (sendingStatus.sentCount + sendingStatus.failedCount || 1)) * 100)}%
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <div className="bg-card/40 backdrop-blur-md border border-border/40 p-6 rounded-2xl text-left shadow-xs transition-all hover:bg-card/60 group">
+                                                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3 opacity-50 group-hover:opacity-100 transition-opacity">Total Alcançado</p>
+                                                                <p className="text-4xl font-black text-foreground tracking-tighter leading-none">
+                                                                    {sendingStatus.totalContacts}
+                                                                </p>
                                                             </div>
                                                         </div>
 
                                                         {sendingStatus.failedContacts.length > 0 && (
-                                                            <div className="w-full text-left bg-destructive/5 border border-destructive/10 rounded-2xl p-4">
-                                                                <div className="flex items-center gap-2 mb-3 text-destructive">
+                                                            <motion.div 
+                                                                initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                                                                className="w-full text-left bg-destructive/[0.02] border border-destructive/10 rounded-3xl p-6 mb-10"
+                                                            >
+                                                                <div className="flex items-center gap-2 mb-4 text-destructive/80">
                                                                     <Bell className="w-4 h-4" />
-                                                                    <span className="text-xs font-bold uppercase tracking-wider">Erros Detectados</span>
+                                                                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Relatório de Erros ({sendingStatus.failedContacts.length})</span>
                                                                 </div>
-                                                                <div className="max-h-32 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-destructive/20">
+                                                                <div className="max-h-40 overflow-y-auto space-y-3 pr-2 no-scrollbar">
                                                                     {sendingStatus.failedContacts.map((c, i) => (
-                                                                        <div key={i} className="flex justify-between items-center text-xs">
-                                                                            <span className="font-semibold text-foreground/80">{c.name}</span>
-                                                                            <span className="font-mono text-muted-foreground">{c.number}</span>
+                                                                        <div key={i} className="flex justify-between items-center bg-background/40 p-3 rounded-2xl border border-border/30">
+                                                                            <span className="font-black text-[11px] text-foreground/80 tracking-tight">{c.name}</span>
+                                                                            <span className="font-mono text-[9px] text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-lg">{c.number}</span>
                                                                         </div>
                                                                     ))}
                                                                 </div>
-                                                            </div>
+                                                            </motion.div>
                                                         )}
 
-                                                        <Button 
+                                                        <motion.button
+                                                            whileHover="hover"
+                                                            whileTap={{ scale: 0.98 }}
                                                             onClick={handleNewTransmission}
-                                                            className="w-full h-14 rounded-2xl font-black text-base shadow-xl hover:shadow-2xl transition-all gap-2"
+                                                            className="w-full h-14 rounded-2xl font-black text-xs bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center justify-center gap-3 group tracking-[0.2em] uppercase"
                                                         >
-                                                            <MessageSquare className="w-5 h-5" />
-                                                            NOVA CAMPANHA
-                                                        </Button>
+                                                            <span>NOVA TRANSMISSÃO</span>
+                                                            <motion.div
+                                                                variants={{ hover: { rotate: 90, scale: 1.2 } }}
+                                                                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                                                            >
+                                                                <Plus className="w-4 h-4" />
+                                                            </motion.div>
+                                                        </motion.button>
                                                     </motion.div>
-                                                )}
+                                                ) }
                                             </AnimatePresence>
 
                                             {/* Stop Confirmation Dialog */}
                                             <AlertDialog open={showStopConfirmation} onOpenChange={setShowStopConfirmation}>
                                                 <AlertDialogContent className="rounded-2xl border-border/50 shadow-2xl">
                                                     <AlertDialogHeader>
-                                                        <AlertDialogTitle className="text-xl font-bold">Interromper Envio?</AlertDialogTitle>
+                                                        <AlertDialogTitle className="text-xl font-black tracking-tight">Interromper Envio?</AlertDialogTitle>
                                                         <AlertDialogDescription>
                                                             Tem certeza que deseja parar o processo agora? 
                                                             Alguns contatos da sua lista podem não receber a mensagem.
@@ -879,66 +1105,6 @@ function SendPageInner() {
                             </div>
                         )}
 
-                        <AnimatePresence>
-                            {scheduledOverlayData && (
-                                <motion.div
-                                    key="scheduled-overlay"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    transition={{ duration: 0.3 }}
-                                    className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/97 backdrop-blur-sm p-8"
-                                >
-                                    <motion.div
-                                        initial={{ scale: 0.9, opacity: 0 }}
-                                        animate={{ scale: 1, opacity: 1 }}
-                                        transition={{ delay: 0.1, duration: 0.3 }}
-                                        className="flex flex-col items-center gap-5 w-full max-w-sm text-center"
-                                    >
-                                        <motion.div 
-                                            className="w-24 h-24 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/20" 
-                                            style={{ background: 'linear-gradient(135deg, #3b82f6, #60a5fa)' }}
-                                            initial={{ scale: 0.8, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                                        >
-                                            <Calendar className="w-12 h-12 text-white" />
-                                        </motion.div>
-
-                                        <div className="w-full space-y-5">
-                                            <div className="space-y-1">
-                                                <h3 className="text-2xl font-extrabold text-blue-700">
-                                                    Envio Agendado!
-                                                </h3>
-                                                <p className="text-sm text-gray-500">
-                                                    Sua campanha foi programada com sucesso e será disparada automaticamente.
-                                                </p>
-                                            </div>
-
-                                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 text-left space-y-2">
-                                                <p className="text-xs text-blue-800 font-semibold">{scheduledOverlayData.batchName}</p>
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] text-blue-600 uppercase font-bold tracking-wider">Horário</span>
-                                                    <span className="text-xs text-blue-900">{new Date(scheduledOverlayData.scheduledFor).toLocaleString('pt-BR')}</span>
-                                                </div>
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] text-blue-600 uppercase font-bold tracking-wider">Contatos</span>
-                                                    <span className="text-xs text-blue-900">{scheduledOverlayData.contactCount}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <button
-                                            onClick={handleNewTransmission}
-                                            className="w-full h-11 rounded-xl font-semibold text-sm text-white shadow-lg transition-transform hover:scale-105 active:scale-95"
-                                            style={{ background: 'linear-gradient(135deg, #3b82f6, #60a5fa)' }}
-                                        >
-                                            Nova Transmissão
-                                        </button>
-                                    </motion.div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                     </div>
                 </motion.div>
             </div>

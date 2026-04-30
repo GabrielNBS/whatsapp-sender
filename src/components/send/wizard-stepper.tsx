@@ -18,12 +18,12 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
   return (
     <nav 
       aria-label="Progresso do envio" 
-      className="flex items-center justify-center w-full my-6"
+      className="flex items-center justify-center w-full mb-10"
     >
       <LayoutGroup id="wizard-stepper">
         <div 
           role="list" 
-          className="flex items-center gap-1 p-1 bg-muted/20 border border-border/30 rounded-full relative"
+          className="flex items-center gap-1 p-1 bg-muted/20 border border-border/40 rounded-full relative backdrop-blur-sm"
         >
           {steps.map((step, index) => {
             const isActive = 
@@ -37,7 +37,7 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
                   onClick={() => onStepClick?.(step.id)}
                   aria-current={isActive ? "step" : undefined}
                   className={cn(
-                    "relative flex items-center gap-2 px-4 py-1.5 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-none",
+                    "relative flex items-center gap-2.5 px-5 py-2.5 rounded-full outline-none transition-all group",
                     isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                   whileTap={{ scale: 0.98 }}
@@ -45,34 +45,26 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
                   {isActive && (
                     <motion.div
                       layoutId="active-step-pill"
-                      className="absolute inset-0 bg-primary rounded-full shadow-sm"
+                      className="absolute inset-0 bg-primary rounded-full shadow-lg shadow-primary/20"
                       style={{ zIndex: 0 }}
                       transition={{
                         type: "spring",
-                        stiffness: 380,
+                        stiffness: 400,
                         damping: 30,
                       }}
                     />
                   )}
                   
-                  <div className="flex items-center gap-2 relative z-10">
-                    <motion.div
-                      animate={isActive ? { scale: [1, 1.2, 1] } : {}}
-                      transition={{ duration: 0.4 }}
-                    >
-                      <step.icon className="w-3.5 h-3.5" />
-                    </motion.div>
-                    <span className="text-xs font-semibold whitespace-nowrap">
-                      {index + 1}. {step.label}
+                  <div className="flex items-center gap-2.5 relative z-10">
+                    <step.icon className={cn("w-3.5 h-3.5", isActive ? "animate-pulse" : "opacity-50 group-hover:opacity-100 transition-opacity")} />
+                    <span className="text-[9px] font-black uppercase tracking-[0.2rem] whitespace-nowrap">
+                      {step.label}
                     </span>
                   </div>
                 </motion.button>
                 
                 {index < steps.length - 1 && (
-                  <ChevronRight 
-                    className="w-3.5 h-3.5 mx-1 text-muted-foreground/40 shrink-0" 
-                    aria-hidden="true" 
-                  />
+                  <div className="mx-1 h-1 w-1 rounded-full bg-muted-foreground/30" aria-hidden="true" />
                 )}
               </div>
             );
