@@ -12,6 +12,15 @@ function isStagedDesktopBundle() {
   return path.basename(__dirname) !== 'electron';
 }
 
+/**
+ * When packaged with asar, __dirname points into the virtual asar archive.
+ * Native files (.node, .dll, .db) live in the .unpacked sibling directory.
+ */
+function resolveUnpacked(asarPath) {
+  return asarPath.replace(/\.asar([/\\])/i, '.asar.unpacked$1')
+                 .replace(/\.asar$/i, '.asar.unpacked');
+}
+
 function ensureDirectory(directoryPath) {
   fs.mkdirSync(directoryPath, { recursive: true });
   return directoryPath;
@@ -37,7 +46,8 @@ function resolveStandaloneDir() {
 }
 
 function resolveDesktopAssetsDir() {
-  return path.join(resolveProjectRoot(), 'desktop-assets');
+  // Desktop assets contain .db files which are unpacked from asar
+  return resolveUnpacked(path.join(resolveProjectRoot(), 'desktop-assets'));
 }
 
 function findFirstExistingPath(candidates) {
@@ -184,7 +194,8 @@ async function startNextServer() {
   process.env.DATABASE_URL = toDatabaseUrl(databasePath);
   process.env.PUPPETEER_EXECUTABLE_PATH = browserExecutable;
 
-  process.chdir(standaloneDir);
+  // chdir needs a real filesystem path, not inside .asar
+  process.chdir(resolveUnpacked(standaloneDir));
   require(serverPath);
   await waitForPort(activePort);
   nextServerLoaded = true;

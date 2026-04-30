@@ -226,10 +226,11 @@ export class WhatsAppService {
     });
 
     this.client.on("authenticated", () => {
-      console.log("WhatsApp Client authenticated");
+      console.log("[WhatsApp] Client authenticated! Initializing synchronization...");
       this.isAuthenticated = true;
       this.status = ConnectionStatus.AUTHENTICATED;
       this.qrCode = null;
+      console.log("[WhatsApp] Please wait while we sync your messages. This can take a few minutes for large accounts.");
     });
 
     this.client.on("auth_failure", (msg) => {

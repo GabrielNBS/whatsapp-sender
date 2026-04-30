@@ -160,10 +160,177 @@ function materializeTracedPackage(targetPath, sourcePath) {
   cpSync(realpathSync(sourcePath), targetPath, { recursive: true, force: true });
 }
 
+/**
+ * Resolve a package from pnpm's content-addressable store.
+ * pnpm does not hoist all packages to the top-level node_modules, so we
+ * need to walk through .pnpm to find the real directory.
+ */
+function resolveFromPnpmStore(packageName) {
+  // Try direct node_modules resolution first (works with npm / hoisted pnpm)
+  const directPath = path.join(projectRoot, 'node_modules', packageName);
+  if (existsSync(directPath)) {
+    return realpathSync(directPath);
+  }
+
+  // Walk .pnpm store to find the package
+  const pnpmDir = path.join(projectRoot, 'node_modules', '.pnpm');
+  if (!existsSync(pnpmDir)) {
+    return null;
+  }
+
+  // @swc/helpers -> @swc+helpers
+  const flatName = packageName.replace('/', '+');
+  const candidates = readdirSync(pnpmDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.startsWith(flatName + '@'))
+    .map((entry) => entry.name)
+    .sort();
+
+  for (const candidate of candidates) {
+    const candidatePath = path.join(pnpmDir, candidate, 'node_modules', ...packageName.split('/'));
+    if (existsSync(candidatePath)) {
+      return realpathSync(candidatePath);
+    }
+  }
+
+  // Fallback: .pnpm/node_modules (virtual store root)
+  const fallbackPath = path.join(pnpmDir, 'node_modules', ...packageName.split('/'));
+  if (existsSync(fallbackPath)) {
+    return realpathSync(fallbackPath);
+  }
+
+  return null;
+}
+
+/**
+ * Remove parts of the `next` package that are not needed at runtime.
+ * This is the single biggest size win (~120 MB -> ~25 MB).
+ */
+function pruneNextRuntime(nodeModulesRoot) {
+  const nextDir = path.join(nodeModulesRoot, 'next');
+  if (!existsSync(nextDir)) {
+    return;
+  }
+
+  // Directories inside next/dist that are NOT needed for standalone runtime
+  const unnecessaryDistDirs = [
+    'docs',
+    'bundle-analyzer',
+    'cli',
+    'telemetry',
+    'next-devtools',
+    'export',
+    'esm',
+  ];
+
+  for (const dir of unnecessaryDistDirs) {
+    removePath(path.join(nextDir, 'dist', dir));
+  }
+
+  // Remove .d.ts type definitions and source maps throughout next/dist
+  removeFilesByPattern(path.join(nextDir, 'dist'), ['.d.ts', '.d.ts.map', '.js.map']);
+
+  // Remove compiled sub-packages not used at runtime in standalone mode
+  const compiledDir = path.join(nextDir, 'dist', 'compiled');
+  if (existsSync(compiledDir)) {
+    const unnecessaryCompiled = [
+      'webpack',
+      'postcss-scss',
+      'sass-loader',
+      'css-loader',
+      'style-loader',
+      'resolve-url-loader',
+      'mini-css-extract-plugin',
+      'cssnano-simple',
+      'jest-worker',
+      'node-html-parser',
+      'babel',
+      'babel-packages',
+      'is-animated',
+      'loader-runner',
+      'loader-utils3',
+      'terser',
+      'watchpack',
+      'webpack-sources3',
+      // Edge runtime — not used in standalone Node.js server
+      '@edge-runtime',
+      'edge-runtime',
+      // Experimental React — only used in canary/experimental channels
+      'react-dom-experimental',
+      'react-experimental',
+      'react-server-dom-webpack-experimental',
+      'react-server-dom-turbopack-experimental',
+      // Dev-only
+      'next-devtools',
+      '@modelcontextprotocol',
+      // Browser polyfills not needed server-side
+      'crypto-browserify',
+      // Build-only utilities
+      'postcss-preset-env',
+      'schema-utils2',
+      'schema-utils3',
+    ];
+
+    for (const name of unnecessaryCompiled) {
+      removePath(path.join(compiledDir, name));
+    }
+  }
+}
+
+/**
+ * Recursively remove files matching given extensions.
+ */
+function removeFilesByPattern(dirPath, extensions) {
+  if (!existsSync(dirPath)) {
+    return;
+  }
+
+  const entries = readdirSync(dirPath, { withFileTypes: true });
+  for (const entry of entries) {
+    const entryPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      removeFilesByPattern(entryPath, extensions);
+    } else if (extensions.some((ext) => entry.name.endsWith(ext))) {
+      rmSync(entryPath, { force: true });
+    }
+  }
+}
+
+/**
+ * Remove dev-only packages and heavy duplicates from the staged bundle.
+ */
+function pruneDesktopBundle(stageRoot) {
+  const nodeModulesDir = path.join(stageRoot, 'node_modules');
+  const nextNodeModulesDir = path.join(stageRoot, '.next', 'node_modules');
+
+  // typescript is a devDependency and should never be in the production bundle
+  removePath(path.join(nodeModulesDir, 'typescript'));
+
+  // Deduplicate whatsapp-web.js traced copies (keep only one)
+  if (existsSync(nextNodeModulesDir)) {
+    const tracedEntries = readdirSync(nextNodeModulesDir, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && e.name.startsWith('whatsapp-web.js-'))
+      .map((e) => e.name)
+      .sort();
+
+    // Keep first, remove rest
+    for (let i = 1; i < tracedEntries.length; i++) {
+      removePath(path.join(nextNodeModulesDir, tracedEntries[i]));
+    }
+  }
+
+  // Prune Next.js
+  pruneNextRuntime(nodeModulesDir);
+}
+
+// ────────────────────────────────────────────────────────────
+//  Main pipeline
+// ────────────────────────────────────────────────────────────
+
 if (!existsSync(standaloneServerPath)) {
   throw new Error('Standalone server.js not found. Run "npm run build" before preparing the Electron bundle.');
 }
 
+// 1. Enrich standalone output with assets Next.js file tracing misses
 copyDirectory(path.join(projectRoot, 'public'), path.join(standaloneDir, 'public'));
 copyDirectory(path.join(projectRoot, '.next', 'static'), path.join(standaloneDir, '.next', 'static'));
 copyDirectory(path.join(projectRoot, 'prisma'), path.join(standaloneDir, 'prisma'));
@@ -184,9 +351,41 @@ copyDirectory(
   path.join(projectRoot, 'node_modules', '@prisma', 'get-platform'),
   path.join(standaloneNodeModulesDir, '@prisma', 'get-platform'),
 );
+
+// 2. Copy missing Next.js runtime dependencies.
+//    pnpm does not hoist transitive packages, so the standalone tracer
+//    often misses them.  Instead of hard-coding names we read next's
+//    own package.json and copy every dependency that is absent.
+const nextPkgJsonPath = path.join(standaloneNodeModulesDir, 'next', 'package.json');
+if (existsSync(nextPkgJsonPath)) {
+  const nextPkg = JSON.parse(readFileSync(nextPkgJsonPath, 'utf8'));
+  const nextDeps = Object.keys(nextPkg.dependencies || {});
+
+  for (const dep of nextDeps) {
+    const segments = dep.split('/');
+    const targetDir = path.join(standaloneNodeModulesDir, ...segments);
+
+    if (existsSync(targetDir)) {
+      continue; // already present
+    }
+
+    const realPath = resolveFromPnpmStore(dep);
+    if (realPath) {
+      mkdirSync(path.dirname(targetDir), { recursive: true });
+      cpSync(realPath, targetDir, { recursive: true, force: true });
+      console.log(`Copied missing Next.js dependency: ${dep}`);
+    } else {
+      console.warn(`WARNING: ${dep} not found in pnpm store. The packaged app may fail.`);
+    }
+  }
+} else {
+  console.warn('WARNING: next/package.json not found in standalone output.');
+}
+
 flattenLinkedEntries(standaloneDir);
 prunePrismaRuntime(standaloneDir);
 
+// 3. Stage the desktop bundle from the enriched standalone output
 rmSync(desktopStageDir, { recursive: true, force: true });
 mkdirSync(desktopStageDir, { recursive: true });
 copyFileSync(path.join(standaloneDir, 'server.js'), path.join(desktopStageDir, 'server.js'));
@@ -227,5 +426,8 @@ materializeTracedPackage(
   path.join(projectRoot, 'node_modules', 'whatsapp-web.js'),
 );
 pruneNodeModules(path.join(desktopStageDir, '.next', 'node_modules'));
+
+// 4. Aggressively prune dev-only content from the staged bundle
+pruneDesktopBundle(desktopStageDir);
 
 console.log('Electron bundle prepared successfully.');

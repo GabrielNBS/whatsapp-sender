@@ -29,7 +29,9 @@ export function OverviewSheetContent() {
   const { data: chartsData, isLoading: isChartsLoading } = useDashboardCharts();
   const { closeSheet } = useGlobalSheet();
 
-  const isConnected = metrics?.connection.status === 'connected';
+  const connectionStatus = metrics?.connection.status;
+  const isConnected = connectionStatus === 'connected';
+  const isInitializing = connectionStatus === 'initializing';
 
   return (
     <div className="space-y-8">
@@ -42,14 +44,16 @@ export function OverviewSheetContent() {
         {/* Status de Conexão */}
         <MetricsCard
           title="Status da Conexão"
-          value={isConnected ? "Online" : "Offline"}
+          value={isConnected ? "Online" : isInitializing ? "Conectando..." : "Offline"}
           description={
             isConnected && metrics?.connection.uptimeSeconds
               ? `Conectado há ${formatters.uptime(metrics.connection.uptimeSeconds)}`
-              : "WhatsApp desconectado"
+              : isInitializing 
+                ? "Sincronizando mensagens..."
+                : "WhatsApp desconectado"
           }
-          icon={isConnected ? Wifi : WifiOff}
-          variant={isConnected ? "success" : "destructive"}
+          icon={isConnected ? Wifi : isInitializing ? Gauge : WifiOff}
+          variant={isConnected ? "success" : isInitializing ? "warning" : "destructive"}
           isLoading={isLoading}
         />
 

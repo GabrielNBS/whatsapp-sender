@@ -232,22 +232,21 @@ export function SendForm({
           <Label htmlFor="template-select" className="text-sm font-medium">
             Modelos de Mensagem (Opcional)
           </Label>
-          <Select onValueChange={handleTemplateSelect} disabled={isSending}>
+          <Select 
+            value={selectedTemplateId || 'none'} 
+            onValueChange={handleTemplateSelect} 
+            disabled={isSending}
+          >
             <SelectTrigger id="template-select" animatedBorder>
               <SelectValue placeholder="Selecione um modelo..." />
             </SelectTrigger>
             <SelectContent>
-              {templates.length === 0 ? (
-                <SelectItem value="__empty__" disabled>
-                  Nenhum modelo disponível
+              <SelectItem value="none">Nenhum modelo</SelectItem>
+              {templates.length > 0 && templates.map(template => (
+                <SelectItem key={template.id} value={template.id}>
+                  {template.title}
                 </SelectItem>
-              ) : (
-                templates.map(template => (
-                  <SelectItem key={template.id} value={template.id}>
-                    {template.title}
-                  </SelectItem>
-                ))
-              )}
+              ))}
             </SelectContent>
           </Select>
         </div>
