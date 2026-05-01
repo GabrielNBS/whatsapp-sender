@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { useAppStore } from "@/lib/store";
+import { Code2 } from "lucide-react";
 
 export function GeneralSettings() {
   const [defaultLink, setDefaultLink] = useState("");
@@ -15,6 +18,7 @@ export function GeneralSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [linkError, setLinkError] = useState("");
+  const { devMode, setDevMode } = useAppStore();
 
   useEffect(() => {
     fetchSettings();
@@ -173,6 +177,24 @@ export function GeneralSettings() {
                 )}
             </Card>
         </div>
+      </div>
+
+      <div className="h-px bg-border/50 my-6" />
+
+      <div className="space-y-4">
+          <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                      <Code2 className="w-4 h-4 text-primary" />
+                      <Label className="text-sm font-bold uppercase tracking-wider">Modo Desenvolvedor</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Habilita o menu flutuante de simulação de estados (Debug UI).</p>
+              </div>
+              <Switch 
+                  checked={devMode}
+                  onCheckedChange={setDevMode}
+              />
+          </div>
       </div>
     </div>
   );

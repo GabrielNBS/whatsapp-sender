@@ -224,3 +224,35 @@
 .text-on-surface-variant {
   color: var(--muted-foreground);
 }
+
+/* Custom Scrollbar Styles */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .premium-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  .premium-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .premium-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--primary) 20%, transparent);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+  }
+  .premium-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklch, var(--primary) 40%, transparent);
+  }
+  
+  .premium-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--primary) 20%, transparent) transparent;
+  }
+}

@@ -1,9 +1,22 @@
-import { useState, useRef, useEffect } from "react";
-import { Users, Check, UserPlus, ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { Users, Check, UserPlus } from "lucide-react";
 import { useGlobalSheet } from "@/components/dashboard/global-sheet-provider";
 import { Button } from "@/components/ui/button";
 import { Group, Contact } from "@/lib/store";
-import { SearchTrigger, SearchInput, GroupList, ContactList } from "./recipient-selector/";
+import { SearchTrigger, GroupList, ContactList } from "./recipient-selector/";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 interface RecipientSelectorProps {
   groups: Group[];
@@ -31,25 +44,17 @@ export function RecipientSelector({
   disabled = false,
 }: RecipientSelectorProps) {
   const { openSheet } = useGlobalSheet();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const searchRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsSearchOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  const hasNoData = groups.length === 0 && contacts.length === 0;
 
   const filteredGroups = groups.filter((group) => {
     const matchesSearch = group.name.toLowerCase().includes(searchTerm.toLowerCase());
     const hasContacts = getContactsByGroup(group.id).length > 0;
     return matchesSearch && hasContacts;
   });
+
   const filteredContacts = contacts.filter(
     (contact) =>
       contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -59,81 +64,113 @@ export function RecipientSelector({
   const handleSelect = (type: "group" | "contact", id: string, name: string) => {
     if (disabled) return;
     onChange({ type, id, name });
-    setIsSearchOpen(false);
+    setIsOpen(false);
     setSearchTerm("");
   };
 
   return (
-    <div
-      className={`bg-card rounded-xl shadow-sm border border-border p-4 space-y-4 relative z-50 ${disabled ? 'opacity-60 pointer-events-none' : ''}`}
-      ref={searchRef}
-    >
-      
-      <h2 className="text-sm font-semibold flex items-center gap-2 text-foreground">
-        <Users className="w-4 h-4 text-primary" />
-        Destinatários
-      </h2>
-      <div className="space-y-1 relative">
-        <label className="text-xs font-medium text-muted-foreground">
-          Buscar Grupo ou Contato
-        </label>
+    <div className={`bg-card rounded-xl border border-border/50 p-5 space-y-5 relative transition-all duration-300 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-4 bg-primary rounded-full" />
+          <h2 className="text-sm font-semibold text-foreground tracking-tight">
+            Destinatários
+          </h2>
+        </div>
 
-        <SearchTrigger
-          value={value}
-          isOpen={isSearchOpen}
-          onToggle={() => setIsSearchOpen(!isSearchOpen)}
-        />
-
-        {isSearchOpen && (
-          <div className="absolute top-full left-0 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-hidden flex flex-col z-100">
-            <SearchInput value={searchTerm} onChange={setSearchTerm} />
-            
-            <div className="overflow-y-auto flex-1 p-1">
-              {/* All Contacts Option */}
-              <div
-                className="px-2 py-1.5 text-sm hover:bg-accent rounded cursor-pointer flex items-center justify-between group"
-                onClick={() => handleSelect("group", "all", "Todos os Contatos")}
-              >
-                <div className="flex items-center gap-2">
-                  <Users className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span>Todos os Contatos</span>
-                </div>
-                {value.id === "all" && <Check className="w-3.5 h-3.5 text-primary" />}
-              </div>
-
-              <GroupList
-                groups={filteredGroups}
-                selectedId={value.id}
-                getContactCount={(id) => getContactsByGroup(id).length}
-                onSelect={(group) => handleSelect("group", group.id, group.name)}
-              />
-
-              <ContactList
-                contacts={filteredContacts}
-                selectedId={value.id}
-                onSelect={(contact) => handleSelect("contact", contact.id, contact.name)}
-              />
-
-              {filteredGroups.length === 0 && filteredContacts.length === 0 && (
-                <div className="p-4 flex flex-col items-center text-center space-y-4 bg-accent/30 rounded-lg border border-dashed border-accent-foreground/20 m-2 mt-4 anime-in fade-in zoom-in duration-300">
-                  <div className="p-3 bg-primary/10 rounded-full">
-                    <UserPlus className="w-6 h-6 text-primary" />
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => openSheet('contacts')}
-                    className="group gap-2 h-9 text-xs w-full bg-background/50 backdrop-blur-sm hover:bg-primary hover:text-primary-foreground border-primary/20 transition-all duration-300"
-                  >
-                    Gerenciar Contatos
-                    <ExternalLink className="w-3.5 h-3.5 opacity-70 transition-transform duration-300 group-hover:delay-150 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => openSheet('contacts')}
+          className="h-7 rounded-md text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 px-2.5 transition-colors"
+        >
+          <UserPlus className="w-3.5 h-3.5 mr-1.5 opacity-70" />
+          Agenda
+        </Button>
       </div>
+
+      {hasNoData ? (
+        <div className="py-10 px-6 flex flex-col items-center text-center space-y-4 bg-muted/5 rounded-xl border border-dashed border-border/60">
+          <div className="w-12 h-12 bg-background rounded-2xl flex items-center justify-center border border-border/50 text-muted-foreground/40 shadow-xs">
+            <UserPlus className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <p className="font-medium text-sm text-foreground">Sua agenda está vazia</p>
+            <p className="text-xs text-muted-foreground leading-relaxed max-w-[220px]">Adicione contatos ou grupos para habilitar o envio de mensagens.</p>
+          </div>
+          <Button
+            onClick={() => openSheet('contacts')}
+            variant="outline"
+            className="h-9 rounded-lg px-5 text-xs font-semibold hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+          >
+            Adicionar Primeiro Contato
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-medium text-muted-foreground/70 ml-0.5">
+            Público alvo da campanha
+          </p>
+
+          <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+              <SearchTrigger
+                value={value}
+                isOpen={isOpen}
+              />
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)] overflow-hidden rounded-xl border-border/60 shadow-xl" align="start">
+              <Command shouldFilter={false} className="bg-popover">
+                <div className="flex items-center px-3 border-b border-border/40">
+                  <CommandInput
+                    placeholder="Pesquisar contatos ou grupos..."
+                    value={searchTerm}
+                    onValueChange={setSearchTerm}
+                    className="h-11 border-none focus:ring-0 text-sm"
+                  />
+                </div>
+                <CommandList className="max-h-[320px] premium-scrollbar py-1">
+                  <CommandEmpty>
+                    <div className="py-8 flex flex-col items-center text-center px-4">
+                      <p className="text-xs font-medium text-muted-foreground italic">Nenhum resultado para "{searchTerm}"</p>
+                    </div>
+                  </CommandEmpty>
+
+                  <CommandGroup heading="Ações">
+                    <CommandItem
+                      onSelect={() => handleSelect("group", "all", "Todos os Contatos")}
+                      className="flex items-center justify-between cursor-pointer py-2.5 px-3 rounded-lg mx-1"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-primary/5 rounded-lg flex items-center justify-center text-primary">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <span className="font-medium text-sm">Todos os Contatos</span>
+                      </div>
+                      {value.id === "all" && (
+                        <Check className="w-4 h-4 text-primary" />
+                      )}
+                    </CommandItem>
+                  </CommandGroup>
+
+                  <GroupList
+                    groups={filteredGroups}
+                    selectedId={value.id}
+                    getContactCount={(id) => getContactsByGroup(id).length}
+                    onSelect={(group) => handleSelect("group", group.id, group.name)}
+                  />
+
+                  <ContactList
+                    contacts={filteredContacts}
+                    selectedId={value.id}
+                    onSelect={(contact) => handleSelect("contact", contact.id, contact.name)}
+                  />
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
     </div>
   );
 }

@@ -31,7 +31,7 @@ export function WizardNavigation({
         disabled={isFirstStep || isSending}
         asChild
         className={cn(
-          "gap-3 h-12 px-6 rounded-2xl text-[10px] font-black uppercase tracking-[0.2rem] text-muted-foreground hover:text-primary transition-all", 
+          "gap-3 h-12 px-6 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2rem] text-muted-foreground hover:text-primary transition-all", 
           isFirstStep && "invisible pointer-events-none"
         )}
       >
@@ -49,7 +49,7 @@ export function WizardNavigation({
         disabled={isNextDisabled || isSending}
         asChild
         className={cn(
-          "h-12 px-8 rounded-2xl text-[10px] font-black uppercase tracking-[0.2rem] transition-all shadow-xl shadow-primary/10 gap-3",
+          "h-12 px-8 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2rem] transition-all shadow-xl shadow-primary/10 gap-3",
           isLastStep ? "bg-emerald-500 hover:bg-emerald-600 text-white" : "bg-primary text-primary-foreground"
         )}
       >

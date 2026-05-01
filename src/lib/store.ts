@@ -45,6 +45,10 @@ interface AppState {
   // Avatar Cache
   avatars: Record<string, string | null>;
   fetchAvatar: (phone: string) => Promise<string | null>;
+
+  // Dev Tools
+  devMode: boolean;
+  setDevMode: (enabled: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -71,6 +75,7 @@ export const useAppStore = create<AppState>()(
       },
 
       history: [],
+      devMode: false,
 
       addGroup: (name, description, customId) => set((state) => ({
         groups: [...state.groups, { id: customId || nanoid(), name, description }]
@@ -172,12 +177,14 @@ export const useAppStore = create<AppState>()(
         }));
         return null;
       },
+
+      setDevMode: (enabled) => set({ devMode: enabled }),
     }),
     {
       name: 'whatsapp-sender-storage',
       partialize: (state) => {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { sendingStatus, logs, ...rest } = state;
+        const { sendingStatus, logs, avatars, ...rest } = state;
         return rest;
       },
     }
