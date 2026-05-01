@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import { Contact } from '@/lib/store';
 import { formatPhoneNumber } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ui/avatar-display';
+import { CommandGroup, CommandItem } from '@/components/ui/command';
 
 interface ContactListProps {
   contacts: Contact[];
@@ -16,30 +17,27 @@ export function ContactList({ contacts, selectedId, onSelect }: ContactListProps
   if (contacts.length === 0) return null;
 
   return (
-    <>
-      <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-2">
-        Contatos
-      </div>
+    <CommandGroup heading="Contatos">
       {contacts.map((contact) => (
-        <div
+        <CommandItem
           key={contact.id}
-          className="px-2 py-1.5 text-sm hover:bg-accent rounded cursor-pointer flex items-center justify-between"
-          onClick={() => onSelect(contact)}
+          onSelect={() => onSelect(contact)}
+          className="flex items-center justify-between cursor-pointer py-2 px-3 rounded-lg mx-1 my-0.5"
         >
-          <div className="flex items-center gap-2">
-            <AvatarDisplay name={contact.name} phone={contact.number} className="w-8 h-8" />
-            <div className="flex flex-col">
-              <span>{contact.name}</span>
-              <span className="text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <AvatarDisplay name={contact.name} phone={contact.number} className="w-8 h-8 rounded-lg opacity-90 shadow-none border border-border/20" />
+            <div className="flex flex-col leading-tight">
+              <span className="font-medium text-sm">{contact.name}</span>
+              <span className="text-[10px] text-muted-foreground font-normal">
                 {formatPhoneNumber(contact.number)}
               </span>
             </div>
           </div>
           {selectedId === contact.id && (
-            <Check className="w-3.5 h-3.5 text-primary" />
+            <Check className="w-4 h-4 text-primary" />
           )}
-        </div>
+        </CommandItem>
       ))}
-    </>
+    </CommandGroup>
   );
 }

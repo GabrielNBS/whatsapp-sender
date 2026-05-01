@@ -16,17 +16,17 @@ interface WizardStepperProps {
 
 export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepperProps) {
   return (
-    <nav 
-      aria-label="Progresso do envio" 
+    <nav
+      aria-label="Progresso do envio"
       className="flex items-center justify-center w-full mb-10"
     >
       <LayoutGroup id="wizard-stepper">
-        <div 
-          role="list" 
-          className="flex items-center gap-1 p-1 bg-muted/20 border border-border/40 rounded-full relative backdrop-blur-sm"
+        <div
+          role="list"
+          className="flex items-center gap-1 p-1 bg-card/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-full relative shadow-xl "
         >
           {steps.map((step, index) => {
-            const isActive = 
+            const isActive =
               (step.id === 0 && currentStep === 0) ||
               (step.id === 1 && currentStep === 1) ||
               (step.id === 2 && (currentStep === 2 || currentStep === 3));
@@ -54,15 +54,15 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
                       }}
                     />
                   )}
-                  
+
                   <div className="flex items-center gap-2.5 relative z-10">
                     <step.icon className={cn("w-3.5 h-3.5", isActive ? "animate-pulse" : "opacity-50 group-hover:opacity-100 transition-opacity")} />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2rem] whitespace-nowrap">
+                    <span className="text-[9px] font-bold uppercase tracking-[0.2rem] whitespace-nowrap">
                       {step.label}
                     </span>
                   </div>
                 </motion.button>
-                
+
                 {index < steps.length - 1 && (
                   <div className="mx-1 h-1 w-1 rounded-full bg-muted-foreground/30" aria-hidden="true" />
                 )}

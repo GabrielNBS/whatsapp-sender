@@ -336,8 +336,9 @@ export function ContactsSheetContent() {
                         <AlertDialogHeader className="space-y-3">
                            <AlertDialogTitle className="text-xl font-bold tracking-tight text-center">Excluir Grupo</AlertDialogTitle>
                            <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2">
-                              O grupo <strong className="text-foreground font-black">&quot;{deletingGroup?.name}&quot;</strong> possui contatos associados. <br/>
-                              Ao excluir, esses contatos serão movidos para o grupo <strong className="text-primary font-black">&quot;Geral&quot;</strong>.
+                              Tem certeza que deseja remover este grupo? <br/>
+                              A categoria <strong className="text-foreground font-bold">&quot;{deletingGroup?.name}&quot;</strong> possui contatos associados. <br/>
+                              Ao excluir, esses contatos serão movidos para o grupo <strong className="text-primary font-bold">&quot;Geral&quot;</strong>.
                               <br/><br/>
                               Deseja continuar?
                            </AlertDialogDescription>
@@ -433,7 +434,7 @@ export function ContactsSheetContent() {
                   <AlertDialogHeader className="space-y-3">
                      <AlertDialogTitle className="text-xl font-bold tracking-tight text-center">Limpar Todos os Contatos</AlertDialogTitle>
                      <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2 text-center">
-                        Tem certeza que deseja remover <strong className="text-foreground font-black text-base">{contacts.length} contatos</strong>? <br/>
+                        Tem certeza que deseja remover <strong className="text-foreground font-bold text-base">{contacts.length} contatos</strong>? <br/>
                         Esta ação excluirá permanentemente todos os contatos da sua lista local.
                      </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -651,8 +652,8 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
                   <AlertDialogHeader className="space-y-3">
                      <AlertDialogTitle className="text-xl font-bold tracking-tight text-center">Excluir Contato</AlertDialogTitle>
                      <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2 text-center">
-                        Tem certeza que deseja excluir o contato <br/>
-                        <strong className="text-foreground font-black text-base">&quot;{deletingContact?.name}&quot;</strong>? <br/>
+                        Deseja realmente remover o contato <br/>
+                        <strong className="text-foreground font-bold text-base">&quot;{deletingContact?.name}&quot;</strong>? <br/>
                         Esta ação não pode ser desfeita.
                      </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -676,8 +677,8 @@ function ValidContactTable({ contacts, onDelete }: { contacts: Contact[], onDele
                   <AlertDialogHeader className="space-y-3">
                      <AlertDialogTitle className="text-xl font-bold tracking-tight text-center">Salvar Alterações</AlertDialogTitle>
                      <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2 text-center">
-                        Deseja confirmar a alteração do grupo para o contato <br/>
-                        <strong className="text-foreground font-black text-base">&quot;{editingContact?.name}&quot;</strong>?
+                        Tem certeza que deseja salvar as alterações para <br/>
+                        <strong className="text-foreground font-bold text-base">&quot;{editingContact?.name}&quot;</strong>?
                      </AlertDialogDescription>
                   </AlertDialogHeader>
                </div>

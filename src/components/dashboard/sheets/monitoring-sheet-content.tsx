@@ -76,7 +76,7 @@ export function MonitoringSheetContent() {
                 {/* 1. Ative Campaign Section */}
                 <section className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                             <Activity className="w-3 h-3 text-primary animate-pulse" />
                             Transmissão Ativa
                         </h3>
@@ -102,7 +102,7 @@ export function MonitoringSheetContent() {
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-2xl font-black text-primary tabular-nums">{percent}%</p>
+                                    <p className="text-2xl font-bold tracking-tight text-primary tabular-nums">{percent}%</p>
                                     <p className="text-[9px] font-bold text-muted-foreground uppercase">Concluído</p>
                                 </div>
                             </div>
@@ -127,14 +127,14 @@ export function MonitoringSheetContent() {
                                 <div className="bg-success/5 border border-success/10 rounded-xl p-3 flex items-center gap-3">
                                     <div className="w-2 h-8 rounded-full bg-success/20" />
                                     <div>
-                                        <p className="text-lg font-black text-success tabular-nums">{sendingStatus.sentCount}</p>
+                                        <p className="text-lg font-bold tracking-tight text-success tabular-nums">{sendingStatus.sentCount}</p>
                                         <p className="text-[9px] font-bold text-success/70 uppercase">Sucesso</p>
                                     </div>
                                 </div>
                                 <div className="bg-destructive/5 border border-destructive/10 rounded-xl p-3 flex items-center gap-3">
                                     <div className="w-2 h-8 rounded-full bg-destructive/20" />
                                     <div>
-                                        <p className="text-lg font-black text-destructive tabular-nums">{sendingStatus.failedCount}</p>
+                                        <p className="text-lg font-bold tracking-tight text-destructive tabular-nums">{sendingStatus.failedCount}</p>
                                         <p className="text-[9px] font-bold text-destructive/70 uppercase">Falhas</p>
                                     </div>
                                 </div>
@@ -155,7 +155,7 @@ export function MonitoringSheetContent() {
 
                 {/* 2. Upcoming Schedules Section */}
                 <section className="space-y-4">
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
                         <Calendar className="w-3 h-3 text-primary" />
                         Próximos Agendamentos ({activeSchedules.length})
                     </h3>
@@ -211,7 +211,7 @@ export function MonitoringSheetContent() {
                                                         {schedule.batchName || "Campanha Sem Nome"}
                                                     </p>
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md transition-colors ${
+                                                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md transition-colors ${
                                                             focusedBatchId === schedule.batchId 
                                                                 ? 'bg-primary/10 text-primary' 
                                                                 : 'bg-muted text-muted-foreground'
@@ -262,8 +262,8 @@ export function MonitoringSheetContent() {
                             <AlertDialogTitle className="text-xl font-bold tracking-tight text-center">Cancelar agendamento?</AlertDialogTitle>
                             <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2">
                                 Esta ação não pode ser desfeita. A campanha <br/>
-                                <strong className="text-foreground font-black text-base">&quot;{scheduleToDelete?.batchName}&quot;</strong> <br/>
-                                com <strong className="text-primary font-black">{scheduleToDelete?.count} contatos</strong> será permanentemente removida da fila.
+                                <strong className="text-foreground font-bold text-base">&quot;{scheduleToDelete?.batchName}&quot;</strong> <br/>
+                                com <strong className="text-primary font-bold">{scheduleToDelete?.count} contatos</strong> será permanentemente removida da fila.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                     </div>

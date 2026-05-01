@@ -98,7 +98,7 @@ export function TransmissionPill() {
                                     {/* Full progress bar */}
                                     <div className="space-y-1.5">
                                         <div className="flex justify-between items-center">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Progresso</p>
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Progresso</p>
                                             <p className="text-xs text-muted-foreground font-medium">
                                                 {totalContacts - processed} restantes
                                             </p>
@@ -116,17 +116,17 @@ export function TransmissionPill() {
                                     <div className="grid grid-cols-3 gap-2">
                                         <div className="bg-muted/50 rounded-xl p-2.5 text-center">
                                             <Users className="w-3.5 h-3.5 mx-auto text-muted-foreground mb-1" />
-                                            <p className="text-lg font-black tabular-nums">{totalContacts}</p>
+                                            <p className="text-lg font-bold tabular-nums">{totalContacts}</p>
                                             <p className="text-[9px] font-bold text-muted-foreground uppercase">Total</p>
                                         </div>
                                         <div className="bg-success/5 rounded-xl p-2.5 text-center">
                                             <CheckCircle className="w-3.5 h-3.5 mx-auto text-success mb-1" />
-                                            <p className="text-lg font-black tabular-nums text-success">{sentCount}</p>
+                                            <p className="text-lg font-bold tabular-nums text-success">{sentCount}</p>
                                             <p className="text-[9px] font-bold text-muted-foreground uppercase">Enviados</p>
                                         </div>
                                         <div className="bg-destructive/5 rounded-xl p-2.5 text-center">
                                             <AlertTriangle className="w-3.5 h-3.5 mx-auto text-destructive mb-1" />
-                                            <p className="text-lg font-black tabular-nums text-destructive">{failedCount}</p>
+                                            <p className="text-lg font-bold tabular-nums text-destructive">{failedCount}</p>
                                             <p className="text-[9px] font-bold text-muted-foreground uppercase">Falhas</p>
                                         </div>
                                     </div>
