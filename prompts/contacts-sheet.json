@@ -1,0 +1,196 @@
+{
+  "objetivo": "Corrigir todos os problemas de implementação, arquitetura, performance, tipagem, acessibilidade e consistência levantados na revisão.",
+  "prioridade_global": "alta",
+  "correcoes": [
+    {
+      "id": "ARCH-001",
+      "problema": "Componente com responsabilidades demais",
+      "acao": "Separar UI, regras de negócio, importação CSV, analytics, paginação, busca e modais em módulos próprios."
+    },
+    {
+      "id": "ARCH-002",
+      "problema": "Acoplamento forte com store global",
+      "acao": "Criar hooks especializados: useContacts, useGroups, useContactImport, useContactAnalytics."
+    },
+    {
+      "id": "VALID-001",
+      "problema": "Validação fraca ao criar contato",
+      "acao": "Validar nome com trim, telefone normalizado, grupo existente e duplicidade por número."
+    },
+    {
+      "id": "VALID-002",
+      "problema": "Validação fraca ao criar grupo",
+      "acao": "Validar trim, duplicidade, tamanho máximo, nomes reservados e caracteres inválidos."
+    },
+    {
+      "id": "DATA-001",
+      "problema": "Inconsistência no formato do telefone",
+      "acao": "Salvar sempre telefone normalizado apenas com dígitos e formatar somente na exibição."
+    },
+    {
+      "id": "DATA-002",
+      "problema": "Perda de múltiplos grupos na edição",
+      "acao": "Permitir edição de múltiplos grupos ou alterar o modelo para groupId único."
+    },
+    {
+      "id": "CSV-001",
+      "problema": "Parsing CSV dentro da UI",
+      "acao": "Mover parsing para service parseContactsCsv.ts."
+    },
+    {
+      "id": "CSV-002",
+      "problema": "PapaParse sem tratamento de erro",
+      "acao": "Adicionar error handler, validação de headers, validação de linhas e feedback de falhas."
+    },
+    {
+      "id": "CSV-003",
+      "problema": "Importação aceita contatos sem nome útil",
+      "acao": "Rejeitar contatos sem nome válido ou marcar como inválidos para revisão antes da importação."
+    },
+    {
+      "id": "CSV-004",
+      "problema": "Importação permite duplicados",
+      "acao": "Deduplicar por telefone antes de importar e bloquear números já existentes."
+    },
+    {
+      "id": "CSV-005",
+      "problema": "Permite importar lista vazia",
+      "acao": "Desabilitar confirmação quando importedContacts.length === 0."
+    },
+    {
+      "id": "STORE-001",
+      "problema": "ID gerado dentro da UI",
+      "acao": "Mover geração de ID para camada de store/service."
+    },
+    {
+      "id": "CONST-001",
+      "problema": "Strings mágicas como default e Geral",
+      "acao": "Criar constantes DEFAULT_GROUP_ID e DEFAULT_GROUP_NAME."
+    },
+    {
+      "id": "GROUP-001",
+      "problema": "Exclusão de grupo depende de comportamento implícito",
+      "acao": "Implementar explicitamente moveContactsToDefaultGroup antes de remover o grupo."
+    },
+    {
+      "id": "API-001",
+      "problema": "Polling agressivo a cada 5 segundos",
+      "acao": "Substituir por React Query/SWR com staleTime, refetchInterval controlado e pausa quando aba estiver inativa."
+    },
+    {
+      "id": "API-002",
+      "problema": "Fetch sem AbortController",
+      "acao": "Adicionar cancelamento de request no unmount."
+    },
+    {
+      "id": "API-003",
+      "problema": "Fetch sem checar res.ok",
+      "acao": "Validar status HTTP antes de chamar res.json."
+    },
+    {
+      "id": "LOG-001",
+      "problema": "console.log em produção",
+      "acao": "Remover logs ou trocar por logger controlado por ambiente."
+    },
+    {
+      "id": "PERF-001",
+      "problema": "Busca e paginação sem memoização",
+      "acao": "Usar useMemo para filteredContacts, paginatedContacts e totalPages."
+    },
+    {
+      "id": "PERF-002",
+      "problema": "Tabela sem virtualização",
+      "acao": "Adicionar virtualização para listas grandes ou paginação server-side."
+    },
+    {
+      "id": "STATE-001",
+      "problema": "Página atual pode ficar inválida após exclusão",
+      "acao": "Sincronizar currentPage com totalPages via useEffect."
+    },
+    {
+      "id": "STATE-002",
+      "problema": "Estados demais no mesmo componente",
+      "acao": "Extrair estados para hooks e componentes menores."
+    },
+    {
+      "id": "A11Y-001",
+      "problema": "Botões de ícone sem aria-label",
+      "acao": "Adicionar aria-label em editar, excluir, avançar, voltar e limpar busca."
+    },
+    {
+      "id": "A11Y-002",
+      "problema": "Input de arquivo invisível sem associação correta",
+      "acao": "Usar label htmlFor com input id ou componente de upload acessível."
+    },
+    {
+      "id": "STYLE-001",
+      "problema": "Classe Tailwind inválida justify-center!",
+      "acao": "Trocar por !justify-center."
+    },
+    {
+      "id": "STYLE-002",
+      "problema": "Cores hardcoded quebrando tema",
+      "acao": "Trocar bg-white, slate e red fixos por tokens do design system."
+    },
+    {
+      "id": "TS-001",
+      "problema": "Cast inseguro no RadioGroup",
+      "acao": "Criar type guard isImportTargetType antes de setar estado."
+    },
+    {
+      "id": "MODAL-001",
+      "problema": "Confirmação de edição pode ficar inconsistente",
+      "acao": "Fechar confirmação junto com modal de edição ou guardar snapshot do contato em confirmação."
+    }
+  ],
+  "nova_estrutura_sugerida": {
+    "components": [
+      "ContactsSheetContent.tsx",
+      "ContactTable.tsx",
+      "ContactRow.tsx",
+      "ContactSearch.tsx",
+      "ContactPagination.tsx",
+      "AddContactDialog.tsx",
+      "ImportContactsDialog.tsx",
+      "GroupsTab.tsx",
+      "GroupCard.tsx",
+      "ConfirmDeleteContactDialog.tsx",
+      "ConfirmDeleteGroupDialog.tsx"
+    ],
+    "hooks": [
+      "useContacts.ts",
+      "useGroups.ts",
+      "useContactImport.ts",
+      "useContactAnalytics.ts",
+      "useContactPagination.ts",
+      "useContactSearch.ts"
+    ],
+    "services": [
+      "parseContactsCsv.ts",
+      "normalizePhone.ts",
+      "validateContact.ts",
+      "validateGroup.ts",
+      "dedupeContacts.ts"
+    ],
+    "constants": [
+      "DEFAULT_GROUP_ID",
+      "DEFAULT_GROUP_NAME",
+      "CONTACTS_PER_PAGE",
+      "ANALYTICS_REFETCH_INTERVAL"
+    ]
+  },
+  "definition_of_done": [
+    "Nenhuma regra de negócio dentro dos componentes visuais.",
+    "Telefone salvo sempre normalizado.",
+    "CSV inválido não quebra a tela.",
+    "Importação não aceita duplicados nem lista vazia.",
+    "Exclusão de grupo move contatos explicitamente para o grupo padrão.",
+    "Analytics não roda quando a aba/tela está inativa.",
+    "Todos os botões de ícone possuem aria-label.",
+    "Nenhum console.log em produção.",
+    "Nenhuma classe Tailwind inválida.",
+    "Cores alinhadas ao design system.",
+    "Busca e paginação memoizadas.",
+    "Fluxo de edição não perde múltiplos grupos."
+  ]
+}
