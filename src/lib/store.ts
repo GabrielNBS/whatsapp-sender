@@ -1,29 +1,41 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { nanoid } from 'nanoid';
-import { Group, Contact, LogEntry, Campaign } from './types';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { nanoid } from "nanoid";
+import { Group, Contact, LogEntry, Campaign } from "./types";
+import { normalizePhone } from "@/services/contacts/normalizePhone";
+
+const DEFAULT_GROUP_ID = "default";
+const AVATAR_CACHE_TTL_MS = 5 * 60 * 1000;
+
+function normalizeGroupIds(groupIds?: string[]): string[] {
+  const safeGroupIds = groupIds && groupIds.length > 0 ? groupIds : [DEFAULT_GROUP_ID];
+  return Array.from(new Set(safeGroupIds));
+}
+
+function normalizeContactPayload(contact: Omit<Contact, "id">): Omit<Contact, "id"> {
+  return {
+    ...contact,
+    name: contact.name.trim(),
+    number: normalizePhone(contact.number),
+    groupIds: normalizeGroupIds(contact.groupIds),
+  };
+}
 
 interface AppState {
   groups: Group[];
   contacts: Contact[];
-
   addGroup: (name: string, description?: string, customId?: string) => void;
   deleteGroup: (id: string) => void;
-
   addContact: (name: string, number: string, groupIds?: string[]) => void;
-  importContacts: (newContacts: Omit<Contact, 'id'>[]) => void;
+  importContacts: (newContacts: Omit<Contact, "id">[]) => void;
   clearContacts: () => void;
   updateContactGroups: (contactId: string, groupIds: string[]) => void;
   deleteContact: (id: string) => void;
-
   getContactsByGroup: (groupId: string) => Contact[];
-
-  // Persistent Logs & Status
   logs: LogEntry[];
   addLog: (entry: LogEntry) => void;
   cleanupLogs: () => void;
   clearLogs: () => void;
-
   sendingStatus: {
     isSending: boolean;
     progress: number;
@@ -36,17 +48,12 @@ interface AppState {
     sentCount: number;
     failedCount: number;
   };
-  setSendingStatus: (status: Partial<AppState['sendingStatus']>) => void;
-
-  // History
+  setSendingStatus: (status: Partial<AppState["sendingStatus"]>) => void;
   history: Campaign[];
   addCampaign: (campaign: Campaign) => void;
-
-  // Avatar Cache
   avatars: Record<string, string | null>;
+  avatarFetchedAt: Record<string, number>;
   fetchAvatar: (phone: string) => Promise<string | null>;
-
-  // Dev Tools
   devMode: boolean;
   setDevMode: (enabled: boolean) => void;
 }
@@ -54,12 +61,8 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      groups: [
-        { id: 'default', name: 'Geral', description: 'Lista Padrão' }
-      ],
+      groups: [{ id: DEFAULT_GROUP_ID, name: "Geral", description: "Lista Padr?o" }],
       contacts: [],
-
-      // Logs & Status Initial State
       logs: [],
       sendingStatus: {
         isSending: false,
@@ -73,107 +76,137 @@ export const useAppStore = create<AppState>()(
         sentCount: 0,
         failedCount: 0,
       },
-
       history: [],
+      avatars: {},
+      avatarFetchedAt: {},
       devMode: false,
 
-      addGroup: (name, description, customId) => set((state) => ({
-        groups: [...state.groups, { id: customId || nanoid(), name, description }]
-      })),
+      addGroup: (name, description, customId) => set((state) => {
+        const normalizedName = name.trim();
+        if (!normalizedName) {
+          return state;
+        }
 
-      deleteGroup: (id) => set((state) => {
-        if (id === 'default') return {}; // Prevent deleting default group
+        const alreadyExists = state.groups.some((group) => group.name.trim().toLowerCase() === normalizedName.toLowerCase());
+        if (alreadyExists) {
+          return state;
+        }
 
         return {
-          groups: state.groups.filter((g) => g.id !== id),
-          contacts: state.contacts.map(c => {
-            const newGroupIds = c.groupIds.filter(gid => gid !== id);
-            return {
-              ...c,
-              groupIds: newGroupIds.length > 0 ? newGroupIds : ['default']
-            };
-          })
+          groups: [...state.groups, { id: customId || nanoid(), name: normalizedName, description }],
         };
       }),
 
-      addContact: (name, number, groupIds = ['default']) => set((state) => ({
-        contacts: [...state.contacts, { id: nanoid(), name, number, groupIds: groupIds.length ? groupIds : ['default'] }]
-      })),
+      deleteGroup: (id) => set((state) => {
+        if (id === DEFAULT_GROUP_ID) return state;
+
+        return {
+          groups: state.groups.filter((group) => group.id !== id),
+          contacts: state.contacts.map((contact) => {
+            const newGroupIds = contact.groupIds.filter((groupId) => groupId !== id);
+            return {
+              ...contact,
+              groupIds: normalizeGroupIds(newGroupIds),
+            };
+          }),
+        };
+      }),
+
+      addContact: (name, number, groupIds = [DEFAULT_GROUP_ID]) => set((state) => {
+        const contact = normalizeContactPayload({ name, number, groupIds });
+        if (!contact.number) {
+          return state;
+        }
+
+        const alreadyExists = state.contacts.some((existing) => normalizePhone(existing.number) === contact.number);
+        if (alreadyExists) {
+          return state;
+        }
+
+        return {
+          contacts: [...state.contacts, { id: nanoid(), ...contact }],
+        };
+      }),
 
       importContacts: (newContacts) => set((state) => {
-        const withIds = newContacts.map(c => ({
-          ...c,
-          id: nanoid(),
-          groupIds: c.groupIds && c.groupIds.length > 0 ? c.groupIds : ['default']
-        }));
-        return { contacts: [...state.contacts, ...withIds] };
+        const existingNumbers = new Set(state.contacts.map((contact) => normalizePhone(contact.number)));
+        const contactsToAdd: Contact[] = [];
+
+        for (const contact of newContacts) {
+          const normalized = normalizeContactPayload(contact);
+          if (!normalized.number || existingNumbers.has(normalized.number)) {
+            continue;
+          }
+
+          existingNumbers.add(normalized.number);
+          contactsToAdd.push({ id: nanoid(), ...normalized });
+        }
+
+        return { contacts: [...state.contacts, ...contactsToAdd] };
       }),
 
       clearContacts: () => set({ contacts: [] }),
 
       updateContactGroups: (contactId, groupIds) => set((state) => ({
-        contacts: state.contacts.map((c) =>
-          c.id === contactId ? { ...c, groupIds: groupIds.length > 0 ? groupIds : ['default'] } : c
-        )
+        contacts: state.contacts.map((contact) =>
+          contact.id === contactId
+            ? { ...contact, groupIds: normalizeGroupIds(groupIds) }
+            : contact
+        ),
       })),
 
       deleteContact: (id) => set((state) => ({
-        contacts: state.contacts.filter((c) => c.id !== id)
+        contacts: state.contacts.filter((contact) => contact.id !== id),
       })),
 
-      getContactsByGroup: (groupId) => {
-        const { contacts } = get();
-        return contacts.filter(c => c.groupIds.includes(groupId));
-      },
+      getContactsByGroup: (groupId) => get().contacts.filter((contact) => contact.groupIds.includes(groupId)),
 
       addLog: (entry) => set((state) => ({
-        logs: [entry, ...state.logs].slice(0, 100) // Keep last 100 logs
+        logs: [entry, ...state.logs].slice(0, 100),
       })),
 
-      cleanupLogs: () => set((state) => {
-        const now = Date.now();
-        return {
-          logs: state.logs.filter(log => !log.expiresAt || log.expiresAt > now)
-        };
-      }),
+      cleanupLogs: () => set((state) => ({
+        logs: state.logs.filter((log) => !log.expiresAt || log.expiresAt > Date.now()),
+      })),
 
       clearLogs: () => set({ logs: [] }),
 
       setSendingStatus: (status) => set((state) => ({
-        sendingStatus: { ...state.sendingStatus, ...status }
+        sendingStatus: { ...state.sendingStatus, ...status },
       })),
 
       addCampaign: (campaign) => set((state) => ({
-        history: [campaign, ...state.history].slice(0, 50) // Keep last 50 campaigns
+        history: [campaign, ...state.history].slice(0, 50),
       })),
 
-      // Avatar Logic
-      avatars: {},
       fetchAvatar: async (phone) => {
-        const { avatars } = get();
-        // Return cached if exists (undefined check because null is a valid "no avatar" state)
-        if (avatars[phone] !== undefined) {
-            return avatars[phone];
+        const normalizedPhone = normalizePhone(phone);
+        const { avatars, avatarFetchedAt } = get();
+        const cachedAt = avatarFetchedAt[normalizedPhone] ?? 0;
+        const cacheValid = cachedAt > 0 && Date.now() - cachedAt < AVATAR_CACHE_TTL_MS;
+
+        if (cacheValid && avatars[normalizedPhone] !== undefined) {
+          return avatars[normalizedPhone];
         }
 
         try {
-            const res = await fetch(`/api/contacts/avatar?phone=${encodeURIComponent(phone)}`);
-            if (res.ok) {
-                const data = await res.json();
-                const url = data.url || null;
-                
-                set((state) => ({
-                    avatars: { ...state.avatars, [phone]: url }
-                }));
-                return url;
-            }
+          const res = await fetch(`/api/contacts/avatar?phone=${encodeURIComponent(normalizedPhone)}`);
+          if (res.ok) {
+            const data = await res.json();
+            const url = data.url || null;
+            set((state) => ({
+              avatars: { ...state.avatars, [normalizedPhone]: url },
+              avatarFetchedAt: { ...state.avatarFetchedAt, [normalizedPhone]: Date.now() },
+            }));
+            return url;
+          }
         } catch (error) {
-            console.error('Failed to fetch avatar', error);
+          console.error("Failed to fetch avatar", error);
         }
 
-        // Cache failure as null to avoid retry loop in short term
         set((state) => ({
-            avatars: { ...state.avatars, [phone]: null }
+          avatars: { ...state.avatars, [normalizedPhone]: null },
+          avatarFetchedAt: { ...state.avatarFetchedAt, [normalizedPhone]: Date.now() },
         }));
         return null;
       },
@@ -181,10 +214,9 @@ export const useAppStore = create<AppState>()(
       setDevMode: (enabled) => set({ devMode: enabled }),
     }),
     {
-      name: 'whatsapp-sender-storage',
+      name: "whatsapp-sender-storage",
       partialize: (state) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { sendingStatus, logs, avatars, ...rest } = state;
+        const { sendingStatus, logs, avatars, avatarFetchedAt, ...rest } = state;
         return rest;
       },
     }

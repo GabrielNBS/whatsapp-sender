@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { logger } from "@/lib/logger";
+import { logger, maskPhone } from "@/lib/logger";
 import { getRequestId } from "./CorrelationId";
 
 export interface IAnalyticsService {
@@ -11,17 +11,17 @@ export interface IAnalyticsService {
 export class AnalyticsService implements IAnalyticsService {
   constructor(private prisma: PrismaClient) {}
 
-  // 🔧 Cria um logger filho com contexto fixo — requestId + método
   private getLogger(method: string) {
     return logger.child({
-      requestId: getRequestId(), // 🔗 ID de correlação
+      requestId: getRequestId(),
       method,
     });
   }
 
   async trackMessageSent(phone: string): Promise<void> {
     const log = this.getLogger("trackMessageSent");
-    const start = performance.now(); // ⏱️ início da medição
+    const start = performance.now();
+    const maskedPhone = maskPhone(phone);
 
     try {
       await this.prisma.contactAnalytics.upsert({
@@ -38,15 +38,14 @@ export class AnalyticsService implements IAnalyticsService {
       });
 
       log.info({
-        phone,
-        durationMs: (performance.now() - start).toFixed(2), // ⏱️ duração
-      }, "Tracked sent message");
-
-    } catch (error: unknown) { // 🔍 tipagem correta
-      log.error({
-        phone,
+        phone: maskedPhone,
         durationMs: (performance.now() - start).toFixed(2),
-        err: error, // Pino serializa stack trace automaticamente com a chave "err"
+      }, "Tracked sent message");
+    } catch (error: unknown) {
+      log.error({
+        phone: maskedPhone,
+        durationMs: (performance.now() - start).toFixed(2),
+        err: error,
       }, "Failed to track sent message");
     }
   }
@@ -54,28 +53,30 @@ export class AnalyticsService implements IAnalyticsService {
   async trackMessageRead(phone: string): Promise<void> {
     const log = this.getLogger("trackMessageRead");
     const start = performance.now();
+    const maskedPhone = maskPhone(phone);
 
     try {
-      const result = await this.prisma.contactAnalytics.updateMany({
+      await this.prisma.contactAnalytics.upsert({
         where: { phone },
-        data: {
+        create: {
+          phone,
+          sentCount: 0,
+          readCount: 1,
+          lastReadAt: new Date(),
+        },
+        update: {
           readCount: { increment: 1 },
           lastReadAt: new Date(),
         },
       });
 
-      if (result.count > 0) {
-        log.info({
-          phone,
-          durationMs: (performance.now() - start).toFixed(2),
-        }, "Tracked read message");
-      } else {
-        log.warn({ phone }, "No record found, skipping read count"); // 🎚️ warn aqui faz sentido
-      }
-
+      log.info({
+        phone: maskedPhone,
+        durationMs: (performance.now() - start).toFixed(2),
+      }, "Tracked read message");
     } catch (error: unknown) {
       log.error({
-        phone,
+        phone: maskedPhone,
         durationMs: (performance.now() - start).toFixed(2),
         err: error,
       }, "Failed to track read message");
@@ -91,24 +92,27 @@ export class AnalyticsService implements IAnalyticsService {
 
     try {
       const operations = phones.map((phone) =>
-        this.prisma.contactAnalytics.updateMany({
+        this.prisma.contactAnalytics.upsert({
           where: { phone },
-          data: {
+          create: {
+            phone,
+            sentCount: 0,
+            readCount: 1,
+            lastReadAt: new Date(),
+          },
+          update: {
             readCount: { increment: 1 },
             lastReadAt: new Date(),
           },
         })
       );
 
-      const results = await this.prisma.$transaction(operations);
-      const updated = results.reduce((sum, r) => sum + r.count, 0);
+      await this.prisma.$transaction(operations);
 
       log.info({
         total: phones.length,
-        updated,
         durationMs: (performance.now() - start).toFixed(2),
       }, "Batch tracked read messages");
-
     } catch (error: unknown) {
       log.error({
         total: phones.length,

@@ -1,18 +1,12 @@
-﻿/**
- * ReportService
- *
- * Responsible for formatting and sending campaign reports via WhatsApp.
- */
-
-import { PrismaClient, Campaign, ReportRecipient, ReportConfig } from '@prisma/client';
-import { IMessageSender } from './types';
+import { PrismaClient, Campaign, ReportRecipient, ReportConfig } from "@prisma/client";
+import { IMessageSender } from "./types";
 
 export interface IReportService {
   formatImmediateReport(campaign: Campaign): string;
   formatEngagementReport(campaign: Campaign): string;
   getImmediateChartUrl(campaign: Campaign): string;
   getEngagementChartUrl(campaign: Campaign): string;
-  sendReportToAllRecipients(message: string, chartUrl?: string): Promise<SendReportResult>;
+  sendReportToAllRecipients(sender: IMessageSender, message: string, chartUrl?: string): Promise<SendReportResult>;
   getConfig(): Promise<ReportConfigWithRecipients | null>;
   getActiveRecipients(): Promise<ReportRecipient[]>;
 }
@@ -28,70 +22,48 @@ export interface SendReportResult {
 }
 
 function formatDuration(startedAt: Date, completedAt: Date | null): string {
-  if (!completedAt) return 'Em andamento';
-
+  if (!completedAt) return "Em andamento";
   const diffMs = completedAt.getTime() - startedAt.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffSecs = Math.floor((diffMs % 60000) / 1000);
-
-  if (diffMins > 0) {
-    return `${diffMins}min ${diffSecs}s`;
-  }
-  return `${diffSecs}s`;
+  return diffMins > 0 ? `${diffMins}min ${diffSecs}s` : `${diffSecs}s`;
 }
 
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
 function calculateSpeed(totalSent: number, startedAt: Date, completedAt: Date | null): string {
-  if (!completedAt || totalSent === 0) return '0';
-
+  if (!completedAt || totalSent === 0) return "0";
   const diffMins = (completedAt.getTime() - startedAt.getTime()) / 60000;
   if (diffMins < 1) return `${totalSent}`;
-
   return (totalSent / diffMins).toFixed(1);
 }
 
 export class ReportService implements IReportService {
   private static readonly REPORT_SEND_CONCURRENCY = 2;
-  private readonly debugEnabled = process.env.LOG_LEVEL === 'debug';
+  private static readonly CHART_FETCH_TIMEOUT_MS = 5000;
+  private readonly debugEnabled = process.env.LOG_LEVEL === "debug";
 
-  constructor(
-    private prisma: PrismaClient,
-    private messageSender?: IMessageSender
-  ) {}
-
-  setSender(sender: IMessageSender) {
-    this.messageSender = sender;
-  }
+  constructor(private prisma: PrismaClient) {}
 
   formatImmediateReport(campaign: Campaign): string {
     const successRate = campaign.totalContacts > 0
       ? ((campaign.sentCount / campaign.totalContacts) * 100).toFixed(0)
-      : '0';
-
-    const speed = calculateSpeed(
-      campaign.sentCount,
-      campaign.startedAt,
-      campaign.completedAt
-    );
-
+      : "0";
+    const speed = calculateSpeed(campaign.sentCount, campaign.startedAt, campaign.completedAt);
     const duration = formatDuration(campaign.startedAt, campaign.completedAt);
 
-    const report = `
+    return `
 RELATORIO DE CAMPANHA
 -------------------
 
 ${campaign.name}
-${campaign.templateName ? `Template: ${campaign.templateName}` : ''}
+${campaign.templateName ? `Template: ${campaign.templateName}` : ""}
 
 Tempo de Execucao
 - Inicio: ${formatTime(campaign.startedAt)}
-- Fim: ${campaign.completedAt ? formatTime(campaign.completedAt) : 'N/A'}
+- Fim: ${campaign.completedAt ? formatTime(campaign.completedAt) : "N/A"}
 - Duracao: ${duration}
 
 Metricas de Envio
@@ -104,31 +76,23 @@ Metricas de Envio
 -------------------
 Relatorio gerado automaticamente
 `.trim();
-
-    return report;
   }
 
   formatEngagementReport(campaign: Campaign): string {
-    const readRate = campaign.sentCount > 0
-      ? ((campaign.readCount / campaign.sentCount) * 100).toFixed(0)
-      : '0';
-
-    const responseRate = campaign.sentCount > 0
-      ? ((campaign.responseCount / campaign.sentCount) * 100).toFixed(0)
-      : '0';
-
+    const readRate = campaign.sentCount > 0 ? ((campaign.readCount / campaign.sentCount) * 100).toFixed(0) : "0";
+    const responseRate = campaign.sentCount > 0 ? ((campaign.responseCount / campaign.sentCount) * 100).toFixed(0) : "0";
     const scoreMessage = parseInt(readRate, 10) >= 70
-      ? 'Excelente engajamento!'
+      ? "Excelente engajamento!"
       : parseInt(readRate, 10) >= 40
-        ? 'Bom engajamento'
-        : 'Engajamento abaixo do esperado';
+        ? "Bom engajamento"
+        : "Engajamento abaixo do esperado";
 
-    const report = `
+    return `
 RELATORIO DE ENGAJAMENTO
 -------------------
 
 ${campaign.name}
-Enviado em: ${campaign.startedAt.toLocaleDateString('pt-BR')}
+Enviado em: ${campaign.startedAt.toLocaleDateString("pt-BR")}
 
 Leituras
 - Lidos: ${campaign.readCount} de ${campaign.sentCount}
@@ -143,51 +107,49 @@ ${scoreMessage}
 -------------------
 Relatorio gerado automaticamente
 `.trim();
-
-    return report;
   }
 
   getImmediateChartUrl(campaign: Campaign): string {
     const config = {
-      type: 'doughnut',
+      type: "doughnut",
       data: {
-        labels: ['Enviados', 'Falhas'],
+        labels: ["Enviados", "Falhas"],
         datasets: [{
           data: [campaign.sentCount, campaign.failedCount],
-          backgroundColor: ['#10b981', '#ef4444']
-        }]
+          backgroundColor: ["#10b981", "#ef4444"],
+        }],
       },
       options: {
         plugins: {
-          doughnutlabel: { labels: [{ text: campaign.sentCount.toString(), font: { size: 20 } }, { text: 'Enviados' }]}
-        }
-      }
+          doughnutlabel: { labels: [{ text: campaign.sentCount.toString(), font: { size: 20 } }, { text: "Enviados" }] },
+        },
+      },
     };
     return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=400&h=400`;
   }
 
   getEngagementChartUrl(campaign: Campaign): string {
     const config = {
-      type: 'bar',
+      type: "bar",
       data: {
-        labels: ['Enviados', 'Lidos', 'Respostas'],
+        labels: ["Enviados", "Lidos", "Respostas"],
         datasets: [{
-          label: 'Conversao',
+          label: "Conversao",
           data: [campaign.sentCount, campaign.readCount, campaign.responseCount],
-          backgroundColor: ['#3b82f6', '#10b981', '#f59e0b']
-        }]
+          backgroundColor: ["#3b82f6", "#10b981", "#f59e0b"],
+        }],
       },
       options: {
         legend: { display: false },
-        title: { display: true, text: 'Funil de Engajamento' }
-      }
+        title: { display: true, text: "Funil de Engajamento" },
+      },
     };
     return `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(config))}&w=500&h=300`;
   }
 
   async getConfig(): Promise<ReportConfigWithRecipients | null> {
     return this.prisma.reportConfig.findUnique({
-      where: { id: 'default' },
+      where: { id: "default" },
       include: { recipients: true },
     });
   }
@@ -198,40 +160,31 @@ Relatorio gerado automaticamente
     });
   }
 
-  async sendReportToAllRecipients(message: string, chartUrl?: string): Promise<SendReportResult> {
+  async sendReportToAllRecipients(sender: IMessageSender, message: string, chartUrl?: string): Promise<SendReportResult> {
     const recipients = await this.getActiveRecipients();
 
     if (recipients.length === 0) {
-      console.log('[ReportService] No active recipients configured');
+      console.log("[ReportService] No active recipients configured");
       return { success: false, sentTo: [], failed: [] };
-    }
-
-    if (!this.messageSender) {
-      console.error('[ReportService] Message sender not configured, cannot send report');
-      return {
-        success: false,
-        sentTo: [],
-        failed: recipients.map((recipient) => recipient.phone),
-      };
     }
 
     let mediaData: { mimetype: string; data: string; filename?: string } | undefined;
     if (chartUrl) {
       try {
-        const chartRes = await fetch(chartUrl);
+        const chartRes = await fetch(chartUrl, { signal: AbortSignal.timeout(ReportService.CHART_FETCH_TIMEOUT_MS) });
         if (chartRes.ok) {
           const arrayBuffer = await chartRes.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
           mediaData = {
-            mimetype: 'image/png',
-            data: buffer.toString('base64'),
-            filename: 'report-chart.png'
+            mimetype: "image/png",
+            data: buffer.toString("base64"),
+            filename: "report-chart.png",
           };
         } else {
-          console.error('[ReportService] Chart request failed with status:', chartRes.status);
+          console.error("[ReportService] Chart request failed with status:", chartRes.status);
         }
       } catch (error) {
-        console.error('[ReportService] Error fetching chart image:', error);
+        console.error("[ReportService] Error fetching chart image:", error);
       }
     }
 
@@ -252,7 +205,7 @@ Relatorio gerado automaticamente
             if (this.debugEnabled) {
               console.log(`[ReportService] Sending report to ${recipient.name} (${recipient.phone})`);
             }
-            await this.messageSender!.sendMessage(recipient.phone, message, mediaData);
+            await sender.sendMessage(recipient.phone, message, mediaData);
             sentTo.push(recipient.phone);
           } catch (error) {
             console.error(`[ReportService] Error sending to ${recipient.name}:`, error);
@@ -273,18 +226,18 @@ Relatorio gerado automaticamente
 
   async ensureDefaultConfig(): Promise<ReportConfig> {
     const existing = await this.prisma.reportConfig.findUnique({
-      where: { id: 'default' },
+      where: { id: "default" },
     });
 
     if (existing) return existing;
 
     return this.prisma.reportConfig.create({
-      data: { id: 'default' },
+      data: { id: "default" },
     });
   }
 }
 
-import { prisma } from './db';
+import { prisma } from "./db";
 
 let reportServiceInstance: ReportService | null = null;
 

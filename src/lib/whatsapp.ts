@@ -36,6 +36,7 @@ import { prisma } from "./db";
 import { AnalyticsService, IAnalyticsService } from "./AnalyticsService";
 import { MessageFormatter, IMessageFormatter, ContactInfo } from "./MessageFormatter";
 import { ensureRuntimeEnvironment } from "./runtime-paths";
+import { logger } from "./logger";
 import {
   MessageAckStatus,
   ConnectionStatus,
@@ -139,9 +140,11 @@ export class WhatsAppService {
     lastPollingTime: null,
   };
 
-  private debugLog(...args: unknown[]) {
-    if (process.env.LOG_LEVEL === "debug") {
-      console.log(...args);
+  private debugLog(message: string, ...args: unknown[]) {
+    if (args.length > 0) {
+      logger.debug({ extra: args }, message);
+    } else {
+      logger.debug(message);
     }
   }
 
@@ -183,7 +186,7 @@ export class WhatsAppService {
     const runtimePaths = ensureRuntimeEnvironment();
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
 
-    console.log("Initializing WhatsApp Service...");
+    logger.info("Initializing WhatsApp Service...");
     this.client = new Client({
       authStrategy: new LocalAuth({
         dataPath: runtimePaths.authDir,
@@ -203,7 +206,7 @@ export class WhatsAppService {
     this.initializeEvents();
     this.status = ConnectionStatus.INITIALIZING;
     this.client.initialize().catch((err) => {
-      console.error("Initialization error:", err);
+      logger.error({ err }, "Initialization error");
       this.status = ConnectionStatus.DISCONNECTED;
     });
     
@@ -212,13 +215,13 @@ export class WhatsAppService {
 
   private initializeEvents() {
     this.client.on("qr", (qr) => {
-      console.log("QR Code received");
+      logger.info("QR Code received");
       this.qrCode = qr;
       this.status = ConnectionStatus.QR_READY;
     });
 
     this.client.on("ready", () => {
-      console.log("WhatsApp Client is ready!");
+      logger.info("WhatsApp Client is ready!");
       this.isReady = true;
       this.status = ConnectionStatus.READY;
       this.qrCode = null;
@@ -226,20 +229,20 @@ export class WhatsAppService {
     });
 
     this.client.on("authenticated", () => {
-      console.log("[WhatsApp] Client authenticated! Initializing synchronization...");
+      logger.info("[WhatsApp] Client authenticated! Initializing synchronization...");
       this.isAuthenticated = true;
       this.status = ConnectionStatus.AUTHENTICATED;
       this.qrCode = null;
-      console.log("[WhatsApp] Please wait while we sync your messages. This can take a few minutes for large accounts.");
+      logger.info("[WhatsApp] Please wait while we sync your messages. This can take a few minutes for large accounts.");
     });
 
     this.client.on("auth_failure", (msg) => {
-      console.error("AUTHENTICATION FAILURE", msg);
+      logger.error({ msg }, "AUTHENTICATION FAILURE");
       this.status = ConnectionStatus.DISCONNECTED;
     });
 
     this.client.on("change_state", (state) => {
-      console.log("CONNECTION STATE CHANGED", state);
+      logger.info({ state }, "CONNECTION STATE CHANGED");
     });
 
     this.client.on("message_create", (msg) => {
@@ -251,7 +254,7 @@ export class WhatsAppService {
     });
 
     this.client.on("disconnected", (reason) => {
-      console.log("Client was disconnected", reason);
+      logger.warn({ reason }, "Client was disconnected");
       this.isAuthenticated = false;
       this.isReady = false;
       this.status = ConnectionStatus.DISCONNECTED;
@@ -268,10 +271,10 @@ export class WhatsAppService {
       }
 
       this.reconnectTimeout = setTimeout(() => {
-        console.log("Attempting to reconnect...");
+        logger.info("Attempting to reconnect...");
         this.status = ConnectionStatus.INITIALIZING;
         this.client.initialize().catch((err) => {
-          console.error("Reconnection error:", err);
+          logger.error({ err }, "Reconnection error");
           this.status = ConnectionStatus.DISCONNECTED;
         });
       }, TIMING.RECONNECT_DELAY_MS);
@@ -591,7 +594,7 @@ export class WhatsAppService {
 
       const timeout = setTimeout(() => {
         this.client.off("ready", onReady);
-        console.warn("Timeout waiting for client readiness");
+        logger.warn("Timeout waiting for client readiness");
         resolve(false);
       }, timeoutMs);
 
@@ -646,14 +649,14 @@ export class WhatsAppService {
         if (validContact && validContact._serialized) {
           finalId = validContact._serialized;
         } else {
-          console.warn(`Number ${number} not found on WhatsApp.`);
+          logger.warn({ phone: number }, "Number not found on WhatsApp");
           throw new Error(
             `O número ${number} não está registrado no WhatsApp.`,
           );
         }
       } catch (e: unknown) {
         const errorMessage = e instanceof Error ? e.message : "Unknown error";
-        console.error("Error validating number:", e);
+        logger.error({ err: e }, "Error validating number");
         throw new Error(`Falha ao validar número: ${errorMessage}`);
       }
     }
@@ -707,9 +710,9 @@ export class WhatsAppService {
           `Smart Substitution: Contact info for ${finalId} (Push: ${contact.pushname}, Name: ${contact.name}, Fallback: ${options?.fallbackName})`,
         );
       } catch (error) {
-        console.warn(
+        logger.warn(
+          { err: error },
           "Failed to fetch contact details for substitution, using fallback.",
-          error,
         );
         contactInfo = { fallbackName: options?.fallbackName };
       }
@@ -740,9 +743,9 @@ export class WhatsAppService {
           const sentMsg = await chat.sendMessage(finalMessage, sendOptions);
           this.trackPendingMessage(sentMsg, finalId);
         } catch (chatError) {
-          console.warn(
+          logger.warn(
+            { err: chatError },
             "Could not get chat object, falling back to client.sendMessage",
-            chatError,
           );
           const sentMsg = await this.client.sendMessage(finalId, finalMessage, sendOptions);
           this.trackPendingMessage(sentMsg, finalId);
@@ -751,7 +754,7 @@ export class WhatsAppService {
     } catch (sendError: unknown) {
       const errorMessage =
         sendError instanceof Error ? sendError.message : "Unknown error";
-      console.error("Error in client.sendMessage:", sendError);
+      logger.error({ err: sendError }, "Error in client.sendMessage");
       throw new Error(`Falha ao enviar mensagem: ${errorMessage}`);
     }
 
@@ -801,7 +804,7 @@ export class WhatsAppService {
       const profilePicUrl = await this.client.getProfilePicUrl(contactId);
       return profilePicUrl || null;
     } catch (error) {
-      console.warn(`Failed to get profile pic for ${number}`, error);
+      logger.warn({ phone: number, err: error }, "Failed to get profile pic");
       return null;
     }
   }
@@ -883,6 +886,13 @@ export function getWhatsAppInstance(): WhatsAppService {
     global.whatsappClientInstance = createWhatsAppService();
   }
 
+  return global.whatsappClientInstance;
+}
+
+/**
+ * Retorna a instância atual do WhatsAppService, sem criá-la se não existir.
+ */
+export function peekWhatsAppInstance(): WhatsAppService | undefined {
   return global.whatsappClientInstance;
 }
 

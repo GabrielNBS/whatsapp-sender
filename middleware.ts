@@ -1,8 +1,8 @@
-import { generateRequestId } from "@/lib/CorrelationId";
+import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 
 export function middleware() {
-  const requestId = generateRequestId();
+  const requestId = `req-${nanoid()}`;
 
   const response = NextResponse.next();
 

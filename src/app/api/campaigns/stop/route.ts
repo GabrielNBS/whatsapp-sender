@@ -1,12 +1,12 @@
-import { NextResponse } from 'next/server';
-import { getQueueService } from '@/lib/QueueService';
+import { NextRequest, NextResponse } from 'next/server';
+import { apiHandler } from '@/lib/api-handler';
+import { CampaignCommandService } from '@/server/services/CampaignCommandService';
 
-export async function POST() {
-  try {
-    await getQueueService().stopCampaign();
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('[API] Error stopping campaign:', error);
-    return NextResponse.json({ error: 'Failed to stop campaign' }, { status: 500 });
-  }
-}
+/**
+ * POST /api/campaigns/stop
+ * Para a execução da campanha de mensagens ativa na fila de disparos.
+ */
+export const POST = apiHandler(async () => {
+  await CampaignCommandService.stopCampaign();
+  return NextResponse.json({ success: true });
+}, { routeName: '/api/campaigns/stop (POST)', requireAuth: true });

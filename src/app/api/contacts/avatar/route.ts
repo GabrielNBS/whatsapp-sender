@@ -1,20 +1,37 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import whatsappService from '@/lib/whatsapp';
+import { apiHandler } from '@/lib/api-handler';
+import { normalizePhone } from '@/services/contacts/normalizePhone';
+import { ValidationError } from '@/lib/api-errors';
+import { z } from 'zod';
 
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const phone = searchParams.get('phone');
+export const dynamic = 'force-dynamic';
 
-    if (!phone) {
-      return NextResponse.json({ error: 'Phone number is required' }, { status: 400 });
-    }
+const avatarQuerySchema = z.object({
+  phone: z.string().min(10, 'Número de telefone inválido (mínimo 10 dígitos)').max(15, 'Número de telefone muito longo').trim(),
+});
 
-    const avatarUrl = await whatsappService.getProfilePicUrl(phone);
+/**
+ * GET /api/contacts/avatar
+ * Retorna a URL da foto de perfil do contato a partir do WhatsApp.
+ */
+export const GET = apiHandler(async (req: NextRequest) => {
+  const { searchParams } = req.nextUrl;
+  const phoneParam = searchParams.get('phone');
 
-    return NextResponse.json({ url: avatarUrl });
-  } catch (error) {
-    console.error('Error fetching avatar:', error);
-    return NextResponse.json({ error: 'Failed to fetch avatar' }, { status: 500 });
+  const validation = avatarQuerySchema.safeParse({ phone: phoneParam });
+  if (!validation.success) {
+    throw new ValidationError('Parâmetro de telefone inválido.', validation.error.flatten().fieldErrors);
   }
-}
+
+  const normalized = normalizePhone(validation.data.phone);
+
+  if (normalized.length < 10 || normalized.length > 15) {
+    throw new ValidationError('O número de telefone deve conter entre 10 e 15 dígitos numéricos.');
+  }
+
+  const avatarUrl = await whatsappService.getProfilePicUrl(normalized);
+
+  return NextResponse.json({ url: avatarUrl });
+}, { routeName: '/api/contacts/avatar (GET)', requireAuth: true });
+

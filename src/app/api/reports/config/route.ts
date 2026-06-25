@@ -1,59 +1,39 @@
-/**
- * API Route: /api/reports/config
- * 
- * Get and update report configuration
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getReportService } from '@/lib/ReportService';
+import { apiHandler } from '@/lib/api-handler';
+import { ReportConfigService } from '@/server/services/ReportConfigService';
+import { reportConfigSchema } from '@/server/validators/reports';
+import { ValidationError } from '@/lib/api-errors';
 
-// GET - Get current config
-export async function GET() {
-  try {
-    const reportService = getReportService();
-    await reportService.ensureDefaultConfig();
+export const dynamic = 'force-dynamic';
 
-    const config = await prisma.reportConfig.findUnique({
-      where: { id: 'default' },
-      include: { recipients: true },
-    });
+/**
+ * GET /api/reports/config
+ * Retorna as configurações de relatórios.
+ */
+export const GET = apiHandler(async () => {
+  const config = await ReportConfigService.getConfig();
+  return NextResponse.json(config);
+}, { routeName: '/api/reports/config (GET)', requireAuth: false });
 
-    return NextResponse.json(config);
-  } catch (error) {
-    console.error('[API] Error fetching config:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch config' },
-      { status: 500 }
-    );
+/**
+ * PATCH /api/reports/config
+ * Atualiza parcialmente as configurações com whitelist rígida (API-009).
+ */
+export const PATCH = apiHandler(async (req: NextRequest) => {
+  const body = await req.json().catch(() => ({}));
+
+  // Valida e aplica strict no body para evitar mass assignment
+  const validation = reportConfigSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ValidationError('Parâmetros de configuração de relatórios inválidos.', validation.error.flatten().fieldErrors);
   }
-}
 
-// PUT - Update config
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { sendImmediate, sendEngagement, engagementDelayMins, engagementTimeFixed } = body;
+  const config = await ReportConfigService.updateConfig(validation.data);
+  return NextResponse.json(config);
+}, { routeName: '/api/reports/config (PATCH)', requireAuth: true });
 
-    const reportService = getReportService();
-    await reportService.ensureDefaultConfig();
-
-    const config = await prisma.reportConfig.update({
-      where: { id: 'default' },
-      data: {
-        ...(sendImmediate !== undefined && { sendImmediate }),
-        ...(sendEngagement !== undefined && { sendEngagement }),
-        ...(engagementDelayMins !== undefined && { engagementDelayMins }),
-        ...(engagementTimeFixed !== undefined && { engagementTimeFixed }),
-      },
-    });
-
-    return NextResponse.json(config);
-  } catch (error) {
-    console.error('[API] Error updating config:', error);
-    return NextResponse.json(
-      { error: 'Failed to update config' },
-      { status: 500 }
-    );
-  }
-}
+/**
+ * PUT /api/reports/config
+ * Mantém suporte a PUT legados mapeando para o mesmo comportamento do PATCH.
+ */
+export const PUT = PATCH;

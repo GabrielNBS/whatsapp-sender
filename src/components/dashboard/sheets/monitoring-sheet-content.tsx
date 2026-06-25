@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { useScheduler } from "@/hooks/use-scheduler";
+import { useSender } from "@/hooks/use-sender";
 import { useGlobalSheet } from "../global-sheet-provider";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -30,8 +31,10 @@ import { ScheduledBatch } from "@/lib/types";
 export function MonitoringSheetContent() {
     const { sendingStatus } = useAppStore();
     const { activeSchedules, handleCancelSchedule } = useScheduler();
+    const { handleStop } = useSender();
     const { sheetData } = useGlobalSheet();
     const [scheduleToDelete, setScheduleToDelete] = useState<ScheduledBatch | null>(null);
+    const [showStopConfirmation, setShowStopConfirmation] = useState(false);
 
     const focusedBatchId = sheetData?.focusedBatchId as string | undefined;
 
@@ -139,6 +142,15 @@ export function MonitoringSheetContent() {
                                     </div>
                                 </div>
                             </div>
+                            
+                            <Button 
+                                variant="destructive" 
+                                className="w-full h-10 mt-2 font-bold uppercase tracking-wider text-[10px] rounded-xl"
+                                onClick={() => setShowStopConfirmation(true)}
+                            >
+                                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                Interromper Envio
+                            </Button>
                         </motion.div>
                     ) : (
                         <div className="bg-muted/30 border border-dashed border-border rounded-2xl py-10 flex flex-col items-center justify-center text-center px-6">
@@ -216,7 +228,7 @@ export function MonitoringSheetContent() {
                                                                 ? 'bg-primary/10 text-primary' 
                                                                 : 'bg-muted text-muted-foreground'
                                                         }`}>
-                                                            {schedule.count} leads
+                                                            {schedule.count + (schedule.paused || 0)} leads
                                                         </span>
                                                         <span className="text-[10px] font-bold text-muted-foreground/70">
                                                             {new Date(schedule.scheduledFor).toLocaleString('pt-BR', {
@@ -281,6 +293,38 @@ export function MonitoringSheetContent() {
                             className="bg-destructive text-secondary hover:bg-destructive/90 w-full sm:w-auto min-w-[160px] rounded-xl font-bold shadow-lg shadow-destructive/20 transition-all"
                         >
                             Confirmar Exclusão
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Stop Active Campaign Confirmation */}
+            <AlertDialog open={showStopConfirmation} onOpenChange={setShowStopConfirmation}>
+                <AlertDialogContent className="rounded-2xl max-w-[400px] border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl">
+                    <div className="flex flex-col items-center text-center pt-4">
+                        <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                            <AlertTriangle className="w-7 h-7 text-destructive" />
+                        </div>
+                        <AlertDialogHeader className="space-y-3">
+                            <AlertDialogTitle className="text-xl font-black tracking-tight text-center">Interromper Envio?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2">
+                                Tem certeza que deseja parar o processo agora?
+                                Alguns contatos da sua lista podem não receber a mensagem. O progresso ficará pausado.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                    </div>
+                    <AlertDialogFooter className="mt-6 flex flex-col sm:flex-row gap-3 justify-center! sm:justify-center! w-full px-2">
+                        <AlertDialogCancel className="w-full sm:w-auto min-w-[120px] rounded-xl font-semibold border-border/50">
+                            Continuar Enviando
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={() => {
+                                handleStop();
+                                setShowStopConfirmation(false);
+                            }}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto min-w-[160px] rounded-xl font-bold"
+                        >
+                            Sim, Parar Agora
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

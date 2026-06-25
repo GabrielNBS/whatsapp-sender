@@ -1,57 +1,53 @@
-/**
- * API Route: /api/campaigns
- * 
- * Create and manage campaigns
- */
-
 import { NextRequest, NextResponse } from 'next/server';
+import { apiHandler } from '@/lib/api-handler';
 import { getCampaignService } from '@/lib/CampaignService';
+import { campaignQuerySchema } from '@/server/validators/campaigns';
+import { ValidationError } from '@/lib/api-errors';
+import { z } from 'zod';
 
-// GET - List recent campaigns
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const limit = parseInt(searchParams.get('limit') || '10');
+export const dynamic = 'force-dynamic';
 
-    const campaignService = getCampaignService();
-    const campaigns = await campaignService.getRecentCampaigns(limit);
+const createCampaignBodySchema = z.object({
+  name: z.string().min(1, 'O nome da campanha é obrigatório').trim(),
+  templateName: z.string().optional().nullable(),
+  totalContacts: z.number().int().min(1, 'A quantidade total de contatos deve ser de no mínimo 1'),
+});
 
-    return NextResponse.json(campaigns);
-  } catch (error) {
-    console.error('[API] Error fetching campaigns:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch campaigns' },
-      { status: 500 }
-    );
+/**
+ * GET /api/campaigns
+ * Lista as campanhas recentes.
+ */
+export const GET = apiHandler(async (req: NextRequest) => {
+  const { searchParams } = req.nextUrl;
+  const limitParam = searchParams.get('limit') || '10';
+
+  const validation = campaignQuerySchema.safeParse({ limit: limitParam });
+  if (!validation.success) {
+    throw new ValidationError('Parâmetros de paginação inválidos.', validation.error.flatten().fieldErrors);
   }
-}
 
-// POST - Create new campaign
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { name, templateName, totalContacts } = body;
+  const limit = validation.data.limit || 10;
+  const campaigns = await getCampaignService().getRecentCampaigns(limit);
+  return NextResponse.json(campaigns);
+}, { routeName: '/api/campaigns (GET)', requireAuth: false });
 
-    if (!name || totalContacts === undefined) {
-      return NextResponse.json(
-        { error: 'Name and totalContacts are required' },
-        { status: 400 }
-      );
-    }
+/**
+ * POST /api/campaigns
+ * Cria uma nova campanha manual.
+ */
+export const POST = apiHandler(async (req: NextRequest) => {
+  const body = await req.json().catch(() => ({}));
 
-    const campaignService = getCampaignService();
-    const campaign = await campaignService.createCampaign({
-      name,
-      templateName,
-      totalContacts,
-    });
-
-    return NextResponse.json(campaign, { status: 201 });
-  } catch (error) {
-    console.error('[API] Error creating campaign:', error);
-    return NextResponse.json(
-      { error: 'Failed to create campaign' },
-      { status: 500 }
-    );
+  const validation = createCampaignBodySchema.safeParse(body);
+  if (!validation.success) {
+    throw new ValidationError('Dados de campanha inválidos.', validation.error.flatten().fieldErrors);
   }
-}
+
+  const campaign = await getCampaignService().createCampaign({
+    name: validation.data.name,
+    templateName: validation.data.templateName || undefined,
+    totalContacts: validation.data.totalContacts,
+  });
+
+  return NextResponse.json(campaign, { status: 201 });
+}, { routeName: '/api/campaigns (POST)', requireAuth: true });

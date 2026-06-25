@@ -1,30 +1,43 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { NextResponse } from 'next/server';
+import { apiHandler } from '@/lib/api-handler';
+import { updateSettingsSchema } from '@/server/validators/settings';
+import { ValidationError } from '@/lib/api-errors';
+import { DEFAULT_CONFIG_ID } from '@/constants/domain';
 
-export async function GET() {
-    try {
-        const settings = await prisma.settings.findUnique({
-            where: { id: 'default' }
-        });
-        return NextResponse.json(settings || { defaultLink: '', defaultCTA: '' });
-    } catch {
-        return NextResponse.json({ error: 'Error fetching settings' }, { status: 500 });
-    }
-}
+export const dynamic = 'force-dynamic';
 
-export async function PUT(request: Request) {
-    try {
-        const body = await request.json();
-        const { defaultLink, defaultCTA } = body;
+/**
+ * GET /api/settings
+ * Retorna as configurações gerais da aplicação.
+ */
+export const GET = apiHandler(async () => {
+  const settings = await prisma.settings.findUnique({
+    where: { id: DEFAULT_CONFIG_ID }
+  });
+  return NextResponse.json(settings || { defaultLink: '', defaultCTA: '' });
+}, { routeName: '/api/settings (GET)', requireAuth: true });
 
-        const settings = await prisma.settings.upsert({
-            where: { id: 'default' },
-            update: { defaultLink, defaultCTA },
-            create: { id: 'default', defaultLink, defaultCTA }
-        });
+/**
+ * PUT /api/settings
+ * Atualiza ou cria as configurações gerais da aplicação.
+ */
+export const PUT = apiHandler(async (req: NextRequest) => {
+  const body = await req.json().catch(() => ({}));
 
-        return NextResponse.json(settings);
-    } catch {
-        return NextResponse.json({ error: 'Error updating settings' }, { status: 500 });
-    }
-}
+  const validation = updateSettingsSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ValidationError('Configurações inválidas.', validation.error.flatten().fieldErrors);
+  }
+
+  const { defaultLink, defaultCTA } = validation.data;
+
+  const settings = await prisma.settings.upsert({
+    where: { id: DEFAULT_CONFIG_ID },
+    update: { defaultLink, defaultCTA },
+    create: { id: DEFAULT_CONFIG_ID, defaultLink, defaultCTA }
+  });
+
+  return NextResponse.json(settings);
+}, { routeName: '/api/settings (PUT)', requireAuth: true });
+

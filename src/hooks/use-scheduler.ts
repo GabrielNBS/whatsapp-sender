@@ -30,8 +30,8 @@ export function useScheduler() {
             if (res.ok) {
                 const data: ScheduledBatch[] = await res.json();
                 
-                // Filter for UI display (show pending and in-flight batches)
-                const pendingBatches = data.filter((batch) => batch.count > 0 || batch.processing > 0);
+                // Filter for UI display (show pending, in-flight and paused batches)
+                const pendingBatches = data.filter((batch) => batch.count > 0 || batch.processing > 0 || (batch.paused ?? 0) > 0);
                 
                 // Detect completion by checking batches that were pending and are now zero-pending (completed)
                 // OR batches that purely disappeared (fallback, though API now returns recent completed)

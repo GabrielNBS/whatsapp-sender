@@ -1,39 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getQueueService } from '@/lib/QueueService';
-import { getCampaignService } from '@/lib/CampaignService';
+import { apiHandler } from '@/lib/api-handler';
+import { CampaignCommandService } from '@/server/services/CampaignCommandService';
+import { startCampaignSchema } from '@/server/validators/campaigns';
+import { ValidationError } from '@/lib/api-errors';
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { name, recipients, message, media } = body;
+/**
+ * POST /api/campaigns/start
+ * Cria uma nova campanha e enfileira seus disparos no background com idempotência (API-005 / API-008).
+ */
+export const POST = apiHandler(async (req: NextRequest) => {
+  const body = await req.json().catch(() => ({}));
 
-    if (!recipients || recipients.length === 0) {
-      return NextResponse.json({ error: 'Nenhum contato fornecido' }, { status: 400 });
-    }
-
-    const campaignService = getCampaignService();
-    // Cria campanha no banco
-    const campaign = await campaignService.createCampaign({
-      name: name || `Campanha ${new Date().toLocaleString('pt-BR')}`,
-      totalContacts: recipients.length,
-    });
-
-    const queueService = getQueueService();
-    
-    // Inicia a fila no background
-    await queueService.startCampaign(campaign.id, campaign.name, recipients, message, media);
-
-    return NextResponse.json({ 
-      success: true, 
-      campaignId: campaign.id 
-    });
-
-  } catch (error: unknown) {
-    console.error('[API] Error starting campaign:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return NextResponse.json(
-      { error: errorMessage || 'Falha ao iniciar campanha' },
-      { status: 500 }
-    );
+  // Valida dados da campanha com o schema Zod (API-002)
+  const validation = startCampaignSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ValidationError('Parâmetros de início de campanha inválidos.', validation.error.flatten().fieldErrors);
   }
-}
+
+  const campaign = await CampaignCommandService.startCampaign(validation.data);
+
+  return NextResponse.json({
+    success: true,
+    campaignId: campaign.id,
+  });
+}, { routeName: '/api/campaigns/start (POST)', requireAuth: true });

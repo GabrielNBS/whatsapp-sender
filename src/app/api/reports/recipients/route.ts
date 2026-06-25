@@ -1,71 +1,33 @@
-/**
- * API Route: /api/reports/recipients
- * 
- * Manage report recipients (gestores)
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getReportService } from '@/lib/ReportService';
+import { apiHandler } from '@/lib/api-handler';
+import { ReportRecipientService } from '@/server/services/ReportRecipientService';
+import { createRecipientSchema } from '@/server/validators/reports';
+import { ValidationError } from '@/lib/api-errors';
 
-// GET - List all recipients
-export async function GET() {
-  try {
-    // Ensure default config exists
-    const reportService = getReportService();
-    await reportService.ensureDefaultConfig();
+export const dynamic = 'force-dynamic';
 
-    const recipients = await prisma.reportRecipient.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
+/**
+ * GET /api/reports/recipients
+ * Lista todos os gestores cadastrados para receber relatórios.
+ */
+export const GET = apiHandler(async () => {
+  const recipients = await ReportRecipientService.listRecipients();
+  return NextResponse.json(recipients);
+}, { routeName: '/api/reports/recipients (GET)', requireAuth: false });
 
-    return NextResponse.json(recipients);
-  } catch (error) {
-    console.error('[API] Error fetching recipients:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch recipients' },
-      { status: 500 }
-    );
+/**
+ * POST /api/reports/recipients
+ * Cadastra um novo gestor de relatórios de forma validada.
+ */
+export const POST = apiHandler(async (req: NextRequest) => {
+  const body = await req.json().catch(() => ({}));
+
+  // Valida com schema Zod (API-002)
+  const validation = createRecipientSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ValidationError('Dados de destinatário inválidos.', validation.error.flatten().fieldErrors);
   }
-}
 
-// POST - Add new recipient
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { name, phone } = body;
-
-    if (!name || !phone) {
-      return NextResponse.json(
-        { error: 'Name and phone are required' },
-        { status: 400 }
-      );
-    }
-
-    // Normalize phone number (remove non-digits)
-    const normalizedPhone = phone.replace(/\D/g, '');
-
-    // Ensure default config exists
-    const reportService = getReportService();
-    await reportService.ensureDefaultConfig();
-
-    const recipient = await prisma.reportRecipient.create({
-      data: {
-        name,
-        phone: normalizedPhone,
-        isActive: true,
-        configId: 'default',
-      },
-    });
-
-    return NextResponse.json(recipient, { status: 201 });
-  } catch (error) {
-    console.error('[API] Error creating recipient:', error);
-    return NextResponse.json(
-      { error: 'Failed to create recipient' },
-      { status: 500 }
-    );
-  }
-}
-
-// DELETE - Remove recipient (handled by dynamic route)
+  const recipient = await ReportRecipientService.addRecipient(validation.data);
+  return NextResponse.json(recipient, { status: 201 });
+}, { routeName: '/api/reports/recipients (POST)', requireAuth: true });

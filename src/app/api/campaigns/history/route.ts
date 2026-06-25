@@ -1,21 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCampaignService } from '@/lib/CampaignService';
+import { apiHandler } from '@/lib/api-handler';
+import { CampaignCommandService } from '@/server/services/CampaignCommandService';
+import { campaignQuerySchema } from '@/server/validators/campaigns';
+import { ValidationError } from '@/lib/api-errors';
 
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const limit = parseInt(searchParams.get('limit') || '50');
+export const dynamic = 'force-dynamic';
 
-    const campaignService = getCampaignService();
-    const history = await campaignService.getCampaignHistory(limit);
+/**
+ * GET /api/campaigns/history
+ * Retorna a lista histórica de campanhas enviadas.
+ */
+export const GET = apiHandler(async (req: NextRequest) => {
+  const { searchParams } = req.nextUrl;
+  const limitParam = searchParams.get('limit') || '50';
 
-    return NextResponse.json(history);
-  } catch (error: unknown) {
-    console.error('[API] Error fetching campaign history:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return NextResponse.json(
-      { error: errorMessage || 'Failed to fetch campaign history' },
-      { status: 500 }
-    );
+  const validation = campaignQuerySchema.safeParse({ limit: limitParam });
+  if (!validation.success) {
+    throw new ValidationError('Parâmetros de paginação do histórico inválidos.', validation.error.flatten().fieldErrors);
   }
-}
+
+  const limit = validation.data.limit || 50;
+  const history = await CampaignCommandService.getHistory(limit);
+  return NextResponse.json(history);
+}, { routeName: '/api/campaigns/history (GET)', requireAuth: false });

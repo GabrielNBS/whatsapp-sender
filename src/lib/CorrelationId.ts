@@ -1,15 +1,18 @@
-import { AsyncLocalStorage } from "async_hooks"; // nativo do Node.js, sem instalar nada
+import { AsyncLocalStorage } from "async_hooks";
+import { randomUUID } from "crypto";
 
 const storage = new AsyncLocalStorage<{ requestId: string }>();
 
 export const correlationStore = storage;
 
-// Gera um ID simples e único por request
 export function generateRequestId(): string {
-  return `req-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  return `req-${randomUUID()}`;
 }
 
-// Retorna o ID da requisição atual (ou "standalone" se chamado fora de um request)
+export function runWithRequestId<T>(requestId: string, callback: () => T): T {
+  return storage.run({ requestId }, callback);
+}
+
 export function getRequestId(): string {
   return storage.getStore()?.requestId ?? "standalone";
 }
