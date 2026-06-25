@@ -119,7 +119,7 @@ export function RecipientSelector({
                 isOpen={isOpen}
               />
             </PopoverTrigger>
-            <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)] overflow-hidden rounded-xl border-border/60 shadow-xl" align="start">
+            <PopoverContent className="p-0 w-(--radix-popover-trigger-width) overflow-hidden rounded-xl border-border/60 shadow-xl" align="start">
               <Command shouldFilter={false} className="bg-popover">
                 <div className="flex items-center px-3 border-b border-border/40">
                   <CommandInput
@@ -132,7 +132,7 @@ export function RecipientSelector({
                 <CommandList className="max-h-[320px] premium-scrollbar py-1">
                   <CommandEmpty>
                     <div className="py-8 flex flex-col items-center text-center px-4">
-                      <p className="text-xs font-medium text-muted-foreground italic">Nenhum resultado para "{searchTerm}"</p>
+                      <p className="text-xs font-medium text-muted-foreground italic">Nenhum resultado para &quot;{searchTerm}&quot;</p>
                     </div>
                   </CommandEmpty>
 

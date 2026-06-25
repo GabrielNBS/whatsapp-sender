@@ -1,0 +1,309 @@
+{
+  "objetivo": "Corrigir todos os problemas de implementação, arquitetura, performance, tipagem, acessibilidade, estado, API e consistência visual levantados no componente TemplatesSheetContent.",
+  "prioridade_global": "alta",
+  "correcoes": [
+    {
+      "id": "ARCH-001",
+      "problema": "Componente com responsabilidades demais",
+      "acao": "Separar busca de dados, filtros, renderização de cards, parsing de mídia, ações de template e controle do sheet em componentes/hooks próprios."
+    },
+    {
+      "id": "ARCH-002",
+      "problema": "Fetch HTTP dentro do componente visual",
+      "acao": "Criar service templatesApi.ts e hook useTemplates para encapsular listagem, exclusão, criação, edição e duplicação."
+    },
+    {
+      "id": "API-001",
+      "problema": "Cache busting com Date.now()",
+      "acao": "Remover query param com timestamp e usar invalidação correta via React Query, SWR ou cache-control adequado."
+    },
+    {
+      "id": "API-002",
+      "problema": "Tratamento incompleto de erro no fetch inicial",
+      "acao": "Checar res.ok, capturar mensagem de erro da API e setar estado de erro exibível na UI."
+    },
+    {
+      "id": "API-003",
+      "problema": "Payload da API sem validação",
+      "acao": "Validar resposta com schema, como Zod, antes de chamar setTemplates."
+    },
+    {
+      "id": "API-004",
+      "problema": "Exclusão sem verificar resposta da API",
+      "acao": "Verificar res.ok no DELETE antes de remover o template do estado local."
+    },
+    {
+      "id": "API-005",
+      "problema": "Ausência de AbortController",
+      "acao": "Cancelar requisição no unmount ou delegar controle para React Query/SWR."
+    },
+    {
+      "id": "LOG-001",
+      "problema": "console.error em produção",
+      "acao": "Substituir console.error por logger controlado por ambiente ou tratamento visual de erro."
+    },
+    {
+      "id": "STATE-001",
+      "problema": "Estado de erro inexistente",
+      "acao": "Adicionar estado error ou usar hook de query com error/status para diferenciar erro de lista vazia."
+    },
+    {
+      "id": "STATE-002",
+      "problema": "Loading sem UI real",
+      "acao": "Criar skeleton/spinner para o grid enquanto os templates carregam."
+    },
+    {
+      "id": "STATE-003",
+      "problema": "Filtro resetado automaticamente após salvar",
+      "acao": "Preservar filter e selectedCategory após salvar, exceto quando o usuário escolher explicitamente limpar filtros."
+    },
+    {
+      "id": "STATE-004",
+      "problema": "Filtros não persistidos",
+      "acao": "Persistir filtros em query params, localStorage ou store, conforme regra de UX definida."
+    },
+    {
+      "id": "STATE-005",
+      "problema": "Fluxo de duplicação ambíguo",
+      "acao": "Criar estado específico duplicateSourceTemplate ou ação duplicateTemplate explícita em vez de reaproveitar editingTemplate com isDuplicate."
+    },
+    {
+      "id": "EVENT-001",
+      "problema": "Comunicação global via window.dispatchEvent",
+      "acao": "Remover templates-updated e substituir por invalidação de cache centralizada, store tipada ou queryClient.invalidateQueries."
+    },
+    {
+      "id": "ASYNC-001",
+      "problema": "setTimeout para sincronização",
+      "acao": "Remover delay fixo e aguardar confirmação real da mutation/API antes de atualizar ou invalidar dados."
+    },
+    {
+      "id": "DELETE-001",
+      "problema": "Uso de confirm() nativo",
+      "acao": "Substituir confirm() por AlertDialog acessível e consistente com o design system."
+    },
+    {
+      "id": "DELETE-002",
+      "problema": "Sem proteção contra exclusão múltipla",
+      "acao": "Adicionar estado isDeletingById e desabilitar botão durante requisição."
+    },
+    {
+      "id": "CLIPBOARD-001",
+      "problema": "Clipboard sem tratamento de erro",
+      "acao": "Transformar copyToClipboard em async, usar await, try/catch e exibir toast de erro quando falhar."
+    },
+    {
+      "id": "PERF-001",
+      "problema": "Categorias recalculadas em todo render",
+      "acao": "Memoizar categories com useMemo."
+    },
+    {
+      "id": "PERF-002",
+      "problema": "Templates filtrados recalculados em todo render",
+      "acao": "Memoizar filteredTemplates com useMemo."
+    },
+    {
+      "id": "PERF-003",
+      "problema": "JSON.parse de mídia dentro do render",
+      "acao": "Normalizar media no momento do fetch ou em selector memoizado, nunca dentro do map de renderização."
+    },
+    {
+      "id": "PERF-004",
+      "problema": "Data formatada diretamente no render",
+      "acao": "Mover formatação de data para utility e memoizar valor formatado por template."
+    },
+    {
+      "id": "PERF-005",
+      "problema": "Handlers recriados em todo render",
+      "acao": "Usar useCallback para handlers repassados a listas/cards ou extrair TemplateCard memoizado."
+    },
+    {
+      "id": "PERF-006",
+      "problema": "Grid sem paginação ou virtualização",
+      "acao": "Adicionar paginação, infinite scroll controlado ou virtualização para grandes volumes."
+    },
+    {
+      "id": "MEDIA-001",
+      "problema": "catch silencioso no JSON.parse",
+      "acao": "Registrar falha de parsing de forma controlada e exibir fallback explícito de mídia inválida."
+    },
+    {
+      "id": "MEDIA-002",
+      "problema": "Tipo media frágil como string JSON",
+      "acao": "Criar tipo TemplateMedia com mimetype, data/url e filename, validado na camada de API."
+    },
+    {
+      "id": "MEDIA-003",
+      "problema": "Imagem base64 dentro do payload",
+      "acao": "Substituir base64 por URL/asset armazenado em storage, CDN ou endpoint dedicado."
+    },
+    {
+      "id": "MEDIA-004",
+      "problema": "next/image usado com data URL e unoptimized",
+      "acao": "Usar URL real para aproveitar next/image ou trocar por img quando data URL for inevitável."
+    },
+    {
+      "id": "A11Y-001",
+      "problema": "Alt genérico na imagem",
+      "acao": "Usar alt baseado no título do template ou descrição da mídia."
+    },
+    {
+      "id": "A11Y-002",
+      "problema": "Botões de ícone sem aria-label",
+      "acao": "Adicionar aria-label em copiar, duplicar, editar e deletar."
+    },
+    {
+      "id": "A11Y-003",
+      "problema": "Filtros sem semântica acessível",
+      "acao": "Adicionar aria-pressed nos botões ou trocar por Tabs/ToggleGroup/RadioGroup acessível."
+    },
+    {
+      "id": "LAYOUT-001",
+      "problema": "Botão fixo pode sobrepor conteúdo",
+      "acao": "Mover ação principal para área de layout responsiva ou criar FAB com safe-area e espaçamento calculado."
+    },
+    {
+      "id": "LAYOUT-002",
+      "problema": "pb-20 usado como workaround para botão fixo",
+      "acao": "Remover padding compensatório manual e resolver espaçamento no layout da página."
+    },
+    {
+      "id": "STYLE-001",
+      "problema": "Cores hardcoded",
+      "acao": "Substituir bg-white, text-gray, bg-blue, bg-slate e similares por tokens do design system."
+    },
+    {
+      "id": "STYLE-002",
+      "problema": "Código visual muito acoplado ao componente",
+      "acao": "Criar componentes TemplateCard, TemplateFilters, EmptyTemplatesState e TemplatesHeader com estilos encapsulados."
+    },
+    {
+      "id": "FILTER-001",
+      "problema": "Categoria sem normalização",
+      "acao": "Normalizar categorias com trim, case-insensitive, ordenação e limite de tamanho."
+    },
+    {
+      "id": "FILTER-002",
+      "problema": "Ausência de busca textual",
+      "acao": "Adicionar busca por título e conteúdo do template."
+    },
+    {
+      "id": "TEMPLATE-001",
+      "problema": "Regex frágil para destacar variáveis",
+      "acao": "Criar parser de placeholders com validação de nomes permitidos e tratamento de placeholders inválidos."
+    },
+    {
+      "id": "TEMPLATE-002",
+      "problema": "highlightVariables mistura parsing e UI",
+      "acao": "Extrair para utility parseTemplateVariables e componente TemplatePreview."
+    },
+    {
+      "id": "TYPE-001",
+      "problema": "Interface Template local ao componente",
+      "acao": "Mover Template e TemplateMedia para módulo compartilhado de tipos/domínio."
+    },
+    {
+      "id": "DATE-001",
+      "problema": "Fallback temporal incorreto",
+      "acao": "Trocar 'Agora mesmo' por 'Data indisponível' quando createdAt não existir."
+    },
+    {
+      "id": "CLEAN-001",
+      "problema": "Código comentado e comentários de workaround",
+      "acao": "Remover imports comentados, comentários temporários e explicações de layout que não agregam manutenção."
+    }
+  ],
+  "nova_estrutura_sugerida": {
+    "components": [
+      "TemplatesSheetContent.tsx",
+      "TemplatesHeader.tsx",
+      "TemplateFilters.tsx",
+      "TemplateGrid.tsx",
+      "TemplateCard.tsx",
+      "TemplatePreview.tsx",
+      "TemplateMediaPreview.tsx",
+      "EmptyTemplatesState.tsx",
+      "TemplatesLoadingSkeleton.tsx",
+      "ConfirmDeleteTemplateDialog.tsx"
+    ],
+    "hooks": [
+      "useTemplates.ts",
+      "useTemplateFilters.ts",
+      "useTemplateActions.ts",
+      "useTemplateMedia.ts",
+      "useTemplateClipboard.ts"
+    ],
+    "services": [
+      "templatesApi.ts",
+      "normalizeTemplate.ts",
+      "parseTemplateMedia.ts",
+      "parseTemplateVariables.ts",
+      "validateTemplate.ts"
+    ],
+    "types": [
+      "Template",
+      "TemplateMedia",
+      "TemplateFilter",
+      "TemplateCategory",
+      "TemplateVariable"
+    ],
+    "constants": [
+      "TEMPLATE_FILTER_ALL",
+      "TEMPLATE_FILTER_MEDIA",
+      "TEMPLATE_FILTER_TEXT",
+      "TEMPLATE_QUERY_KEY",
+      "MAX_CATEGORY_LENGTH"
+    ]
+  },
+  "fluxo_corrigido": {
+    "carregamento": [
+      "useTemplates busca dados via service",
+      "resposta é validada por schema",
+      "templates são normalizados antes de chegar na UI",
+      "loading, error e empty state são estados distintos"
+    ],
+    "salvar_template": [
+      "TemplateSheet executa mutation",
+      "mutation aguarda resposta real da API",
+      "cache é invalidado sem setTimeout",
+      "filtros atuais são preservados"
+    ],
+    "excluir_template": [
+      "usuário abre AlertDialog",
+      "botão fica desabilitado enquanto exclui",
+      "estado local só muda se DELETE retornar sucesso",
+      "erro da API exibe toast de falha"
+    ],
+    "copiar_template": [
+      "clipboard usa await",
+      "sucesso só aparece após writeText resolver",
+      "falha exibe toast de erro"
+    ],
+    "mídia": [
+      "media chega tipada e validada",
+      "imagem usa URL real quando possível",
+      "fallback de mídia inválida é explícito"
+    ]
+  },
+  "definition_of_done": [
+    "Nenhuma chamada fetch direta dentro do componente principal.",
+    "Nenhum Date.now usado para forçar cache busting.",
+    "Nenhum setTimeout usado para sincronização de dados.",
+    "Nenhum window.dispatchEvent usado para atualizar outras partes da aplicação.",
+    "Nenhum console.error direto em fluxo de produção.",
+    "DELETE só altera UI após sucesso real da API.",
+    "Clipboard trata sucesso e falha corretamente.",
+    "Templates, categorias e filtros são memoizados.",
+    "Mídia não é parseada dentro do render.",
+    "Payload da API é validado antes de entrar no estado.",
+    "Existe estado separado para loading, error e empty.",
+    "Botões de ícone possuem aria-label.",
+    "Filtros possuem semântica acessível.",
+    "Cores hardcoded foram trocadas por tokens.",
+    "Botão de criar não sobrepõe conteúdo em telas pequenas.",
+    "Preview de variáveis usa parser validado.",
+    "Template e TemplateMedia ficam em tipos compartilhados.",
+    "Lista suporta crescimento com paginação, virtualização ou infinite scroll.",
+    "Código comentado e workarounds visuais foram removidos."
+  ]
+}
