@@ -39,6 +39,7 @@ export function useSender() {
     recipients: Contact[],
     message: string,
     selectedFile: { mimetype: string; data: string; filename?: string } | null,
+    campaignName: string
   ): Promise<boolean> => {
     if ((!message && !selectedFile) || recipients.length === 0) return false;
 
@@ -81,10 +82,14 @@ export function useSender() {
         }
       }
 
+      const idempotencyKey = nanoid();
+
       const res = await fetch("/api/campaigns/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          name: campaignName,
+          idempotencyKey,
           recipients,
           message,
           media: selectedFile,
@@ -102,6 +107,12 @@ export function useSender() {
     } catch (error: unknown) {
       const errMessage = error instanceof Error ? error.message : "Erro desconhecido";
       addLog(`Falha ao iniciar: ${errMessage}`, "error");
+      
+      // Importante: Mostrar o erro para o usuário via toast
+      import("sonner").then(({ toast }) => {
+        toast.error(`Erro ao iniciar envio: ${errMessage}`);
+      });
+      
       setSendingStatus({ isSending: false, statusMessage: null });
       return false;
     }

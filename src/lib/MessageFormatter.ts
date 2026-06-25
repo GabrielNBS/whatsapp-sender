@@ -173,12 +173,7 @@ export class MessageFormatter implements IMessageFormatter {
    * a mensagem não usa variáveis de nome.
    */
   hasNamePlaceholder(template: string): boolean {
-    // Usamos .test() que é mais eficiente que .match() quando
-    // só queremos saber se existe match (não precisamos do resultado)
-    return (
-      MESSAGE_PATTERNS.NAME.test(template) || 
-      MESSAGE_PATTERNS.NAME_PT.test(template)
-    );
+    return template.includes("{{name}}") || template.includes("{{nome}}");
   }
   
   /**

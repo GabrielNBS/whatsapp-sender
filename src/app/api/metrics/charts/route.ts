@@ -1,15 +1,23 @@
-import { NextResponse } from 'next/server';
-import { getMetricsService } from '@/lib/MetricsService';
+import { NextRequest, NextResponse } from 'next/server';
+import { apiHandler } from '@/lib/api-handler';
+import { MetricsQueryService } from '@/server/services/MetricsQueryService';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  try {
-    const metricsService = getMetricsService();
-    const data = await metricsService.getDashboardChartsData();
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error('Failed to fetch dashboard charts data:', error);
-    return NextResponse.json({ error: 'Failed to fetch charts data' }, { status: 500 });
-  }
-}
+/**
+ * GET /api/metrics/charts
+ * Retorna dados agregados para exibição de gráficos no dashboard.
+ */
+export const GET = apiHandler(async () => {
+  const data = await MetricsQueryService.getDashboardChartsData();
+  
+  const response = NextResponse.json(data);
+  
+  // Cache-Control explícito no-store (API-011)
+  response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  response.headers.set('Pragma', 'no-cache');
+  response.headers.set('Expires', '0');
+
+  return response;
+}, { routeName: '/api/metrics/charts (GET)', requireAuth: true });
+

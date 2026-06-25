@@ -52,6 +52,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js",
+    "zod": "^4.4.3",
     "zustand": "^5.0.9"
   },
   "devDependencies": {

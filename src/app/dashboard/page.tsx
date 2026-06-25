@@ -199,6 +199,9 @@ function SendPageInner() {
 
     // Validation
     const canNavigateTo = (targetStep: number) => {
+        // Se houver uma campanha em envio ou agendamento, sempre permite acessar a tela de transmissão (Step 3)
+        if (targetStep === 3 && isSending) return true;
+        
         if (targetStep <= currentStep) return true;
         if (targetStep === 1 && currentStep === 0) return true;
         if (targetStep === 2) return recipients.length > 0;
@@ -271,10 +274,14 @@ function SendPageInner() {
             return;
         }
 
+        const batchNameStr = recipientConfig.type === 'contact'
+            ? `Envio para ${recipientConfig.name}`
+            : `Campanha para ${recipients.length} contatos`;
+
         if (isScheduleMode) {
             await handleSchedule();
         } else {
-            const started = await handleSend(recipients, message, selectedFile);
+            const started = await handleSend(recipients, message, selectedFile, batchNameStr);
             if (started) {
                 setCurrentStep(3);
             }
@@ -895,7 +902,7 @@ function SendPageInner() {
 
                                                     <div className="w-full bg-card/40 backdrop-blur-md border border-border/40 rounded-2xl p-4 lg:p-4 2xl:p-6 text-left space-y-4 lg:space-y-4 2xl:space-y-6 shadow-xs mb-6 lg:mb-6 2xl:mb-10">
                                                         <div className="flex items-center justify-between">
-                                                            <span className="text-[9px] lg:text-[9px] 2xl:text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-50">{scheduledOverlayData.batchName}</span>
+                                                            <span className="text-[9px] lg:text-[9px] 2xl:text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-50">{scheduledOverlayData?.batchName}</span>
                                                             <div className="h-[2px] w-12 bg-blue-500/30 rounded-full" />
                                                         </div>
 
@@ -906,7 +913,7 @@ function SendPageInner() {
                                                                     <span className="text-[8px] lg:text-[8px] 2xl:text-[9px] uppercase font-black tracking-widest">DATA E HORA</span>
                                                                 </div>
                                                                 <p className="text-xs lg:text-xs 2xl:text-sm font-black text-foreground tracking-tight">
-                                                                    {new Date(scheduledOverlayData.scheduledFor).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                                    {scheduledOverlayData?.scheduledFor ? new Date(scheduledOverlayData.scheduledFor).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}
                                                                 </p>
                                                             </div>
                                                             <div className="space-y-1.5 lg:space-y-1.5 2xl:space-y-2">
@@ -914,7 +921,7 @@ function SendPageInner() {
                                                                     <Users className="w-3 h-3 lg:w-3 lg:h-3 2xl:w-3.5 2xl:h-3.5" />
                                                                     <span className="text-[8px] lg:text-[8px] 2xl:text-[9px] uppercase font-black tracking-widest">PÚBLICO</span>
                                                                 </div>
-                                                                <p className="text-xs lg:text-xs 2xl:text-sm font-black text-foreground tracking-tight">{scheduledOverlayData.contactCount} contatos</p>
+                                                                <p className="text-xs lg:text-xs 2xl:text-sm font-black text-foreground tracking-tight">{scheduledOverlayData?.contactCount || 0} contatos</p>
                                                             </div>
                                                         </div>
                                                     </div>

@@ -1,60 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCampaignService } from '@/lib/CampaignService';
-import { getReportService } from '@/lib/ReportService';
-import { getWhatsAppInstance } from '@/lib/whatsapp';
-
+import { apiHandler } from '@/lib/api-handler';
+import { CampaignCommandService } from '@/server/services/CampaignCommandService';
+import { campaignCompleteSchema } from '@/server/validators/campaigns';
+import { ValidationError } from '@/lib/api-errors';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// POST - Complete campaign
-export async function POST(request: NextRequest, { params }: RouteParams) {
-  try {
-    const { id } = await params;
-    const body = await request.json();
-    const { sentCount, failedCount } = body;
-
-    const campaignService = getCampaignService();
-    const reportService = getReportService();
-
-    // Complete campaign with metrics
-    const campaign = await campaignService.completeCampaign(id, {
-      sentCount: sentCount ?? 0,
-      failedCount: failedCount ?? 0,
-    });
-
-    // Check if immediate report should be sent
-    const config = await reportService.getConfig();
-    
-    if (config?.sendImmediate) {
-      console.log('[API] Sending immediate report for campaign:', id);
-      
-      const reportMessage = reportService.formatImmediateReport(campaign);
-      const chartUrl = reportService.getImmediateChartUrl(campaign);
-
-      const whatsapp = getWhatsAppInstance();
-      if (whatsapp) {
-        reportService.setSender(whatsapp);
-      }
-
-      const result = await reportService.sendReportToAllRecipients(reportMessage, chartUrl);
-      
-      if (result.success || result.sentTo.length > 0) {
-        await campaignService.markImmediateReportSent(id);
-        console.log('[API] Immediate report sent to:', result.sentTo);
-      }
-    }
-
-    return NextResponse.json({ 
-      campaign,
-      reportSent: config?.sendImmediate ?? false,
-    });
-  } catch (error) {
-    console.error('[API] Error completing campaign:', error);
-    return NextResponse.json(
-      { error: 'Failed to complete campaign' },
-      { status: 500 }
-    );
+/**
+ * POST /api/campaigns/[id]/complete
+ * Marca uma campanha como concluída, salva estatísticas finais e dispara relatórios se configurado (API-008).
+ */
+export const POST = apiHandler(async (req: NextRequest, { params }: RouteParams) => {
+  const { id } = await params;
+  if (!id) {
+    throw new ValidationError('ID da campanha é obrigatório na rota.');
   }
-}
+
+  const body = await req.json().catch(() => ({}));
+
+  // Valida estatísticas finais usando schema Zod (API-002)
+  const validation = campaignCompleteSchema.safeParse(body);
+  if (!validation.success) {
+    throw new ValidationError('Métricas de conclusão de campanha inválidas.', validation.error.flatten().fieldErrors);
+  }
+
+  const result = await CampaignCommandService.completeCampaign(id, validation.data);
+
+  return NextResponse.json(result);
+}, { routeName: '/api/campaigns/[id]/complete (POST)', requireAuth: true });
