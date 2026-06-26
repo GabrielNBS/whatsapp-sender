@@ -252,18 +252,20 @@ function SendPageInner() {
             ? `Envio para ${recipientConfig.name}`
             : `Campanha para ${recipients.length} contatos`;
 
+        const isoScheduledDate = new Date(scheduleDate).toISOString();
+
         await scheduleMessages({
             recipients: recipients,
             message,
             media: selectedFile,
-            scheduledFor: scheduleDate,
+            scheduledFor: isoScheduledDate,
             batchName: batchNameStr,
             templateId: selectedTemplateId || ''
         });
 
         setScheduledOverlayData({
             batchName: batchNameStr,
-            scheduledFor: scheduleDate,
+            scheduledFor: isoScheduledDate,
             contactCount: recipients.length
         });
     };
