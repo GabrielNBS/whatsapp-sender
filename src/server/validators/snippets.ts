@@ -13,7 +13,7 @@ export const createSnippetSchema = z.object({
 });
 
 export const updateSnippetSchema = createSnippetSchema.extend({
-  id: z.string().uuid().optional(),
+  id: z.string().min(1, 'ID do snippet inválido').optional(),
 });
 
 export type CreateSnippetInput = z.infer<typeof createSnippetSchema>;

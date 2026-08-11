@@ -1,21 +1,24 @@
 import { prisma } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 import { ReportConfigInput } from '../validators/reports';
 import { DEFAULT_CONFIG_ID } from '@/constants/domain';
+import { getCurrentWorkspaceId, getWorkspaceScopedId } from '@/server/workspace';
 
 export const ReportConfigService = {
   /**
    * Obtém a configuração de relatórios ativa, criando o registro padrão caso não exista.
    */
-  async getConfig() {
+  async getConfig(workspaceId = getCurrentWorkspaceId()) {
     let config = await prisma.reportConfig.findUnique({
-      where: { id: DEFAULT_CONFIG_ID },
+      where: { workspaceId },
       include: { recipients: true },
     });
 
     if (!config) {
       config = await prisma.reportConfig.create({
         data: {
-          id: DEFAULT_CONFIG_ID,
+          id: getWorkspaceScopedId(workspaceId, DEFAULT_CONFIG_ID),
+          workspaceId,
           sendImmediate: true,
           sendEngagement: true,
           engagementDelayMins: 240,
@@ -30,16 +33,18 @@ export const ReportConfigService = {
   /**
    * Atualiza as configurações de relatórios restringindo a alteração aos campos permitidos.
    */
-  async updateConfig(data: ReportConfigInput) {
+  async updateConfig(data: ReportConfigInput, workspaceId = getCurrentWorkspaceId()) {
     // Whitelist explícita de campos (evita mass assignment - API-009)
-    const updateData: any = {};
+    const updateData: Prisma.ReportConfigUpdateInput = {};
     if (data.sendImmediate !== undefined) updateData.sendImmediate = data.sendImmediate;
     if (data.sendEngagement !== undefined) updateData.sendEngagement = data.sendEngagement;
-    if (data.engagementDelayMins !== undefined) updateData.engagementDelayMins = data.engagementDelayMins;
+    if (data.engagementDelayMins !== undefined && data.engagementDelayMins !== null) {
+      updateData.engagementDelayMins = data.engagementDelayMins;
+    }
     if (data.engagementTimeFixed !== undefined) updateData.engagementTimeFixed = data.engagementTimeFixed;
 
     return prisma.reportConfig.update({
-      where: { id: DEFAULT_CONFIG_ID },
+      where: { workspaceId },
       data: updateData,
     });
   },

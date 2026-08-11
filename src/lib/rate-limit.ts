@@ -7,9 +7,7 @@ interface RateLimitTracker {
 
 const cache = new Map<string, RateLimitTracker>();
 
-/**
- * Verifica e aplica limite de requisicoes em memoria (para ambiente local/desktop).
- */
+/** Aplica um limite por processo para proteger endpoints de polling e envio. */
 export function checkRateLimit(key: string, limit: number, windowMs: number): void {
   const now = Date.now();
   const tracker = cache.get(key);

@@ -1,63 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WhatsApp Sender
 
-## Getting Started
+Servico web para gerenciar contatos, campanhas, agendamentos e relatorios de envios pelo WhatsApp Web.
 
-First, run the development server:
+## Requisitos
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 20.9 ou superior
+- npm 11
+- Chrome/Chromium e dependencias de sistema exigidas pelo Puppeteer
+- armazenamento persistente para o banco SQLite e para a sessao do WhatsApp
+
+O processo precisa ser de longa duracao. A integracao com `whatsapp-web.js`, o agendador e a fila rodam no servidor e nao sao adequados a runtimes serverless efemeros.
+
+## Configuracao
+
+Crie um arquivo `.env` local:
+
+```dotenv
+DATABASE_URL="file:./dev.db"
+# Opcional quando o Chromium empacotado pelo Puppeteer nao puder ser usado.
+# PUPPETEER_EXECUTABLE_PATH="/usr/bin/google-chrome"
+# Opcional. O padrao e ./.wwebjs_auth.
+# WWEBJS_AUTH_PATH="/var/lib/whatsapp-sender/session"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Em producao, `DATABASE_URL` e `WWEBJS_AUTH_PATH` devem apontar para volumes persistentes. Nunca publique o banco, a pasta de autenticacao ou arquivos `.env`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Executando Localmente
-
-Para rodar o projeto localmente, você pode usar os scripts facilitadores na raiz do projeto:
-
-1. **`setup_database.bat`**: Instala dependências, gera o cliente do banco de dados e configura o SQLite. Execute isso na primeira vez.
-2. **`iniciar_projeto.bat`**: Constrói o projeto (build) e inicia o servidor. Use este script no dia a dia.
-3. **`clean_install.bat`**: Remove `node_modules` e reinstala tudo do zero. Use caso tenha problemas estranhos.
-
-### Requisitos
-
-- Node.js 18+ instalado
-- Google Chrome instalado (para o WhatsApp Web)
-
-### Comandos Manuais
-
-Se preferir usar o terminal:
+## Desenvolvimento
 
 ```bash
-# Instalar dependências
-npm install
-
-# Configurar banco de dados
-npx prisma generate
-npx prisma db push
-
-# Rodar em modo de desenvolvimento
+npm ci
+npm run db:generate
+npm run db:migrate
 npm run dev
+```
 
-# Rodar em modo de produção (mais rápido)
+A aplicacao fica disponivel em [http://localhost:3000](http://localhost:3000).
+
+## Producao
+
+Execute as migracoes antes de iniciar cada nova versao:
+
+```bash
+npm ci
+npm run db:generate
+npm run db:migrate
 npm run build
 npm start
 ```
+
+## Verificacao
+
+```bash
+npm run check
+npm run db:status
+npm audit
+```
+
+`npm run check` executa lint, verificacao de tipos, testes e build de producao.
+
+## Limites atuais
+
+- A aplicacao opera em um workspace padrao enquanto autenticacao e planos ainda nao existem.
+- As APIs aceitam apenas chamadas sem `Origin`/`Referer` ou chamadas de mesma origem. Isso reduz requisicoes indevidas do navegador, mas nao substitui autenticacao.
+- Uma instancia do servico deve controlar uma unica sessao do WhatsApp. Escala horizontal exigira coordenacao externa da fila e das sessoes.

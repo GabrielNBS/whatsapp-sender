@@ -19,7 +19,7 @@ export const GET = apiHandler(async () => {
       'Expires': '0',
     },
   });
-}, { routeName: '/api/templates (GET)', requireAuth: false }); // Aberto para visualização na UI local
+}, { routeName: '/api/templates (GET)', requireAuth: true });
 
 /**
  * POST /api/templates

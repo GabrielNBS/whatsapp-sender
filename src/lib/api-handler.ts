@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
 import { logger } from "./logger";
 import { ApiError, mapPrismaError, isPrismaError, UnauthorizedError } from "./api-errors";
 import { nanoid } from "nanoid";
@@ -17,53 +16,32 @@ export function isAuthorizedRequest(req: Request | NextRequest): boolean {
   const host = req.headers.get("host") || "";
   const referer = req.headers.get("referer") || "";
   const origin = req.headers.get("origin") || "";
-  const userAgent = req.headers.get("user-agent") || "";
 
-  const isLocalHost = host.includes("localhost") || host.includes("127.0.0.1") || host.startsWith("::1");
-  const isLocalReferer = referer.includes("localhost") || referer.includes("127.0.0.1") || referer === "";
-  const isLocalOrigin = origin.includes("localhost") || origin.includes("127.0.0.1") || origin === "";
-  const isElectron = userAgent.toLowerCase().includes("electron");
-
-  const appToken = process.env.APP_SESSION_TOKEN;
-  if (appToken) {
-    const authHeader = req.headers.get("authorization") || req.headers.get("x-app-token") || "";
-    const token = authHeader.replace("Bearer ", "").trim();
-
-    if (!token) {
-      return false;
+  const getHost = (value: string) => {
+    if (!value) return '';
+    try {
+      return new URL(value.includes('://') ? value : `http://${value}`).host;
+    } catch {
+      return '';
     }
+  };
 
-    const tokenBuffer = Buffer.from(token);
-    const appTokenBuffer = Buffer.from(appToken);
-
-    if (tokenBuffer.length !== appTokenBuffer.length) {
-      return false;
-    }
-
-    return timingSafeEqual(tokenBuffer, appTokenBuffer);
-  }
-
-  return isLocalHost && (isLocalReferer || isLocalOrigin || isElectron);
+  const requestHost = getHost(host);
+  const isSameHost = (value: string) => !value || getHost(value) === requestHost;
+  return Boolean(requestHost) && isSameHost(referer) && isSameHost(origin);
 }
 
-export function apiHandler(
-  handler: (req: NextRequest, context?: any) => Promise<NextResponse>,
+type ApiRouteContext = { params: Promise<Record<string, string>> };
+
+export function apiHandler<Context extends ApiRouteContext = ApiRouteContext>(
+  handler: (req: NextRequest, context: Context) => Promise<Response>,
   options?: {
     routeName?: string;
     requireAuth?: boolean;
   }
 ) {
-  return async (req: Request | NextRequest, context?: any): Promise<NextResponse> => {
-    const nextReq = req instanceof NextRequest
-      ? req
-      : new NextRequest(req.url, {
-          method: req.method,
-          headers: req.headers,
-          body: req.body,
-          duplex: "half",
-        } as any);
-
-    const correlationId = nanoid();
+  return async (nextReq: NextRequest, context: Context): Promise<Response> => {
+    const correlationId = nextReq.headers.get('x-request-id') || `req-${nanoid()}`;
     const startTime = Date.now();
     const method = nextReq.method;
     const url = nextReq.nextUrl.pathname;
@@ -76,7 +54,7 @@ export function apiHandler(
           throw new UnauthorizedError("Acesso recusado: requisicao nao autorizada.");
         }
 
-        const response = await handler(nextReq, context);
+        const response = await handler(nextReq, context as Context);
         const duration = Date.now() - startTime;
 
         const logPayload = {

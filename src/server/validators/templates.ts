@@ -1,11 +1,12 @@
 import { z } from 'zod';
 import { MAX_CATEGORY_LENGTH } from '@/constants/templates';
+import { MAX_MEDIA_BASE64_LENGTH } from '@/constants/domain';
 
 export const templateMediaSchema = z.object({
   mimetype: z.string().min(1, 'O tipo MIME da mídia é obrigatório'),
-  data: z.string().min(1, 'Os dados em base64 da mídia são obrigatórios'),
-  filename: z.string().optional(),
-});
+  data: z.string().min(1, 'Os dados em base64 da mídia são obrigatórios').max(MAX_MEDIA_BASE64_LENGTH, 'A mídia excede o limite de 20 MB'),
+  filename: z.string().max(255).optional(),
+}).strict();
 
 export const createTemplateSchema = z.object({
   title: z.string()
@@ -25,7 +26,7 @@ export const createTemplateSchema = z.object({
 });
 
 export const updateTemplateSchema = createTemplateSchema.extend({
-  id: z.string().uuid('ID do modelo inválido (UUID requerido)').optional(),
+  id: z.string().min(1, 'ID do modelo inválido').optional(),
 });
 export type CreateTemplateInput = z.infer<typeof createTemplateSchema>;
 export type UpdateTemplateInput = z.infer<typeof updateTemplateSchema>;

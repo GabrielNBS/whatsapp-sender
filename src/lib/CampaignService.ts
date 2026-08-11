@@ -60,7 +60,7 @@ export interface CampaignHistoryItem extends Campaign {
 // ============================================
 
 export class CampaignService implements ICampaignService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient, private workspaceId: string) {}
 
   /**
    * Create a new campaign when sending starts
@@ -70,6 +70,7 @@ export class CampaignService implements ICampaignService {
     
     return this.prisma.campaign.create({
       data: {
+        workspaceId: this.workspaceId,
         name: data.name,
         templateName: data.templateName,
         totalContacts: data.totalContacts,
@@ -88,7 +89,7 @@ export class CampaignService implements ICampaignService {
     console.log('[CampaignService] Completing campaign:', campaignId, metrics);
     
     return this.prisma.campaign.update({
-      where: { id: campaignId },
+      where: { id: campaignId, workspaceId: this.workspaceId },
       data: {
         completedAt: new Date(),
         sentCount: metrics.sentCount,
@@ -104,6 +105,7 @@ export class CampaignService implements ICampaignService {
     const result = await this.prisma.campaign.updateMany({
       where: {
         id: campaignId,
+        workspaceId: this.workspaceId,
         completedAt: null,
       },
       data: {
@@ -118,7 +120,7 @@ export class CampaignService implements ICampaignService {
     }
 
     return this.prisma.campaign.findUnique({
-      where: { id: campaignId },
+      where: { id: campaignId, workspaceId: this.workspaceId },
     });
   }
 
@@ -130,7 +132,7 @@ export class CampaignService implements ICampaignService {
     metrics: Partial<CampaignMetrics>
   ): Promise<Campaign> {
     return this.prisma.campaign.update({
-      where: { id: campaignId },
+      where: { id: campaignId, workspaceId: this.workspaceId },
       data: metrics,
     });
   }
@@ -140,7 +142,7 @@ export class CampaignService implements ICampaignService {
    */
   async getCampaign(campaignId: string): Promise<Campaign | null> {
     return this.prisma.campaign.findUnique({
-      where: { id: campaignId },
+      where: { id: campaignId, workspaceId: this.workspaceId },
     });
   }
 
@@ -149,6 +151,7 @@ export class CampaignService implements ICampaignService {
    */
   async getRecentCampaigns(limit: number = 10): Promise<Campaign[]> {
     return this.prisma.campaign.findMany({
+      where: { workspaceId: this.workspaceId },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
@@ -159,6 +162,7 @@ export class CampaignService implements ICampaignService {
    */
   async getCampaignHistory(limit: number = 50): Promise<CampaignHistoryItem[]> {
     const campaigns = await this.prisma.campaign.findMany({
+      where: { workspaceId: this.workspaceId },
       orderBy: { startedAt: 'desc' },
       take: limit,
     });
@@ -172,6 +176,7 @@ export class CampaignService implements ICampaignService {
       this.prisma.scheduledMessage.findMany({
         where: {
           batchId: { in: campaignIds },
+          workspaceId: this.workspaceId,
           status: 'FAILED',
         },
         select: {
@@ -184,6 +189,7 @@ export class CampaignService implements ICampaignService {
       this.prisma.scheduledMessage.findMany({
         where: {
           batchId: { in: campaignIds },
+          workspaceId: this.workspaceId,
         },
         orderBy: { createdAt: 'asc' },
         distinct: ['batchId'],
@@ -254,6 +260,7 @@ export class CampaignService implements ICampaignService {
     return this.prisma.campaign.findMany({
       where: {
         completedAt: { not: null },
+        workspaceId: this.workspaceId,
         engagementReportSentAt: null,
       },
       orderBy: { completedAt: 'asc' },
@@ -265,7 +272,7 @@ export class CampaignService implements ICampaignService {
    */
   async markImmediateReportSent(campaignId: string): Promise<Campaign> {
     return this.prisma.campaign.update({
-      where: { id: campaignId },
+      where: { id: campaignId, workspaceId: this.workspaceId },
       data: { immediateReportSentAt: new Date() },
     });
   }
@@ -274,6 +281,7 @@ export class CampaignService implements ICampaignService {
     const result = await this.prisma.campaign.updateMany({
       where: {
         id: campaignId,
+        workspaceId: this.workspaceId,
         immediateReportSentAt: null,
       },
       data: { immediateReportSentAt: new Date() },
@@ -287,7 +295,7 @@ export class CampaignService implements ICampaignService {
    */
   async markEngagementReportSent(campaignId: string): Promise<Campaign> {
     return this.prisma.campaign.update({
-      where: { id: campaignId },
+      where: { id: campaignId, workspaceId: this.workspaceId },
       data: { engagementReportSentAt: new Date() },
     });
   }
@@ -299,13 +307,15 @@ export class CampaignService implements ICampaignService {
 
 import { prisma } from './db';
 
-let campaignServiceInstance: CampaignService | null = null;
+const campaignServiceInstances = new Map<string, CampaignService>();
 
-export function getCampaignService(): CampaignService {
-  if (!campaignServiceInstance) {
-    campaignServiceInstance = new CampaignService(prisma);
+export function getCampaignService(workspaceId: string): CampaignService {
+  let instance = campaignServiceInstances.get(workspaceId);
+  if (!instance) {
+    instance = new CampaignService(prisma, workspaceId);
+    campaignServiceInstances.set(workspaceId, instance);
   }
-  return campaignServiceInstance;
+  return instance;
 }
 
 export default getCampaignService;

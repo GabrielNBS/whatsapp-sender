@@ -24,9 +24,10 @@ import { ImportContactsDialog } from './components/contacts/ImportContactsDialog
 import { GroupsTab } from './components/contacts/GroupsTab';
 import { EditContactGroupIdDialog } from './components/contacts/EditContactGroupIdDialog';
 import { ConfirmDeleteContactDialog } from './components/contacts/ConfirmDeleteContactDialog';
+import { clearContacts } from '@/services/contacts/contactsApi';
 
 export function ContactsSheetContent() {
-  const { clearContacts } = useAppStore();
+  const { replaceContactState } = useAppStore();
   
   const {
     contacts,
@@ -65,15 +66,20 @@ export function ContactsSheetContent() {
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
   const [managingGroup, setManagingGroup] = useState<Group | null>(null);
 
-  const handleClearAll = () => {
-    clearContacts();
-    setIsClearConfirmOpen(false);
-    toast.success("Todos os contatos foram removidos");
+  const handleClearAll = async () => {
+    try {
+      const snapshot = await clearContacts();
+      replaceContactState(snapshot.groups, snapshot.contacts);
+      setIsClearConfirmOpen(false);
+      toast.success("Todos os contatos foram removidos");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Falha ao remover contatos.');
+    }
   };
 
-  const executeDeleteContact = () => {
+  const executeDeleteContact = async () => {
     if (deletingContact) {
-      deleteContact(deletingContact.id);
+      await deleteContact(deletingContact.id);
       setDeletingContact(null);
     }
   };

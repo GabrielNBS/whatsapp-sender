@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export const GET = apiHandler(async () => {
   const config = await ReportConfigService.getConfig();
   return NextResponse.json(config);
-}, { routeName: '/api/reports/config (GET)', requireAuth: false });
+}, { routeName: '/api/reports/config (GET)', requireAuth: true });
 
 /**
  * PATCH /api/reports/config

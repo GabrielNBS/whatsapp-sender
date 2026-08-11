@@ -1,7 +1,8 @@
 import { PrismaClient } from '@prisma/client'
-import { ensureRuntimeEnvironment } from './runtime-paths'
 
-ensureRuntimeEnvironment()
+if (!process.env.DATABASE_URL) {
+  throw new Error('DATABASE_URL must be configured before starting the service.')
+}
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient }
 

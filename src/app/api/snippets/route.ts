@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { apiHandler } from '@/lib/api-handler';
 import { createSnippetSchema } from '@/server/validators/snippets';
 import { ValidationError, NotFoundError } from '@/lib/api-errors';
 import { z } from 'zod';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +14,9 @@ export const dynamic = 'force-dynamic';
  * Lista todos os snippets cadastrados.
  */
 export const GET = apiHandler(async () => {
+  const workspaceId = getCurrentWorkspaceId();
   const snippets = await prisma.snippet.findMany({
+    where: { workspaceId },
     orderBy: { trigger: 'asc' }
   });
   return NextResponse.json(snippets);
@@ -23,6 +27,7 @@ export const GET = apiHandler(async () => {
  * Cria um novo snippet.
  */
 export const POST = apiHandler(async (req: NextRequest) => {
+  const workspaceId = getCurrentWorkspaceId();
   const body = await req.json().catch(() => ({}));
 
   const validation = createSnippetSchema.safeParse(body);
@@ -30,13 +35,14 @@ export const POST = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Dados do snippet inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  let { trigger, content } = validation.data;
+  let { trigger } = validation.data;
+  const { content } = validation.data;
   if (!trigger.startsWith('/')) {
     trigger = '/' + trigger;
   }
 
   const snippet = await prisma.snippet.create({
-    data: { trigger, content }
+    data: { workspaceId, trigger, content }
   });
 
   return NextResponse.json(snippet, { status: 201 });
@@ -47,6 +53,7 @@ export const POST = apiHandler(async (req: NextRequest) => {
  * Remove um snippet pelo ID.
  */
 export const DELETE = apiHandler(async (req: NextRequest) => {
+  const workspaceId = getCurrentWorkspaceId();
   const { searchParams } = req.nextUrl;
   const id = searchParams.get('id');
 
@@ -57,11 +64,11 @@ export const DELETE = apiHandler(async (req: NextRequest) => {
 
   try {
     await prisma.snippet.delete({
-      where: { id: validation.data }
+      where: { id: validation.data, workspaceId }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // P2025 é o código do Prisma para "Record not found"
-    if (error.code === 'P2025') {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       throw new NotFoundError('Snippet não encontrado.');
     }
     throw error;

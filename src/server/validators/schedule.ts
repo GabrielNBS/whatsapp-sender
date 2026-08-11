@@ -6,7 +6,7 @@ export const scheduleRecipientInputSchema = z.object({
   name: z.string().min(1, 'Nome do destinatário é obrigatório').trim(),
   number: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
-}).refine(data => data.number || data.phone, {
+}).strict().refine(data => data.number || data.phone, {
   message: 'O telefone (campo "number" ou "phone") é obrigatório',
   path: ['number']
 });
@@ -21,6 +21,9 @@ export const createScheduleSchema = z.object({
   batchName: z.string().max(100).optional().nullable(),
   templateId: z.string().optional().nullable(),
   timezone: z.string().optional().default('America/Sao_Paulo'),
+}).strict().refine((data) => Boolean(data.templateId || data.message?.trim() || data.media), {
+  message: 'Informe um template, uma mensagem ou uma mídia.',
+  path: ['message'],
 });
 
 export const rescheduleSchema = z.object({

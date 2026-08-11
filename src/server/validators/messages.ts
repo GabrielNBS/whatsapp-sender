@@ -6,6 +6,9 @@ export const sendMessageSchema = z.object({
   message: z.string().max(4096, 'Mensagem muito longa (máximo 4096 caracteres)').optional().nullable(),
   media: templateMediaSchema.nullable().optional(),
   idempotencyKey: z.string().trim().optional().nullable(),
+}).strict().refine((data) => Boolean(data.message?.trim() || data.media), {
+  message: 'Informe uma mensagem ou uma mídia.',
+  path: ['message'],
 });
 
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;

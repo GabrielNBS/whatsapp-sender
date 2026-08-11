@@ -179,15 +179,9 @@ export function useSendForm({
     setSelectedTemplateId(null);
   }, []);
 
-  // Monitor templates list to reset form if selected template is deleted
-  useEffect(() => {
-    if (selectedTemplateId && templates.length > 0) {
-      const templateExists = templates.some(t => t.id === selectedTemplateId);
-      if (!templateExists) {
-        resetForm();
-      }
-    }
-  }, [templates, selectedTemplateId, resetForm]);
+  const visibleSelectedTemplateId = selectedTemplateId && templates.some((template) => template.id === selectedTemplateId)
+    ? selectedTemplateId
+    : null;
 
   return {
     // State
@@ -196,7 +190,7 @@ export function useSendForm({
     selectedFile,
     isScheduleMode,
     scheduleDate,
-    selectedTemplateId,
+    selectedTemplateId: visibleSelectedTemplateId,
     
     // Computed
     recipients,

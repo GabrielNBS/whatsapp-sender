@@ -3,16 +3,21 @@ import { getQueueService } from "@/lib/QueueService";
 import { getReportService } from "@/lib/ReportService";
 import { getWhatsAppInstance } from "@/lib/whatsapp";
 import { StartCampaignInput, CampaignCompleteInput } from "../validators/campaigns";
-import { ConflictError } from "@/lib/api-errors";
+import { ConflictError, NotFoundError } from "@/lib/api-errors";
 import { prisma } from "@/lib/db";
 import { normalizePhone } from "@/services/contacts/normalizePhone";
 import { beginIdempotentOperation } from "@/lib/idempotency";
+import { getCurrentWorkspaceId } from "@/server/workspace";
+
+type CampaignMedia = NonNullable<StartCampaignInput["media"]>;
 
 export const CampaignCommandService = {
   async startCampaign(data: StartCampaignInput) {
-    const queueService = getQueueService();
-    const campaignService = getCampaignService();
-    const reservation = beginIdempotentOperation(data.idempotencyKey);
+    const workspaceId = getCurrentWorkspaceId();
+    const queueService = getQueueService(workspaceId);
+    const campaignService = getCampaignService(workspaceId);
+    const reservation = await beginIdempotentOperation(workspaceId, data.idempotencyKey);
+    let campaignQueued = false;
 
     try {
       const activeStatus = await queueService.getStatus(0);
@@ -21,16 +26,15 @@ export const CampaignCommandService = {
       }
 
       let campaignMessage = data.message || "";
-      let campaignMedia: any = data.media || undefined;
+      let campaignMedia: CampaignMedia | null = data.media || null;
 
       if (data.templateId) {
-        const template = await prisma.template.findUnique({
-          where: { id: data.templateId },
+        const template = await prisma.template.findFirst({
+          where: { id: data.templateId, workspaceId },
         });
-        if (template) {
-          campaignMessage = template.content;
-          campaignMedia = template.media ? JSON.parse(template.media as string) : undefined;
-        }
+        if (!template) throw new NotFoundError('Template não encontrado neste workspace.');
+        campaignMessage = template.content;
+        campaignMedia = template.media ? JSON.parse(template.media as string) as CampaignMedia : null;
       }
 
       const campaign = await campaignService.createCampaign({
@@ -54,35 +58,39 @@ export const CampaignCommandService = {
           campaignMedia,
           data.templateId || undefined
         );
+        campaignQueued = true;
       } catch (error) {
         await campaignService.completeCampaign(campaign.id, { sentCount: 0, failedCount: 0 });
         throw new Error(`Falha ao registrar campanha na fila: ${error instanceof Error ? error.message : String(error)}`);
       }
 
-      reservation.complete();
+      await reservation.complete();
       return campaign;
     } catch (error) {
-      reservation.abort();
+      if (!campaignQueued) {
+        await reservation.abort();
+      }
       throw error;
     }
   },
 
   async stopCampaign() {
-    await getQueueService().stopCampaign();
+    await getQueueService(getCurrentWorkspaceId()).stopCampaign();
     return true;
   },
 
   async getStatus(logOffset: number = 0) {
-    return getQueueService().getStatus(logOffset);
+    return getQueueService(getCurrentWorkspaceId()).getStatus(logOffset);
   },
 
   async getHistory(limit: number = 50) {
-    return getCampaignService().getCampaignHistory(limit);
+    return getCampaignService(getCurrentWorkspaceId()).getCampaignHistory(limit);
   },
 
   async completeCampaign(id: string, data: CampaignCompleteInput) {
-    const campaignService = getCampaignService();
-    const reportService = getReportService();
+    const workspaceId = getCurrentWorkspaceId();
+    const campaignService = getCampaignService(workspaceId);
+    const reportService = getReportService(workspaceId);
     const campaign = await campaignService.completeCampaign(id, {
       sentCount: data.sentCount,
       failedCount: data.failedCount,

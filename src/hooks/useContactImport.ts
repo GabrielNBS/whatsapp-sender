@@ -5,6 +5,8 @@ import { dedupeContacts } from '@/services/contacts/dedupeContacts';
 import { DEFAULT_GROUP_ID } from '@/constants/contacts';
 import { nanoid } from 'nanoid';
 import { toast } from 'sonner';
+import { importContacts } from '@/services/contacts/contactsApi';
+import { MAX_CSV_FILE_SIZE } from '@/constants/domain';
 
 export type ImportTargetType = 'default' | 'existing' | 'new';
 
@@ -13,7 +15,7 @@ export function isImportTargetType(value: unknown): value is ImportTargetType {
 }
 
 export function useContactImport() {
-  const { contacts, groups, addGroup, importContacts: storeImportContacts } = useAppStore();
+  const { contacts, groups, replaceContactState } = useAppStore();
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importedContacts, setImportedContacts] = useState<Omit<Contact, 'id'>[]>([]);
@@ -23,6 +25,10 @@ export function useContactImport() {
   const [isParsing, setIsParsing] = useState(false);
 
   const handleFileUpload = useCallback(async (file: File) => {
+    if (file.size > MAX_CSV_FILE_SIZE) {
+      toast.error('O arquivo CSV excede o limite de 5 MB.');
+      return;
+    }
     setIsParsing(true);
     try {
       const result = await parseContactsCsv(file);
@@ -49,7 +55,7 @@ export function useContactImport() {
     }
   }, []);
 
-  const handleConfirmImport = useCallback(() => {
+  const handleConfirmImport = useCallback(async () => {
     if (importedContacts.length === 0) {
       toast.error('Não há contatos para importar.');
       return;
@@ -77,11 +83,13 @@ export function useContactImport() {
         return;
       }
 
-      // Gera id do novo grupo
       const newId = nanoid();
-      addGroup(trimmedGroupName, 'Criado via importação', newId);
       targetGroupId = newId;
     }
+
+    const newGroup = importTargetType === 'new'
+      ? { id: targetGroupId, name: importNewGroupName.trim(), description: 'Criado via importação' }
+      : undefined;
 
     // Aplica o grupo de destino aos contatos importados
     const contactsWithGroups = importedContacts.map(c => ({
@@ -98,7 +106,16 @@ export function useContactImport() {
       return;
     }
 
-    storeImportContacts(uniqueContacts);
+    try {
+      const snapshot = await importContacts(
+        newGroup,
+        uniqueContacts.map((contact) => ({ id: nanoid(), ...contact })),
+      );
+      replaceContactState(snapshot.groups, snapshot.contacts);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Falha ao importar contatos.');
+      return;
+    }
     
     if (duplicateCount > 0) {
       toast.success(`${uniqueContacts.length} contatos importados. ${duplicateCount} duplicados foram ignorados.`);
@@ -112,7 +129,7 @@ export function useContactImport() {
     setImportTargetType('default');
     setImportTargetGroupId('');
     setImportNewGroupName('');
-  }, [importedContacts, importTargetType, importTargetGroupId, importNewGroupName, groups, contacts, addGroup, storeImportContacts]);
+  }, [importedContacts, importTargetType, importTargetGroupId, importNewGroupName, groups, contacts, replaceContactState]);
 
   const handleCloseImport = useCallback(() => {
     setIsImportModalOpen(false);

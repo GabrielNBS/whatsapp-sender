@@ -7,19 +7,156 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Contact {
+model Workspace {
   id        String   @id @default(cuid())
   name      String
-  phone     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       WorkspaceMember[]
+  contacts    Contact[]
+  groups      ContactGroup[]
+  templates   Template[]
+  snippets    Snippet[]
+  schedules   ScheduledMessage[]
+  analytics   ContactAnalytics[]
+  campaigns   Campaign[]
+  reportConfigs ReportConfig[]
+  reportRecipients ReportRecipient[]
+  settings    Settings[]
+  usageEvents UsageEvent[]
+  idempotencyRecords IdempotencyRecord[]
+  subscription Subscription?
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaces WorkspaceMember[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        String    @default("OWNER")
+  createdAt   DateTime  @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId])
+}
+
+model Plan {
+  id                   String   @id
+  name                 String
+  monthlyMessageLimit  Int
+  contactLimit         Int?
+  activeCampaignLimit  Int      @default(1)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                 String    @id @default(cuid())
+  workspaceId        String    @unique
+  planId             String
+  status             String    @default("TRIAL")
+  provider           String?
+  providerCustomerId String?
+  providerSubId      String?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  plan      Plan      @relation(fields: [planId], references: [id])
+}
+
+model UsageEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  type        String
+  quantity    Int      @default(1)
+  metadata    String?
+  occurredAt  DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, type, occurredAt])
+}
+
+model IdempotencyRecord {
+  id          String   @id @default(cuid())
+  workspaceId String
+  key         String
+  state       String   @default("IN_PROGRESS")
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, key])
+  @@index([expiresAt])
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  workspaceId String @default("local")
+  name      String
+  phone     String
   tags      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   scheduledMessages ScheduledMessage[]
+  groupMemberships ContactGroupMembership[]
+
+  @@unique([workspaceId, phone])
+  @@index([workspaceId])
+}
+
+model ContactGroup {
+  id          String   @id @default(cuid())
+  workspaceId String  @default("local")
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  memberships ContactGroupMembership[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model ContactGroupMembership {
+  contactId String
+  groupId   String
+  createdAt DateTime @default(now())
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  group   ContactGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, groupId])
+  @@index([groupId])
 }
 
 model Template {
   id        String   @id @default(cuid())
+  workspaceId String @default("local")
   title     String
   content   String
   createdAt DateTime @default(now())
@@ -28,20 +165,30 @@ model Template {
   media     String?  // JSON string: { data, mimetype, filename }
   category  String?
   
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   scheduledMessages ScheduledMessage[]
+
+  @@index([workspaceId])
 }
 
 model Snippet {
   id        String   @id @default(cuid())
-  trigger   String   @unique // ex: "/pix"
+  workspaceId String @default("local")
+  trigger   String   // ex: "/pix"
   content   String   // ex: "Chave PIX: ..."
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, trigger])
+  @@index([workspaceId])
 }
 
 
 model ScheduledMessage {
   id           String   @id @default(cuid())
+  workspaceId  String   @default("local")
   scheduledFor DateTime
   status       String   @default("PENDING") // PENDING, SENT, FAILED, MISSED
 
@@ -59,18 +206,27 @@ model ScheduledMessage {
   batchId   String?  // UUID of the broadcast batch
   batchName String?  // Optional name for grouping
 
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status, scheduledFor])
   @@index([status, scheduledFor])
   @@index([batchId, status])
   @@index([scheduledFor])
 }
 
 model ContactAnalytics {
-  phone       String   @id
+  id          String   @id @default(cuid())
+  phone       String
+  workspaceId String   @default("local")
   sentCount   Int      @default(0)
   readCount   Int      @default(0)
   lastReadAt  DateTime?
   lastSentAt  DateTime?
   updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, phone])
 }
 
 // ============================================
@@ -79,6 +235,7 @@ model ContactAnalytics {
 
 model Campaign {
   id            String   @id @default(cuid())
+  workspaceId   String   @default("local")
   name          String   // Ex: "Promo Sexta" ou "Campanha para 150 contatos"
   templateName  String?  // Nome do template usado
   
@@ -101,35 +258,50 @@ model Campaign {
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, startedAt])
 }
 
 model ReportConfig {
-  id                  String   @id @default("default")
+  id                  String   @id
+  workspaceId          String   @default("local")
   sendImmediate       Boolean  @default(true)
   sendEngagement      Boolean  @default(true)
   engagementDelayMins Int      @default(240) // 4 horas
   engagementTimeFixed String?  // Ex: "23:00"
   
   recipients          ReportRecipient[]
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   
   updatedAt           DateTime @updatedAt
+
+  @@unique([workspaceId])
 }
 
 model ReportRecipient {
   id        String   @id @default(cuid())
+  workspaceId String @default("local")
   name      String   // Nome do gestor
   phone     String   // WhatsApp (formato: 5511999999999)
   isActive  Boolean  @default(true)
   
   configId  String   @default("default")
   config    ReportConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   
   createdAt DateTime @default(now())
+
+  @@unique([workspaceId, phone])
 }
 
 model Settings {
-  id          String   @id @default("default")
+  id          String   @id
+  workspaceId String   @unique @default("local")
   defaultLink String?
   defaultCTA  String?
   updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 }

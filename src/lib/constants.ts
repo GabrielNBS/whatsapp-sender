@@ -1,46 +1,5 @@
 /**
- * =============================================================================
- * CONSTANTS.TS - Constantes e Enums para WhatsApp Service
- * =============================================================================
- * 
- * POR QUE ESTE ARQUIVO FOI CRIADO?
- * --------------------------------
- * Este arquivo foi criado para substituir "Magic Numbers" (números mágicos) que
- * estavam espalhados pelo código. Magic Numbers são valores literais hardcoded
- * que não têm significado claro sem contexto.
- * 
- * PROBLEMA ORIGINAL:
- * - Código como `if (ack === 3)` não deixa claro o que "3" significa
- * - Valores como `5000` (timeout) aparecem em vários lugares
- * - Difícil manter e alterar valores quando necessário
- * 
- * SOLUÇÃO (Clean Code):
- * - Usar Enums para valores que representam estados
- * - Usar constantes nomeadas para valores de configuração
- * - Agrupar constantes relacionadas em objetos
- * 
- * BENEFÍCIOS:
- * 1. Código mais legível e auto-documentado
- * 2. Alterações centralizadas (mudar em um lugar afeta todos)
- * 3. Autocompletar do IDE funciona melhor
- * 4. TypeScript pode validar valores em tempo de compilação
- */
-
-// =============================================================================
-// ENUMS - Estados e Status
-// =============================================================================
-
-/**
  * Status de confirmação de mensagem do WhatsApp (ACK Status)
- * 
- * O WhatsApp usa números internamente para representar o status de entrega.
- * Este enum dá nomes significativos a esses números.
- * 
- * ANTES (código difícil de entender):
- *   if (ack === 3) { ... }
- * 
- * DEPOIS (código auto-explicativo):
- *   if (ack === MessageAckStatus.READ) { ... }
  */
 export enum MessageAckStatus {
   /** Mensagem ainda pendente de envio */
@@ -82,29 +41,9 @@ export enum RiskLevel {
   HIGH = "HIGH",
 }
 
-// =============================================================================
-// CONSTANTES DE TEMPO - Intervalos e Timeouts
-// =============================================================================
-
-/**
- * Constantes relacionadas a tempo (em milissegundos)
- * 
- * DICA: Usamos `as const` para que o TypeScript trate esses valores como
- * literais imutáveis, não apenas como `number`. Isso permite melhor
- * inferência de tipos.
- * 
- * POR QUE AGRUPAR EM UM OBJETO?
- * - Namespace: evita conflitos de nomes globais
- * - Organização: fácil encontrar todas as constantes de tempo
- * - Autocompletar: digitar `TIMING.` mostra todas as opções
- */
+/** Constantes de tempo em milissegundos. */
 export const TIMING = {
-  /**
-   * Intervalo entre verificações de status de mensagens (polling)
-   * 
-   * ANTES: setInterval(..., 10000) - O que significa 10000?
-   * DEPOIS: setInterval(..., TIMING.POLLING_INTERVAL_MS) - Claramente é o intervalo de polling
-   */
+  /** Intervalo entre verificações de status de mensagens. */
   POLLING_INTERVAL_MS: 10_000, // 10 segundos
   
   /**
@@ -224,16 +163,8 @@ export const MESSAGE_PATTERNS = {
  */
 export const DEFAULT_CONTACT_NAME = "Cliente";
 
-// =============================================================================
-// HELPERS - Funções Utilitárias
-// =============================================================================
-
 /**
  * Determina o nível de risco baseado na contagem diária de mensagens
- * 
- * Esta função foi movida para cá porque usa as constantes SAFETY_LIMITS.
- * Mantê-la junto das constantes garante consistência e facilita manutenção.
- * 
  * @param dailyCount - Número de mensagens enviadas hoje
  * @returns O nível de risco correspondente
  * 

@@ -1,4 +1,5 @@
 import { prisma } from "./db";
+import { getCurrentWorkspaceId } from "@/server/workspace";
 
 export interface RealtimeMetrics {
   connection: {
@@ -44,6 +45,7 @@ export interface IMetricsService {
 }
 
 export class MetricsService implements IMetricsService {
+  constructor(private workspaceId = getCurrentWorkspaceId()) {}
   async getRealtimeMetrics(): Promise<RealtimeMetrics> {
     const whatsappMetrics = await this.getWhatsAppMetrics();
     const todayStats = await this.getTodayStats();
@@ -82,16 +84,19 @@ export class MetricsService implements IMetricsService {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const [totalContacts, totals, inactive, topEngaged] = await Promise.all([
-      prisma.contactAnalytics.count(),
+      prisma.contactAnalytics.count({ where: { workspaceId: this.workspaceId } }),
       prisma.contactAnalytics.aggregate({
+        where: { workspaceId: this.workspaceId },
         _sum: { sentCount: true, readCount: true },
       }),
       prisma.contactAnalytics.count({
         where: {
+          workspaceId: this.workspaceId,
           OR: [{ lastReadAt: null }, { lastReadAt: { lt: thirtyDaysAgo } }],
         },
       }),
       prisma.contactAnalytics.findMany({
+        where: { workspaceId: this.workspaceId },
         orderBy: { readCount: "desc" },
         take: 5,
         select: { phone: true, readCount: true },
@@ -118,12 +123,14 @@ export class MetricsService implements IMetricsService {
     const [sent, read] = await Promise.all([
       prisma.scheduledMessage.count({
         where: {
+          workspaceId: this.workspaceId,
           status: "SENT",
           updatedAt: { gte: today },
         },
       }),
       prisma.contactAnalytics.count({
         where: {
+          workspaceId: this.workspaceId,
           lastReadAt: { gte: today },
         },
       }),
@@ -137,6 +144,7 @@ export class MetricsService implements IMetricsService {
     trends: Array<{ date: string; sent: number; read: number; responses: number }>;
   }> {
     const campaignTotals = await prisma.campaign.aggregate({
+      where: { workspaceId: this.workspaceId },
       _sum: {
         sentCount: true,
         readCount: true,
@@ -159,7 +167,7 @@ export class MetricsService implements IMetricsService {
     last7Days.setHours(0, 0, 0, 0);
 
     const campaigns = await prisma.campaign.findMany({
-      where: { startedAt: { gte: last7Days } },
+      where: { workspaceId: this.workspaceId, startedAt: { gte: last7Days } },
       orderBy: { startedAt: "asc" },
     });
 

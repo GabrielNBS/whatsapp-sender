@@ -12,8 +12,12 @@ export const createRecipientSchema = z.object({
   phone: z.string().min(10, 'O número de telefone deve conter no mínimo 10 dígitos').max(15).trim(),
 });
 
-export const updateRecipientSchema = createRecipientSchema.extend({
-  id: z.string().uuid().optional(),
+export const updateRecipientSchema = z.object({
+  name: z.string().min(1).max(100).trim().optional(),
+  phone: z.string().min(10).max(15).trim().optional(),
+  isActive: z.boolean().optional(),
+}).strict().refine((data) => Object.keys(data).length > 0, {
+  message: 'Informe ao menos um campo para atualização.',
 });
 
 export type ReportConfigInput = z.infer<typeof reportConfigSchema>;

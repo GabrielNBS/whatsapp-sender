@@ -22,4 +22,4 @@ export const GET = apiHandler(async (req: NextRequest) => {
   const limit = validation.data.limit || 50;
   const history = await CampaignCommandService.getHistory(limit);
   return NextResponse.json(history);
-}, { routeName: '/api/campaigns/history (GET)', requireAuth: false });
+}, { routeName: '/api/campaigns/history (GET)', requireAuth: true });

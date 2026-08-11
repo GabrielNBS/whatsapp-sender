@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Template } from '@/types/templates';
 import { TemplateCard } from './TemplateCard';
 import { Button } from '@/components/ui/button';
@@ -28,19 +28,8 @@ export function TemplateGrid({
     return Math.ceil(templates.length / TEMPLATES_PER_PAGE) || 1;
   }, [templates.length]);
 
-  // Corrige página órfã se a lista encolher
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [totalPages, currentPage]);
-
-  // Reseta paginação quando o tamanho do array muda (busca/filtros aplicados)
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [templates.length]);
-
-  const startIndex = (currentPage - 1) * TEMPLATES_PER_PAGE;
+  const visiblePage = Math.min(currentPage, totalPages);
+  const startIndex = (visiblePage - 1) * TEMPLATES_PER_PAGE;
   const endIndex = startIndex + TEMPLATES_PER_PAGE;
   const paginatedTemplates = useMemo(() => {
     return templates.slice(startIndex, endIndex);
@@ -73,19 +62,19 @@ export function TemplateGrid({
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
+              disabled={visiblePage === 1}
               aria-label="Página anterior de modelos"
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
             <span className="text-sm font-medium min-w-12 text-center">
-              {currentPage} / {totalPages}
+              {visiblePage} / {totalPages}
             </span>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
+              disabled={visiblePage === totalPages}
               aria-label="Próxima página de modelos"
             >
               <ChevronRight className="w-4 h-4" />

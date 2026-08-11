@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { apiHandler } from '@/lib/api-handler';
 import { UnauthorizedError, ValidationError } from '@/lib/api-errors';
 import whatsappService from '@/lib/whatsapp';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,7 @@ export const dynamic = 'force-dynamic';
  * Restrito apenas para ambiente de desenvolvimento (API-009).
  */
 export const POST = apiHandler(async () => {
+  const workspaceId = getCurrentWorkspaceId();
   // Restringe a execução apenas em desenvolvimento (API-009)
   if (process.env.NODE_ENV === 'production') {
     throw new UnauthorizedError('Acesso negado: Este endpoint está disponível apenas em ambiente de desenvolvimento.');
@@ -19,7 +21,7 @@ export const POST = apiHandler(async () => {
 
   // Busca destinatários ativos
   const recipients = await prisma.reportRecipient.findMany({
-    where: { isActive: true },
+    where: { workspaceId, isActive: true },
   });
 
   if (recipients.length === 0) {
@@ -79,12 +81,13 @@ _Se você recebeu esta mensagem, o sistema está configurado corretamente._
  * Lista os destinatários de teste para auditoria (apenas em desenvolvimento).
  */
 export const GET = apiHandler(async () => {
+  const workspaceId = getCurrentWorkspaceId();
   if (process.env.NODE_ENV === 'production') {
     throw new UnauthorizedError('Acesso negado.');
   }
 
   const recipients = await prisma.reportRecipient.findMany({
-    where: { isActive: true },
+    where: { workspaceId, isActive: true },
     select: {
       id: true,
       name: true,

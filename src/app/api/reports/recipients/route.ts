@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export const GET = apiHandler(async () => {
   const recipients = await ReportRecipientService.listRecipients();
   return NextResponse.json(recipients);
-}, { routeName: '/api/reports/recipients (GET)', requireAuth: false });
+}, { routeName: '/api/reports/recipients (GET)', requireAuth: true });
 
 /**
  * POST /api/reports/recipients

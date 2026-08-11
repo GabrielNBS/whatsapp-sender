@@ -1,79 +1,57 @@
-import { ConflictError } from "./api-errors";
+import { Prisma } from '@prisma/client';
+import { ConflictError } from './api-errors';
+import { prisma } from './db';
 
-interface IdempotencyTracker {
-  timestamp: number;
-  state: "in_progress" | "completed";
-}
-
-const cache = new Map<string, IdempotencyTracker>();
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 
 export interface IdempotencyReservation {
-  complete(): void;
-  abort(): void;
+  complete(): Promise<void>;
+  abort(): Promise<void>;
 }
 
-export function checkIdempotency(key?: string | null, ttlMs: number = DEFAULT_TTL_MS): void {
-  const reservation = beginIdempotentOperation(key, ttlMs);
-  reservation.complete();
-}
-
-export function beginIdempotentOperation(
+export async function beginIdempotentOperation(
+  workspaceId: string,
   key?: string | null,
-  ttlMs: number = DEFAULT_TTL_MS
-): IdempotencyReservation {
+  ttlMs: number = DEFAULT_TTL_MS,
+): Promise<IdempotencyReservation> {
   if (!key) {
     return {
-      complete() {},
-      abort() {},
+      async complete() {},
+      async abort() {},
     };
   }
 
-  const now = Date.now();
-  const tracker = cache.get(key);
+  const expiresAt = new Date(Date.now() + ttlMs);
 
-  if (tracker && now - tracker.timestamp < ttlMs) {
-    throw new ConflictError("Esta requisicao ja foi processada recentemente.");
+  await prisma.idempotencyRecord.deleteMany({
+    where: { workspaceId, key, expiresAt: { lte: new Date() } },
+  });
+
+  let reservationId: string;
+  try {
+    const reservation = await prisma.idempotencyRecord.create({
+      data: { workspaceId, key, expiresAt },
+      select: { id: true },
+    });
+    reservationId = reservation.id;
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new ConflictError('Esta requisicao ja foi processada recentemente.');
+    }
+    throw error;
   }
 
-  const entry: IdempotencyTracker = {
-    timestamp: now,
-    state: "in_progress",
-  };
-
-  cache.set(key, entry);
-
   return {
-    complete() {
-      const current = cache.get(key);
-      if (current !== entry) {
-        return;
-      }
-
-      cache.set(key, {
-        timestamp: Date.now(),
-        state: "completed",
+    async complete() {
+      await prisma.idempotencyRecord.updateMany({
+        where: { id: reservationId, workspaceId },
+        data: { state: 'COMPLETED', expiresAt: new Date(Date.now() + ttlMs) },
       });
     },
-    abort() {
-      const current = cache.get(key);
-      if (current === entry) {
-        cache.delete(key);
-      }
+    async abort() {
+      await prisma.idempotencyRecord.deleteMany({
+        where: { id: reservationId, workspaceId, state: 'IN_PROGRESS' },
+      });
     },
   };
 }
-
-if (typeof setInterval !== "undefined") {
-  const cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [key, tracker] of cache.entries()) {
-      if (now - tracker.timestamp > DEFAULT_TTL_MS) {
-        cache.delete(key);
-      }
-    }
-  }, 60000);
-
-  cleanupInterval.unref?.();
-}
-export default checkIdempotency;

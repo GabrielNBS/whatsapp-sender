@@ -1,41 +1,9 @@
-/**
- * =============================================================================
- * WHATSAPP SERVICE - Versão Refatorada com SOLID
- * =============================================================================
- * 
- * MUDANÇAS REALIZADAS (SOLID REFACTORING):
- * ----------------------------------------
- * 
- * 1. SRP (Single Responsibility Principle):
- *    - ANTES: Esta classe fazia conexão, envio, formatação e analytics
- *    - DEPOIS: Esta classe SÓ faz conexão e envio de mensagens
- *    - Analytics foi movido para AnalyticsService
- *    - Formatação foi movida para MessageFormatter
- * 
- * 2. DIP (Dependency Inversion Principle):
- *    - ANTES: Usava `await import("@/lib/db")` dinamicamente (acoplamento forte)
- *    - DEPOIS: Recebe dependências pelo construtor (injeção de dependência)
- * 
- * 3. Clean Code:
- *    - ANTES: Magic numbers como `ack === 3`, `5000`, `10000`
- *    - DEPOIS: Constantes descritivas como `MessageAckStatus.READ`, `TIMING.*`
- * 
- * BENEFÍCIOS:
- * -----------
- * - Código mais testável (pode mockar dependências)
- * - Cada classe tem uma responsabilidade clara
- * - Fácil trocar implementações (ex: outro banco de dados)
- * - Código mais legível e manutenível
- */
-
 import { Client, LocalAuth, MessageMedia } from "whatsapp-web.js";
 
-// MUDANÇA: Importações centralizadas das novas classes e constantes
-// Antes eram imports dinâmicos espalhados pelo código
 import { prisma } from "./db";
 import { AnalyticsService, IAnalyticsService } from "./AnalyticsService";
 import { MessageFormatter, IMessageFormatter, ContactInfo } from "./MessageFormatter";
-import { ensureRuntimeEnvironment } from "./runtime-paths";
+import { resolveWhatsAppAuthPath } from "./service-paths";
 import { logger } from "./logger";
 import {
   MessageAckStatus,
@@ -52,41 +20,17 @@ declare global {
   var whatsappClientInstance: WhatsAppService | undefined;
 }
 
-/**
- * Dados sobre uma mensagem pendente de confirmação
- */
 interface PendingMessageData {
   phone: string;
   timestamp: number;
 }
 
-/**
- * MELHORIA #4: Interface de métricas de polling
- * =============================================
- * 
- * Permite observar o comportamento do polling sem alterar seu funcionamento.
- * Útil para:
- * - Debugging
- * - Monitoramento
- * - Otimização de performance
- */
 export interface PollingMetrics {
-  /** Total de ciclos de polling executados */
   pollingCycles: number;
-  
-  /** Mensagens encontradas como lidas via polling (fallback) */
   readsFoundByPolling: number;
-  
-  /** Mensagens encontradas como lidas via evento (preferível) */
   readsFoundByEvent: number;
-  
-  /** Número atual de mensagens pendentes */
   currentPendingCount: number;
-  
-  /** Intervalo atual de polling em ms */
   currentIntervalMs: number;
-  
-  /** Última vez que o polling rodou */
   lastPollingTime: Date | null;
 }
 
@@ -108,11 +52,6 @@ export class WhatsAppService {
   private isAuthenticated: boolean = false;
   private isReady: boolean = false;
   
-  /**
-   * MUDANÇA: Agora usa enum ConnectionStatus ao invés de string literal
-   * ANTES: private status: "DISCONNECTED" | "INITIALIZING" | ... = "DISCONNECTED"
-   * DEPOIS: private status: ConnectionStatus = ConnectionStatus.DISCONNECTED
-   */
   private status: ConnectionStatus = ConnectionStatus.DISCONNECTED;
 
   // Safety Handling
@@ -128,9 +67,6 @@ export class WhatsAppService {
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private waitReadyPromise: Promise<boolean> | null = null;
   
-  /**
-   * MELHORIA #4: Métricas de polling para observabilidade
-   */
   private metrics: PollingMetrics = {
     pollingCycles: 0,
     readsFoundByPolling: 0,
@@ -148,48 +84,16 @@ export class WhatsAppService {
     }
   }
 
-  /**
-   * MUDANÇA PRINCIPAL: Injeção de Dependência (DIP)
-   * ------------------------------------------------
-   * 
-   * ANTES (acoplamento forte):
-   * ```typescript
-   * constructor() {
-   *   // Não recebia dependências, usava import dinâmico depois
-   * }
-   * 
-   * async someMethod() {
-   *   const { prisma } = await import("@/lib/db"); // RUIM!
-   * }
-   * ```
-   * 
-   * DEPOIS (desacoplado):
-   * ```typescript
-   * constructor(
-   *   private analyticsService: IAnalyticsService,
-   *   private messageFormatter: IMessageFormatter
-   * ) {
-   *   // Dependências injetadas, prontas para uso
-   * }
-   * ```
-   * 
-   * POR QUE ISSO É MELHOR?
-   * 1. Testabilidade: Em testes, passamos mocks ao invés de serviços reais
-   * 2. Flexibilidade: Fácil trocar implementação (ex: outro banco de dados)
-   * 3. Clareza: Dependências são explícitas no construtor
-   * 4. Performance: Não tem overhead de import dinâmico em runtime
-   */
   constructor(
     private analyticsService: IAnalyticsService,
     private messageFormatter: IMessageFormatter
   ) {
-    const runtimePaths = ensureRuntimeEnvironment();
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
 
     logger.info("Initializing WhatsApp Service...");
     this.client = new Client({
       authStrategy: new LocalAuth({
-        dataPath: runtimePaths.authDir,
+        dataPath: resolveWhatsAppAuthPath(),
       }),
       puppeteer: {
         headless: true,
@@ -261,11 +165,6 @@ export class WhatsAppService {
       this.pendingMessages.clear();
       this.metrics.currentPendingCount = 0;
 
-      /**
-       * MUDANÇA: Timeout agora usa constante descritiva
-       * ANTES: setTimeout(() => {...}, 5000)
-       * DEPOIS: setTimeout(() => {...}, TIMING.RECONNECT_DELAY_MS)
-       */
       if (this.reconnectTimeout) {
         clearTimeout(this.reconnectTimeout);
       }
@@ -295,44 +194,14 @@ export class WhatsAppService {
         return;
       }
       
-      // Remove from polling queue if we got an event
-      /**
-       * MUDANÇA: Comparação usa enum ao invés de magic number
-       * ANTES: if (ack >= 3)
-       * DEPOIS: if (ack >= MessageAckStatus.READ)
-       */
-      // Cast ack to number because whatsapp-web.js uses MessageAck enum
+      // whatsapp-web.js exposes ack through its own enum type.
       if ((ack as number) >= MessageAckStatus.READ) {
         this.pendingMessages.delete(msg.id._serialized);
       }
 
-      /**
-       * MUDANÇA: Usa enum para comparação
-       * ANTES: if (ack === 3)
-       * DEPOIS: if (ack === MessageAckStatus.READ)
-       * 
-       * Este código é muito mais legível! Fica claro que estamos
-       * verificando se a mensagem foi LIDA, não um número arbitrário.
-       */
-      // Cast ack to number because whatsapp-web.js uses MessageAck enum
       if ((ack as number) === MessageAckStatus.READ) {
         this.debugLog(`[ACK DEBUG] Marking as READ for ${phone}`);
-        
-        /**
-         * MUDANÇA: Usa AnalyticsService injetado ao invés de import dinâmico
-         * ANTES:
-         *   const { prisma } = await import("@/lib/db");
-         *   await prisma.contactAnalytics.upsert({...});
-         * 
-         * DEPOIS:
-         *   await this.analyticsService.trackMessageRead(phone);
-         * 
-         * BENEFÍCIOS:
-         * - Código mais limpo e conciso
-         * - Lógica de banco centralizada no AnalyticsService
-         * - Fácil de mockar em testes
-         */
-        // MELHORIA #4: Atualizar métrica de leituras encontradas por evento
+
         this.metrics.readsFoundByEvent++;
         
         await this.analyticsService.trackMessageRead(phone);
@@ -341,45 +210,17 @@ export class WhatsAppService {
     });
   }
   
-  /**
-   * MELHORIAS IMPLEMENTADAS NO POLLING:
-   * ===================================
-   * 
-   * #1 - POLLING PARALELO:
-   *   Usa Promise.allSettled para verificar múltiplas mensagens simultaneamente.
-   * 
-   * #2 - INTERVALO ADAPTATIVO:
-   *   Usa setTimeout recursivo ao invés de setInterval fixo.
-   *   O intervalo varia de 3s (pico) a 30s (ocioso) baseado na carga.
-   * 
-   * #3 - BATCH DE OPERAÇÕES:
-   *   Coleta todos os phones lidos e faz uma única chamada ao banco.
-   * 
-   * #4 - MÉTRICAS:
-   *   Atualiza contadores para observabilidade do sistema.
-   */
+  // Recursive polling prevents overlapping cycles and adapts to queue load.
   private startPolling() {
     if (this.pollingInterval) return;
     
     this.debugLog("[POLLING] Starting adaptive ack check service...");
     
-    /**
-     * MELHORIA #2: setTimeout recursivo ao invés de setInterval
-     * ----------------------------------------------------------
-     * 
-     * ANTES (setInterval fixo):
-     * - Sempre roda a cada 10s, mesmo se ocioso ou sobrecarregado
-     * 
-     * DEPOIS (setTimeout recursivo com intervalo adaptativo):
-     * - Calcula o próximo intervalo baseado na carga atual
-     * - Mais rápido quando ocupado, mais lento quando ocioso
-     * - Evita problemas de overlapping (novo ciclo antes do anterior terminar)
-     */
     const runPollingCycle = async () => {
       // Atualizar métricas de pending count
       this.metrics.currentPendingCount = this.pendingMessages.size;
       
-      // Calcular próximo intervalo ANTES de processar (para logging)
+      // Calculate first so the same interval is used for logging and scheduling.
       const nextInterval = getAdaptivePollingInterval(this.pendingMessages.size);
       this.metrics.currentIntervalMs = nextInterval;
       
@@ -543,11 +384,6 @@ export class WhatsAppService {
     this.dailyCount++;
   }
 
-  /**
-   * MUDANÇA: Usa função do módulo constants
-   * ANTES: Lógica inline com magic numbers
-   * DEPOIS: Chamada para getRiskLevel() que encapsula a lógica
-   */
   public getRiskLevel(): RiskLevel {
     return getRiskLevel(this.getDailyCount());
   }
@@ -564,21 +400,11 @@ export class WhatsAppService {
       stats: {
         dailyCount: this.getDailyCount(),
         riskLevel: this.getRiskLevel(),
-        /**
-         * MUDANÇA: Usa constante ao invés de magic number
-         * ANTES: recommendedLimit: 50
-         * DEPOIS: recommendedLimit: SAFETY_LIMITS.RECOMMENDED_DAILY_LIMIT
-         */
         recommendedLimit: SAFETY_LIMITS.RECOMMENDED_DAILY_LIMIT,
       },
     };
   }
 
-  /**
-   * MUDANÇA: Timeout agora usa constante com valor padrão descritivo
-   * ANTES: private async waitForReady(timeoutMs: number = 15000)
-   * DEPOIS: timeoutMs: number = TIMING.WAIT_READY_TIMEOUT_MS
-   */
   private async waitForReady(timeoutMs: number = TIMING.WAIT_READY_TIMEOUT_MS): Promise<boolean> {
     if (this.isReady) return true;
     if (this.waitReadyPromise) return this.waitReadyPromise;
@@ -661,40 +487,6 @@ export class WhatsAppService {
       }
     }
 
-    /**
-     * MUDANÇA PRINCIPAL: Formatação delegada ao MessageFormatter
-     * ----------------------------------------------------------
-     * 
-     * ANTES (código inline no sendMessage):
-     * ```typescript
-     * let finalMessage = message;
-     * finalMessage = finalMessage.replace(/{{phone}}/g, number);
-     * if (finalMessage.includes("{{name}}") || finalMessage.includes("{{nome}}")) {
-     *   try {
-     *     const contact = await this.client.getContactById(finalId);
-     *     const bestName = contact.pushname || contact.name || options?.fallbackName || "Cliente";
-     *     finalMessage = finalMessage.replace(/{{name}}/g, bestName).replace(/{{nome}}/g, bestName);
-     *   } catch (error) {
-     *     // ... tratamento de erro duplicado ...
-     *   }
-     * }
-     * ```
-     * 
-     * DEPOIS (delegado ao MessageFormatter):
-     * ```typescript
-     * let contactInfo: ContactInfo | undefined;
-     * if (this.messageFormatter.hasNamePlaceholder(message)) {
-     *   // Busca contato só se necessário
-     *   contactInfo = await this.getContactInfo(finalId, options?.fallbackName);
-     * }
-     * const finalMessage = this.messageFormatter.formatMessage(message, number, contactInfo);
-     * ```
-     * 
-     * BENEFÍCIOS:
-     * - Lógica de formatação testável isoladamente
-     * - Código do sendMessage mais limpo e focado
-     * - Fácil adicionar novos placeholders no futuro
-     */
     let contactInfo: ContactInfo | undefined;
     
     // Só busca contato se a mensagem precisar (otimização)
@@ -718,7 +510,6 @@ export class WhatsAppService {
       }
     }
 
-    // MUDANÇA: Usa MessageFormatter para formatar a mensagem
     const finalMessage = this.messageFormatter.formatMessage(message, number, contactInfo);
 
     this.debugLog(`Sending to final ID: ${finalId}`);
@@ -760,36 +551,6 @@ export class WhatsAppService {
 
     this.incrementDailyCount();
 
-    /**
-     * MUDANÇA: Analytics delegado ao AnalyticsService
-     * ------------------------------------------------
-     * 
-     * ANTES:
-     * ```typescript
-     * try {
-     *   const phone = finalId.replace("@c.us", "");
-     *   const { prisma } = await import("@/lib/db");
-     *   await prisma.contactAnalytics.upsert({
-     *     where: { phone },
-     *     create: { phone, sentCount: 1, lastSentAt: new Date() },
-     *     update: { sentCount: { increment: 1 }, lastSentAt: new Date() },
-     *   });
-     * } catch (e) {
-     *   console.error("Failed to update sent analytics", e);
-     * }
-     * ```
-     * 
-     * DEPOIS:
-     * ```typescript
-     * const phone = finalId.replace("@c.us", "");
-     * await this.analyticsService.trackMessageSent(phone);
-     * ```
-     * 
-     * BENEFÍCIOS:
-     * - Código muito mais limpo
-     * - Lógica de banco encapsulada
-     * - Tratamento de erro centralizado
-     */
     const phone = finalId.replace("@c.us", "");
     await this.analyticsService.trackMessageSent(phone);
 
@@ -825,47 +586,10 @@ export class WhatsAppService {
   }
 }
 
-/**
- * =============================================================================
- * SINGLETON PATTERN - Instância Global
- * =============================================================================
- * 
- * MUDANÇA: Factory function para criar instância com dependências
- * ----------------------------------------------------------------
- * 
- * ANTES:
- * ```typescript
- * if (!global.whatsappClientInstance) {
- *   global.whatsappClientInstance = new WhatsAppService();
- * }
- * ```
- * 
- * DEPOIS:
- * ```typescript
- * if (!global.whatsappClientInstance) {
- *   // Cria dependências
- *   const analyticsService = new AnalyticsService(prisma);
- *   const messageFormatter = new MessageFormatter();
- *   
- *   // Injeta no construtor
- *   global.whatsappClientInstance = new WhatsAppService(
- *     analyticsService,
- *     messageFormatter
- *   );
- * }
- * ```
- * 
- * POR QUE ISSO É MELHOR?
- * 1. Dependências são explícitas e configuráveis
- * 2. Em testes, pode criar instância com mocks
- * 3. Composição raiz (composition root) fica clara
- */
 function createWhatsAppService(): WhatsAppService {
-  // Criar instâncias das dependências
   const analyticsService = new AnalyticsService(prisma);
   const messageFormatter = new MessageFormatter();
-  
-  // Injetar dependências no WhatsAppService
+
   return new WhatsAppService(analyticsService, messageFormatter);
 }
 
@@ -878,9 +602,6 @@ const service = new Proxy({} as WhatsAppService, {
   },
 });
 
-/**
- * Retorna a instância do WhatsAppService para uso em outros módulos
- */
 export function getWhatsAppInstance(): WhatsAppService {
   if (!global.whatsappClientInstance) {
     global.whatsappClientInstance = createWhatsAppService();
@@ -889,9 +610,6 @@ export function getWhatsAppInstance(): WhatsAppService {
   return global.whatsappClientInstance;
 }
 
-/**
- * Retorna a instância atual do WhatsAppService, sem criá-la se não existir.
- */
 export function peekWhatsAppInstance(): WhatsAppService | undefined {
   return global.whatsappClientInstance;
 }

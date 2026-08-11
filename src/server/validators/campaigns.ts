@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { API_MAX_PAGE_SIZE } from '@/constants/api';
+import { MAX_MEDIA_BASE64_LENGTH, MAX_RECIPIENTS_LIMIT } from '@/constants/domain';
 
 export const campaignRecipientSchema = z.object({
   name: z.string().min(1, 'Nome do destinatário é obrigatório').trim(),
@@ -11,12 +12,15 @@ export const startCampaignSchema = z.object({
   message: z.string().max(4096).optional().nullable(),
   media: z.object({
     mimetype: z.string(),
-    data: z.string(),
-    filename: z.string().optional()
-  }).optional().nullable(),
+    data: z.string().min(1).max(MAX_MEDIA_BASE64_LENGTH, 'A mídia excede o limite de 20 MB'),
+    filename: z.string().max(255).optional()
+  }).strict().optional().nullable(),
   templateId: z.string().optional().nullable(),
-  recipients: z.array(campaignRecipientSchema).min(1, 'Pelo menos um destinatário é obrigatório'),
+  recipients: z.array(campaignRecipientSchema).min(1, 'Pelo menos um destinatário é obrigatório').max(MAX_RECIPIENTS_LIMIT),
   idempotencyKey: z.string().min(1, 'Chave de idempotência é obrigatória').trim(),
+}).strict().refine((data) => Boolean(data.templateId || data.message?.trim() || data.media), {
+  message: 'Informe um template, uma mensagem ou uma mídia.',
+  path: ['message'],
 });
 
 export const campaignQuerySchema = z.object({

@@ -11,8 +11,8 @@ import { GroupManagementDialog } from '@/components/contacts/group-management-di
 interface GroupsTabProps {
   groups: Group[];
   contacts: Contact[];
-  onAddGroup: (name: string) => boolean;
-  onDeleteGroup: (id: string) => void;
+  onAddGroup: (name: string) => Promise<boolean>;
+  onDeleteGroup: (id: string) => Promise<void>;
   managingGroup: Group | null;
   onManageGroupChange: (group: Group | null) => void;
 }
@@ -29,8 +29,8 @@ export function GroupsTab({
   const [newGroupName, setNewGroupName] = useState('');
   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
 
-  const handleAddGroup = () => {
-    const success = onAddGroup(newGroupName);
+  const handleAddGroup = async () => {
+    const success = await onAddGroup(newGroupName);
     if (success) {
       setNewGroupName('');
       setIsCreateOpen(false);
@@ -46,9 +46,9 @@ export function GroupsTab({
     }
   };
 
-  const confirmDeleteGroup = () => {
+  const confirmDeleteGroup = async () => {
     if (deletingGroup) {
-      onDeleteGroup(deletingGroup.id);
+      await onDeleteGroup(deletingGroup.id);
       setDeletingGroup(null);
     }
   };

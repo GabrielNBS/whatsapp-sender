@@ -19,7 +19,7 @@ interface ImportContactsDialogProps {
   importNewGroupName: string;
   onNewGroupNameChange: (value: string) => void;
   groups: Group[];
-  onConfirmImport: () => void;
+  onConfirmImport: () => Promise<void>;
 }
 
 export function ImportContactsDialog({

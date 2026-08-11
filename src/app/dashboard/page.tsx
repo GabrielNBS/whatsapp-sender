@@ -24,7 +24,6 @@ import {
     Activity,
     Bell,
     Users,
-    User,
     AlertTriangle,
     ChevronRight,
     QrCode,
@@ -464,6 +463,7 @@ function SendPageInner() {
                                         </div>
                                         <motion.button
                                             onClick={() => setCurrentStep(1)}
+                                            aria-label="Iniciar campanha"
                                             whileHover="hover"
                                             whileTap={{ scale: 0.98 }}
                                             className="cursor-pointer mt-4 lg:mt-10 px-8 sm:px-10 py-3.5 sm:py-4.5 bg-primary text-primary-foreground text-xs sm:text-sm font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center gap-3"

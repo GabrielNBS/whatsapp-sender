@@ -21,4 +21,4 @@ export const GET = apiHandler(async (req: NextRequest) => {
 
   const status = await CampaignCommandService.getStatus(validation.data.logOffset || 0);
   return NextResponse.json(status);
-}, { routeName: '/api/campaigns/status (GET)', requireAuth: false });
+}, { routeName: '/api/campaigns/status (GET)', requireAuth: true });

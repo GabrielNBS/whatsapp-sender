@@ -1,16 +1,17 @@
 import { prisma } from '@/lib/db';
-import { CreateRecipientInput } from '../validators/reports';
+import { CreateRecipientInput, UpdateRecipientInput } from '../validators/reports';
 import { normalizePhone } from '@/services/contacts/normalizePhone';
 import { ConflictError, NotFoundError } from '@/lib/api-errors';
 import { DEFAULT_CONFIG_ID } from '@/constants/domain';
+import { getCurrentWorkspaceId, getWorkspaceScopedId } from '@/server/workspace';
 
 export const ReportRecipientService = {
   /**
    * Lista todos os destinatários de relatórios.
    */
-  async listRecipients() {
+  async listRecipients(workspaceId = getCurrentWorkspaceId()) {
     return prisma.reportRecipient.findMany({
-      where: { configId: DEFAULT_CONFIG_ID },
+      where: { workspaceId },
     });
   },
 
@@ -18,14 +19,14 @@ export const ReportRecipientService = {
    * Adiciona um novo destinatário à lista de relatórios.
    * Valida duplicidade e normaliza o número de telefone (API-006 / API-009).
    */
-  async addRecipient(data: CreateRecipientInput) {
+  async addRecipient(data: CreateRecipientInput, workspaceId = getCurrentWorkspaceId()) {
     const phone = normalizePhone(data.phone);
 
     // Valida duplicidade por telefone no banco (API-009)
     const existing = await prisma.reportRecipient.findFirst({
       where: {
         phone,
-        configId: DEFAULT_CONFIG_ID,
+        workspaceId,
       },
     });
 
@@ -35,9 +36,10 @@ export const ReportRecipientService = {
 
     return prisma.reportRecipient.create({
       data: {
+        workspaceId,
         name: data.name.trim(),
         phone,
-        configId: DEFAULT_CONFIG_ID,
+        configId: getWorkspaceScopedId(workspaceId, DEFAULT_CONFIG_ID),
       },
     });
   },
@@ -45,13 +47,39 @@ export const ReportRecipientService = {
   /**
    * Remove um destinatário da lista pelo ID (API-009 / API-015).
    */
-  async deleteRecipient(id: string) {
+  async deleteRecipient(id: string, workspaceId = getCurrentWorkspaceId()) {
     try {
       return await prisma.reportRecipient.delete({
-        where: { id },
+        where: { id, workspaceId },
       });
-    } catch (error) {
+    } catch {
       // P2025 é o erro Prisma para "registro não encontrado"
+      throw new NotFoundError('Destinatário de relatórios não encontrado no sistema.');
+    }
+  },
+
+  async updateRecipient(id: string, data: UpdateRecipientInput, workspaceId = getCurrentWorkspaceId()) {
+    const phone = data.phone === undefined ? undefined : normalizePhone(data.phone);
+    if (phone !== undefined) {
+      const duplicate = await prisma.reportRecipient.findFirst({
+        where: { workspaceId, phone, id: { not: id } },
+        select: { id: true },
+      });
+      if (duplicate) {
+        throw new ConflictError('Este número de telefone já está cadastrado como destinatário de relatórios.');
+      }
+    }
+
+    try {
+      return await prisma.reportRecipient.update({
+        where: { id, workspaceId },
+        data: {
+          name: data.name,
+          phone,
+          isActive: data.isActive,
+        },
+      });
+    } catch {
       throw new NotFoundError('Destinatário de relatórios não encontrado no sistema.');
     }
   },

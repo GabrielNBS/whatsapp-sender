@@ -12,7 +12,7 @@ interface EditContactGroupIdDialogProps {
   groups: Group[];
   isOpen: boolean;
   onClose: () => void;
-  onSave: (contactId: string, groupIds: string[]) => boolean;
+  onSave: (contactId: string, groupIds: string[]) => Promise<boolean>;
 }
 
 export function EditContactGroupIdDialog({
@@ -41,9 +41,9 @@ export function EditContactGroupIdDialog({
     setIsConfirmOpen(true);
   };
 
-  const handleExecuteSave = () => {
+  const handleExecuteSave = async () => {
     if (contact) {
-      const success = onSave(contact.id, selectedGroupIds);
+      const success = await onSave(contact.id, selectedGroupIds);
       if (success) {
         setIsConfirmOpen(false);
         onClose();

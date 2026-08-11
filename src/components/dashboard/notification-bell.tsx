@@ -49,6 +49,8 @@ export function NotificationBell() {
                 <Button
                     size="icon"
                     variant="ghost"
+                    aria-label={`Abrir notificações${totalNotifications > 0 ? ` (${totalNotifications})` : ''}`}
+                    title="Notificações"
                     className="h-12 w-12 rounded-full bg-card/80 backdrop-blur-md border border-border shadow-xl hover:shadow-primary/20 hover:bg-card transition-all group relative overflow-visible"
                 >
                     <Bell className={cn(

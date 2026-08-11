@@ -4,6 +4,7 @@ import whatsappService from "./whatsapp";
 import { getCampaignService } from "./CampaignService";
 import { getQueueService } from "./QueueService";
 import { logger } from "./logger";
+import { getCurrentWorkspaceId } from "@/server/workspace";
 
 
 const IDLE_SLEEP_MS = 2000;
@@ -17,9 +18,10 @@ function sleep(ms: number) {
 }
 
 async function claimNextScheduledMessage(now: Date) {
+  const workspaceId = getCurrentWorkspaceId();
   for (let attempt = 0; attempt < CLAIM_MAX_ATTEMPTS; attempt++) {
     const candidate = await prisma.scheduledMessage.findFirst({
-      where: { status: "PENDING", scheduledFor: { lte: now } },
+      where: { workspaceId, status: "PENDING", scheduledFor: { lte: now } },
       orderBy: { scheduledFor: "asc" },
       include: { template: true },
     });
@@ -29,7 +31,7 @@ async function claimNextScheduledMessage(now: Date) {
     }
 
     const claimResult = await prisma.scheduledMessage.updateMany({
-      where: { id: candidate.id, status: "PENDING" },
+      where: { id: candidate.id, workspaceId, status: "PENDING" },
       data: { status: "PROCESSING" },
     });
 
@@ -44,6 +46,7 @@ async function claimNextScheduledMessage(now: Date) {
 }
 
 export function startScheduler() {
+  const workspaceId = getCurrentWorkspaceId();
   const globalObj = global as unknown as { isSchedulerRunning?: boolean; wakeUpScheduler?: () => void };
   if (globalObj.isSchedulerRunning) {
     return;
@@ -61,7 +64,7 @@ export function startScheduler() {
     isProcessing = true;
 
     try {
-      const queueLogs = getQueueService();
+      const queueLogs = getQueueService(workspaceId);
       const status = whatsappService.getStatus();
 
       if (!status.isReady) {
@@ -96,22 +99,22 @@ export function startScheduler() {
       if (msg.batchId) {
         await prisma.$transaction([
           prisma.scheduledMessage.update({
-            where: { id: msg.id },
+            where: { id: msg.id, workspaceId },
             data: { status: success ? "SENT" : "FAILED" },
           }),
           prisma.campaign.updateMany({
-            where: { id: msg.batchId },
+            where: { id: msg.batchId, workspaceId },
             data: success ? { sentCount: { increment: 1 } } : { failedCount: { increment: 1 } },
           }),
         ]);
 
-        const campaignService = getCampaignService();
+        const campaignService = getCampaignService(workspaceId);
         const pendingLeft = await prisma.scheduledMessage.count({
-          where: { batchId: msg.batchId, status: { in: ["PENDING", "PROCESSING", "PAUSED"] } },
+          where: { workspaceId, batchId: msg.batchId, status: { in: ["PENDING", "PROCESSING", "PAUSED"] } },
         });
 
         if (pendingLeft === 0) {
-          const tmpCamp = await prisma.campaign.findUnique({ where: { id: msg.batchId } });
+          const tmpCamp = await prisma.campaign.findFirst({ where: { id: msg.batchId, workspaceId } });
           if (tmpCamp) {
             const camp = await campaignService.completeCampaignIfOpen(msg.batchId, {
               sentCount: tmpCamp.sentCount,
@@ -122,7 +125,7 @@ export function startScheduler() {
               void (async () => {
                 try {
                   const { getReportService } = await import("./ReportService");
-                  const reportService = getReportService();
+                  const reportService = getReportService(workspaceId);
                   const config = await reportService.getConfig();
 
                   if (config?.sendImmediate && !camp.immediateReportSentAt) {
@@ -142,7 +145,7 @@ export function startScheduler() {
         }
       } else {
         await prisma.scheduledMessage.update({
-          where: { id: msg.id },
+          where: { id: msg.id, workspaceId },
           data: { status: success ? "SENT" : "FAILED" },
         });
       }
@@ -167,6 +170,7 @@ export function startScheduler() {
       const res = await prisma.scheduledMessage.updateMany({
         where: {
           status: { in: ["PENDING", "PROCESSING"] },
+          workspaceId,
           scheduledFor: { lte: new Date(Date.now() - 15 * 60 * 1000) },
         },
         data: { status: "PAUSED" },

@@ -31,6 +31,8 @@ export function ActionMenu() {
       <PopoverTrigger asChild>
         <Button 
           size="icon" 
+          aria-label="Abrir menu de ações"
+          title="Ações"
           className={cn(
               "h-14 w-14 sm:h-12 sm:w-12 rounded-full shadow-2xl hover:shadow-primary/40 transition-all duration-300 bg-neutral-900 text-white border-none group relative overflow-hidden",
               open && "ring-4 ring-primary/20 scale-95"

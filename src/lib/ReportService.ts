@@ -1,5 +1,6 @@
 import { PrismaClient, Campaign, ReportRecipient, ReportConfig } from "@prisma/client";
 import { IMessageSender } from "./types";
+import { getCurrentWorkspaceId, getWorkspaceScopedId } from "@/server/workspace";
 
 export interface IReportService {
   formatImmediateReport(campaign: Campaign): string;
@@ -45,7 +46,7 @@ export class ReportService implements IReportService {
   private static readonly CHART_FETCH_TIMEOUT_MS = 5000;
   private readonly debugEnabled = process.env.LOG_LEVEL === "debug";
 
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient, private workspaceId: string) {}
 
   formatImmediateReport(campaign: Campaign): string {
     const successRate = campaign.totalContacts > 0
@@ -149,14 +150,14 @@ Relatorio gerado automaticamente
 
   async getConfig(): Promise<ReportConfigWithRecipients | null> {
     return this.prisma.reportConfig.findUnique({
-      where: { id: "default" },
+      where: { workspaceId: this.workspaceId },
       include: { recipients: true },
     });
   }
 
   async getActiveRecipients(): Promise<ReportRecipient[]> {
     return this.prisma.reportRecipient.findMany({
-      where: { isActive: true },
+      where: { workspaceId: this.workspaceId, isActive: true },
     });
   }
 
@@ -226,26 +227,31 @@ Relatorio gerado automaticamente
 
   async ensureDefaultConfig(): Promise<ReportConfig> {
     const existing = await this.prisma.reportConfig.findUnique({
-      where: { id: "default" },
+      where: { workspaceId: this.workspaceId },
     });
 
     if (existing) return existing;
 
     return this.prisma.reportConfig.create({
-      data: { id: "default" },
+      data: {
+        id: getWorkspaceScopedId(this.workspaceId, "default"),
+        workspaceId: this.workspaceId,
+      },
     });
   }
 }
 
 import { prisma } from "./db";
 
-let reportServiceInstance: ReportService | null = null;
+const reportServiceInstances = new Map<string, ReportService>();
 
-export function getReportService(): ReportService {
-  if (!reportServiceInstance) {
-    reportServiceInstance = new ReportService(prisma);
+export function getReportService(workspaceId = getCurrentWorkspaceId()): ReportService {
+  let instance = reportServiceInstances.get(workspaceId);
+  if (!instance) {
+    instance = new ReportService(prisma, workspaceId);
+    reportServiceInstances.set(workspaceId, instance);
   }
-  return reportServiceInstance;
+  return instance;
 }
 
 export default getReportService;

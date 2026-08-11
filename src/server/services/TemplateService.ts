@@ -1,14 +1,16 @@
 import { prisma } from '@/lib/db';
 import { CreateTemplateInput, UpdateTemplateInput } from '../validators/templates';
 import { SYSTEM_TEMPLATE_CATEGORY } from '@/constants/domain';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 
 export const TemplateService = {
   /**
    * Lista todos os templates de mensagem, excluindo os do sistema.
    */
-  async listTemplates() {
+  async listTemplates(workspaceId = getCurrentWorkspaceId()) {
     return prisma.template.findMany({
       where: {
+        workspaceId,
         OR: [
           { category: null },
           { category: { not: SYSTEM_TEMPLATE_CATEGORY } }
@@ -21,18 +23,19 @@ export const TemplateService = {
   /**
    * Obtém um template específico pelo ID.
    */
-  async getTemplateById(id: string) {
-    return prisma.template.findUnique({
-      where: { id },
+  async getTemplateById(id: string, workspaceId = getCurrentWorkspaceId()) {
+    return prisma.template.findFirst({
+      where: { id, workspaceId },
     });
   },
 
   /**
    * Cria um novo template.
    */
-  async createTemplate(data: CreateTemplateInput) {
+  async createTemplate(data: CreateTemplateInput, workspaceId = getCurrentWorkspaceId()) {
     return prisma.template.create({
       data: {
+        workspaceId,
         title: data.title,
         content: data.content,
         category: data.category || null,
@@ -44,9 +47,9 @@ export const TemplateService = {
   /**
    * Atualiza um template existente.
    */
-  async updateTemplate(id: string, data: UpdateTemplateInput) {
+  async updateTemplate(id: string, data: UpdateTemplateInput, workspaceId = getCurrentWorkspaceId()) {
     return prisma.template.update({
-      where: { id },
+      where: { id, workspaceId },
       data: {
         title: data.title,
         content: data.content,
@@ -59,9 +62,9 @@ export const TemplateService = {
   /**
    * Exclui um template.
    */
-  async deleteTemplate(id: string) {
+  async deleteTemplate(id: string, workspaceId = getCurrentWorkspaceId()) {
     return prisma.template.delete({
-      where: { id },
+      where: { id, workspaceId },
     });
   },
 };

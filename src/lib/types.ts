@@ -40,6 +40,7 @@ export type ScheduledMessageStatus =
     | 'PENDING'
     | 'PROCESSING'
     | 'PAUSED'
+    | 'CANCELED'
     | 'SENT'
     | 'FAILED';
 

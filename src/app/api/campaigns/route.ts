@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { getCampaignService } from '@/lib/CampaignService';
 import { campaignQuerySchema } from '@/server/validators/campaigns';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 import { ValidationError } from '@/lib/api-errors';
 import { z } from 'zod';
 
@@ -27,9 +28,9 @@ export const GET = apiHandler(async (req: NextRequest) => {
   }
 
   const limit = validation.data.limit || 10;
-  const campaigns = await getCampaignService().getRecentCampaigns(limit);
+  const campaigns = await getCampaignService(getCurrentWorkspaceId()).getRecentCampaigns(limit);
   return NextResponse.json(campaigns);
-}, { routeName: '/api/campaigns (GET)', requireAuth: false });
+}, { routeName: '/api/campaigns (GET)', requireAuth: true });
 
 /**
  * POST /api/campaigns
@@ -43,7 +44,7 @@ export const POST = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Dados de campanha inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const campaign = await getCampaignService().createCampaign({
+  const campaign = await getCampaignService(getCurrentWorkspaceId()).createCampaign({
     name: validation.data.name,
     templateName: validation.data.templateName || undefined,
     totalContacts: validation.data.totalContacts,

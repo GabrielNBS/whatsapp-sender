@@ -11,8 +11,9 @@ import {
     LayoutDashboard,
     Clock
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { useState } from "react";
+
+type SendingStatusPatch = Partial<ReturnType<typeof useAppStore.getState>["sendingStatus"]>;
 
 export function DebugTransmissionMenu() {
     const { setSendingStatus } = useAppStore();
@@ -22,7 +23,7 @@ export function DebugTransmissionMenu() {
         window.dispatchEvent(new CustomEvent('go-to-step', { detail: step }));
     };
 
-    const setStatus = (status: any, step: number = 3) => {
+    const setStatus = (status: SendingStatusPatch, step: number = 3) => {
         setSendingStatus(status);
         goToStep(step);
     };

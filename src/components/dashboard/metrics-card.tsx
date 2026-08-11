@@ -12,6 +12,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import type { ComponentType } from "react";
 
 type MetricVariant = "default" | "success" | "warning" | "info" | "destructive";
 
@@ -23,7 +24,7 @@ interface MetricsCardProps {
   /** Descrição ou subtítulo */
   description?: string;
   /** Ícone do lucide-react */
-  icon?: import("react").ComponentType<any>;
+  icon?: ComponentType<{ className?: string }>;
   /** Variante de cor (usa tokens) */
   variant?: MetricVariant;
   /** Indicador de tendência */

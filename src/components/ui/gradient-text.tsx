@@ -62,7 +62,7 @@ export default function GradientText({
   useEffect(() => {
     elapsedRef.current = 0;
     progress.set(0);
-  }, [animationSpeed, yoyo]);
+  }, [animationSpeed, progress, yoyo]);
 
   const backgroundPosition = useTransform(progress, p => {
     if (direction === 'horizontal') {

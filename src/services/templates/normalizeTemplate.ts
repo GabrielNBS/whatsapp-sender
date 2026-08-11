@@ -1,10 +1,20 @@
 import { Template } from '@/types/templates';
 import { parseTemplateMedia } from './parseTemplateMedia';
 
+interface RawTemplate {
+  id?: unknown;
+  title?: string | null;
+  content?: string | null;
+  media?: string | null;
+  category?: string | null;
+  createdAt?: string | Date | null;
+  updatedAt?: string | Date | null;
+}
+
 /**
  * Normaliza os atributos de um template recebido da API para consumo seguro na UI.
  */
-export function normalizeTemplate(rawTemplate: any): Template {
+export function normalizeTemplate(rawTemplate: RawTemplate): Template {
   // Trata categoria (trim e capitalize)
   let normalizedCategory = null;
   if (rawTemplate.category) {
@@ -42,14 +52,14 @@ export function normalizeTemplate(rawTemplate: any): Template {
     parsedMedia,
     category: normalizedCategory,
     createdAt: formattedDate,
-    updatedAt: rawTemplate.updatedAt || undefined,
+    updatedAt: rawTemplate.updatedAt ? String(rawTemplate.updatedAt) : undefined,
   };
 }
 
 /**
  * Normaliza uma lista inteira de templates.
  */
-export function normalizeTemplates(rawTemplates: any[]): Template[] {
+export function normalizeTemplates(rawTemplates: RawTemplate[]): Template[] {
   if (!Array.isArray(rawTemplates)) return [];
   return rawTemplates.map(normalizeTemplate);
 }

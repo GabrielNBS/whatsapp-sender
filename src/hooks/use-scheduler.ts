@@ -100,12 +100,11 @@ export function useScheduler() {
 
         if (keep) {
             try {
-                await fetch('/api/schedule', {
-                    method: 'PUT',
+                await fetch(`/api/schedule/${encodeURIComponent(batch.batchId)}/reschedule`, {
+                    method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        batchId: batch.batchId,
-                        newDate: new Date().toISOString()
+                        scheduledFor: new Date().toISOString()
                     })
                 });
                 toast.success('Envio retomado com sucesso!');

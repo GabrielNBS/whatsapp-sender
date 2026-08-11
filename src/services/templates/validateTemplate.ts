@@ -1,4 +1,4 @@
-import { Template, TemplateMedia } from '@/types/templates';
+import { TemplateMedia } from '@/types/templates';
 import { MAX_CATEGORY_LENGTH } from '@/constants/templates';
 
 export interface ValidationResult {

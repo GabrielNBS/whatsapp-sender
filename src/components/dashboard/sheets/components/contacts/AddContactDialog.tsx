@@ -10,7 +10,7 @@ import { DEFAULT_GROUP_ID } from '@/constants/contacts';
 
 interface AddContactDialogProps {
   groups: Group[];
-  onAddContact: (name: string, number: string, groupIds: string[]) => boolean;
+  onAddContact: (name: string, number: string, groupIds: string[]) => Promise<boolean>;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -30,8 +30,8 @@ export function AddContactDialog({
     setNumber(formatted);
   };
 
-  const handleSave = () => {
-    const success = onAddContact(name, number, [groupId]);
+  const handleSave = async () => {
+    const success = await onAddContact(name, number, [groupId]);
     if (success) {
       setName('');
       setNumber('');

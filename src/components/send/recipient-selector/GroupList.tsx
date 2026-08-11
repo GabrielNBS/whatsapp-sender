@@ -1,7 +1,6 @@
 import { Users, Check } from 'lucide-react';
 import { Group } from '@/lib/store';
 import { CommandGroup, CommandItem } from '@/components/ui/command';
-import { cn } from '@/lib/utils';
 
 interface GroupListProps {
   groups: Group[];

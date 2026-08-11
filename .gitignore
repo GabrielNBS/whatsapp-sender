@@ -26,9 +26,6 @@
 
 # debug
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -43,19 +40,12 @@ next-env.d.ts
 # whatsapp-web.js
 .wwebjs_auth
 .wwebjs_cache
+# Sessao legada preservada ate migracao ou logout explicito.
+/runtime/
 
 /src/generated/prisma
 
 # sqlite
 *.db
 *.db-journal
-
-# desktop packaging artifacts
-/desktop-assets/chrome/
-/desktop-assets/template.db
-/\.desktop-stage/
-/out/
-/runtime/
-/docs/
-.forge-temp/
-/prompts
+*.backup

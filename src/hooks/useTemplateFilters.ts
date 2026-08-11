@@ -1,55 +1,65 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useSyncExternalStore } from 'react';
 import { Template, TemplateFilterType } from '@/types/templates';
 
 const LOCAL_STORAGE_FILTER_KEY = 'templates-filter-type';
 const LOCAL_STORAGE_CAT_KEY = 'templates-filter-category';
+const FILTERS_CHANGED_EVENT = 'template-filters-changed';
+
+function subscribeToStoredFilters(onStoreChange: () => void) {
+  window.addEventListener('storage', onStoreChange);
+  window.addEventListener(FILTERS_CHANGED_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener('storage', onStoreChange);
+    window.removeEventListener(FILTERS_CHANGED_EVENT, onStoreChange);
+  };
+}
+
+function getStoredFilter(): TemplateFilterType {
+  const saved = localStorage.getItem(LOCAL_STORAGE_FILTER_KEY);
+  return saved === 'media' || saved === 'text' ? saved : 'all';
+}
+
+function notifyStoredFiltersChanged() {
+  window.dispatchEvent(new Event(FILTERS_CHANGED_EVENT));
+}
 
 export function useTemplateFilters(templates: Template[]) {
-  const [filter, setFilter] = useState<TemplateFilterType>('all');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const filter = useSyncExternalStore<TemplateFilterType>(
+    subscribeToStoredFilters,
+    getStoredFilter,
+    () => 'all',
+  );
+  const selectedCategory = useSyncExternalStore(
+    subscribeToStoredFilters,
+    () => localStorage.getItem(LOCAL_STORAGE_CAT_KEY),
+    () => null,
+  );
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Carrega os filtros salvos do localStorage na montagem (STATE-004)
-  useEffect(() => {
-    try {
-      const savedFilter = localStorage.getItem(LOCAL_STORAGE_FILTER_KEY);
-      if (savedFilter === 'all' || savedFilter === 'media' || savedFilter === 'text') {
-        setFilter(savedFilter as TemplateFilterType);
-      }
-
-      const savedCategory = localStorage.getItem(LOCAL_STORAGE_CAT_KEY);
-      if (savedCategory) {
-        setSelectedCategory(savedCategory);
-      }
-    } catch {}
-  }, []);
-
-  // Salva no localStorage quando os filtros mudam
   const changeFilter = (type: TemplateFilterType) => {
-    setFilter(type);
     try {
       localStorage.setItem(LOCAL_STORAGE_FILTER_KEY, type);
+      notifyStoredFiltersChanged();
     } catch {}
   };
 
   const changeCategory = (category: string | null) => {
-    setSelectedCategory(category);
     try {
       if (category) {
         localStorage.setItem(LOCAL_STORAGE_CAT_KEY, category);
       } else {
         localStorage.removeItem(LOCAL_STORAGE_CAT_KEY);
       }
+      notifyStoredFiltersChanged();
     } catch {}
   };
 
   const clearFilters = () => {
-    setFilter('all');
-    setSelectedCategory(null);
     setSearchTerm('');
     try {
       localStorage.removeItem(LOCAL_STORAGE_FILTER_KEY);
       localStorage.removeItem(LOCAL_STORAGE_CAT_KEY);
+      notifyStoredFiltersChanged();
     } catch {}
   };
 

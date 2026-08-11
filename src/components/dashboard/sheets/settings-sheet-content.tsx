@@ -10,20 +10,11 @@ import { GeneralSettings } from "@/components/settings/general-settings";
 import { SnippetSettings } from "@/components/settings/snippet-settings";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QrDisplay } from "@/components/qr-display";
-import { useEffect } from "react";
 import { useGlobalSheet } from "../global-sheet-provider";
-import { DebugTransmissionMenu } from "../debug-transmission-menu";
-import { Code2 } from "lucide-react";
 
 export function SettingsSheetContent() {
   const { sheetData } = useGlobalSheet();
-  const [activeTab, setActiveTab] = useState('general');
-
-  useEffect(() => {
-    if (sheetData?.tab === 'connection') {
-      setActiveTab('connection');
-    }
-  }, [sheetData]);
+  const [activeTab, setActiveTab] = useState(() => sheetData?.tab === 'connection' ? 'connection' : 'general');
 
   return (
     <div className="flex flex-col h-full space-y-8">

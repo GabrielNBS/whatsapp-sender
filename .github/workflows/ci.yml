@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: windows-latest
+    env:
+      DATABASE_URL: file:../ci.db
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run db:generate
+      - shell: pwsh
+        run: New-Item -ItemType File -Path ci.db -ErrorAction Stop | Out-Null
+      - run: npm run db:migrate
+      - run: npm run check

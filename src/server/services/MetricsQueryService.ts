@@ -2,15 +2,17 @@ import { prisma } from '@/lib/db';
 import { getMetricsService } from '@/lib/MetricsService';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { API_RATE_LIMITS, API_MAX_PAGE_SIZE } from '@/constants/api';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 
 export const MetricsQueryService = {
   /**
    * Obtém a lista de engajamento/analytics dos contatos com limites seguros de paginação.
    */
-  async getContactAnalytics(limit: number = 50, offset: number = 0) {
+  async getContactAnalytics(limit: number = 50, offset: number = 0, workspaceId = getCurrentWorkspaceId()) {
     const safeLimit = Math.min(limit, API_MAX_PAGE_SIZE);
     
     return prisma.contactAnalytics.findMany({
+      where: { workspaceId },
       take: safeLimit,
       skip: offset,
       orderBy: { updatedAt: 'desc' },

@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export const GET = apiHandler(async () => {
   const activeSchedules = await ScheduleService.listActiveSchedules();
   return NextResponse.json(activeSchedules);
-}, { routeName: '/api/schedule (GET)', requireAuth: false }); // Aberto para UI local
+}, { routeName: '/api/schedule (GET)', requireAuth: true });
 
 /**
  * POST /api/schedule

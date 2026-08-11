@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { logger, maskPhone } from "@/lib/logger";
 import { getRequestId } from "./CorrelationId";
+import { getCurrentWorkspaceId } from "@/server/workspace";
 
 export interface IAnalyticsService {
   trackMessageSent(phone: string): Promise<void>;
@@ -9,7 +10,7 @@ export interface IAnalyticsService {
 }
 
 export class AnalyticsService implements IAnalyticsService {
-  constructor(private prisma: PrismaClient) {}
+  constructor(private prisma: PrismaClient, private workspaceId = getCurrentWorkspaceId()) {}
 
   private getLogger(method: string) {
     return logger.child({
@@ -25,8 +26,9 @@ export class AnalyticsService implements IAnalyticsService {
 
     try {
       await this.prisma.contactAnalytics.upsert({
-        where: { phone },
+        where: { workspaceId_phone: { workspaceId: this.workspaceId, phone } },
         create: {
+          workspaceId: this.workspaceId,
           phone,
           sentCount: 1,
           lastSentAt: new Date(),
@@ -57,8 +59,9 @@ export class AnalyticsService implements IAnalyticsService {
 
     try {
       await this.prisma.contactAnalytics.upsert({
-        where: { phone },
+        where: { workspaceId_phone: { workspaceId: this.workspaceId, phone } },
         create: {
+          workspaceId: this.workspaceId,
           phone,
           sentCount: 0,
           readCount: 1,
@@ -93,8 +96,9 @@ export class AnalyticsService implements IAnalyticsService {
     try {
       const operations = phones.map((phone) =>
         this.prisma.contactAnalytics.upsert({
-          where: { phone },
+          where: { workspaceId_phone: { workspaceId: this.workspaceId, phone } },
           create: {
+            workspaceId: this.workspaceId,
             phone,
             sentCount: 0,
             readCount: 1,

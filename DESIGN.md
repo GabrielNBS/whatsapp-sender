@@ -76,7 +76,7 @@ Utilizamos o set **Lucide React**, personalizado com strokes mais finos para man
 ---
 
 ## 7. Estratégia Responsiva
-- **Desktop (Electron)**: Otimizado para uma experiência de janelas flutuantes com scrollbars customizadas e layouts de grid flexíveis.
+- **Web responsiva**: Otimizada para navegadores modernos, com scrollbars customizadas e layouts de grid flexíveis.
 - **Mobile**: Uso extensivo de *Sheets (Bottom Drawers)* para previews e configurações de formulário, garantindo que a experiência seja nativa em telas menores.
 
 ---

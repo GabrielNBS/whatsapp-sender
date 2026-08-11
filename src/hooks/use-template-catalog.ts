@@ -6,23 +6,20 @@ import type { Template } from '@/lib/types';
 export function useTemplateCatalog(): Template[] {
   const [templates, setTemplates] = useState<Template[]>([]);
 
-  const fetchTemplates = async () => {
-    try {
-      // Adiciona timestamp para evitar cache do navegador/Next.js
-      const response = await fetch(`/api/templates?_t=${Date.now()}`);
-      if (!response.ok) {
-        return;
-      }
-
-      const data: Template[] = await response.json();
-      setTemplates(data);
-    } catch (error) {
-      console.error('Falha ao buscar modelos', error);
-    }
-  };
-
   useEffect(() => {
-    fetchTemplates();
+    let canceled = false;
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch(`/api/templates?_t=${Date.now()}`);
+        if (!response.ok) return;
+        const data: Template[] = await response.json();
+        if (!canceled) setTemplates(data);
+      } catch (error) {
+        console.error('Falha ao buscar modelos', error);
+      }
+    };
+
+    void fetchTemplates();
 
     // Ouvir eventos de atualização de templates disparados por outros componentes
     const handleUpdate = () => {
@@ -35,6 +32,7 @@ export function useTemplateCatalog(): Template[] {
     const interval = setInterval(fetchTemplates, 15000);
 
     return () => {
+      canceled = true;
       window.removeEventListener('templates-updated', handleUpdate);
       clearInterval(interval);
     };

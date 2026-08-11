@@ -24,6 +24,7 @@ function normalizeContactPayload(contact: Omit<Contact, "id">): Omit<Contact, "i
 interface AppState {
   groups: Group[];
   contacts: Contact[];
+  replaceContactState: (groups: Group[], contacts: Contact[]) => void;
   addGroup: (name: string, description?: string, customId?: string) => void;
   deleteGroup: (id: string) => void;
   addContact: (name: string, number: string, groupIds?: string[]) => void;
@@ -80,6 +81,11 @@ export const useAppStore = create<AppState>()(
       avatars: {},
       avatarFetchedAt: {},
       devMode: false,
+
+      replaceContactState: (groups, contacts) => set({
+        groups: groups.length > 0 ? groups : [{ id: DEFAULT_GROUP_ID, name: "Geral", description: "Lista Padrao" }],
+        contacts,
+      }),
 
       addGroup: (name, description, customId) => set((state) => {
         const normalizedName = name.trim();
@@ -216,8 +222,10 @@ export const useAppStore = create<AppState>()(
     {
       name: "whatsapp-sender-storage",
       partialize: (state) => {
-        const { sendingStatus, logs, avatars, avatarFetchedAt, ...rest } = state;
-        return rest;
+        const transientKeys = new Set(["sendingStatus", "logs", "avatars", "avatarFetchedAt"]);
+        return Object.fromEntries(
+          Object.entries(state).filter(([key]) => !transientKeys.has(key))
+        ) as Partial<AppState>;
       },
     }
   )
