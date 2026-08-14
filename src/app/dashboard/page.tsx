@@ -312,13 +312,13 @@ function SendPageInner() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-2rem)] -m-6 p-6 overflow-hidden">
+        <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
 
             {/* Main Grid Content */}
-            <div className="flex gap-6 flex-1 min-h-0 overflow-hidden">
+            <div className="flex flex-1 min-h-0 min-w-0 gap-3 overflow-hidden sm:gap-4 lg:gap-6">
 
-                <motion.div layout className="flex flex-col min-h-0 flex-1" transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}>
-                    <div className="bg-card rounded-xl flex flex-col h-full pt-4 relative">
+                <motion.div layout className="flex min-h-0 min-w-0 flex-1 flex-col" transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}>
+                    <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl bg-card pt-3 sm:pt-4">
 
                         {currentStep < 3 && (
                             <WizardStepper
@@ -328,12 +328,12 @@ function SendPageInner() {
                             />
                         )}
 
-                        <div className="flex-1 overflow-hidden relative">
+                        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                             {currentStep > 0 && currentStep < 3 && !isConnected && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="bg-amber-50 w-full max-w-xl mx-auto mt-4 dark:bg-amber-950/20 shadow-md shadow-amber-900/20 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4"
+                                    className="mx-3 mt-2 flex max-w-xl flex-col items-center justify-between gap-3 rounded-xl bg-amber-50 p-3 shadow-md shadow-amber-900/20 dark:bg-amber-950/20 sm:mx-auto sm:mt-4 sm:flex-row sm:gap-4 sm:p-4"
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="bg-amber-100 dark:bg-amber-900/50 p-2 rounded-full shrink-0">
@@ -351,10 +351,10 @@ function SendPageInner() {
                                 </motion.div>
                             )}
 
-                            <AnimatedContent activeKey={currentStep} spring="snappy" className="h-full flex flex-col">
+                            <AnimatedContent activeKey={currentStep} spring="snappy" className="flex min-h-0 flex-1 flex-col">
                                 {/* STEP 0: INTRO */}
                                 {currentStep === 0 && (
-                                    <div className="flex-1 flex flex-col items-center justify-center text-center max-w-lg mx-auto space-y-4 py-4 lg:py-8">
+                                    <div className="premium-scrollbar mx-auto flex min-h-0 max-w-lg flex-1 flex-col items-center justify-center space-y-4 overflow-y-auto px-3 py-4 text-center lg:py-8">
                                         <div className="relative w-24 h-24 sm:w-28 sm:h-28 mb-6 lg:mb-10 flex items-center justify-center">
                                             {[...Array(5)].map((_, i) => (
                                                 <motion.div
@@ -542,8 +542,8 @@ function SendPageInner() {
 
                                 {/* STEP 1: RECIPIENTS */}
                                 {currentStep === 1 && (
-                                    <div className="max-w-xl mx-auto w-full space-y-6 pt-4 h-full overflow-y-auto no-scrollbar pb-10 px-2 lg:px-0">
-                                        <div className="space-y-1 mb-10">
+                                    <div className="premium-scrollbar mx-auto h-full w-full max-w-xl space-y-4 overflow-y-auto px-2 pb-6 pt-2 sm:space-y-6 sm:pb-8 sm:pt-4 lg:px-0">
+                                        <div className="mb-5 space-y-1 sm:mb-8 lg:mb-10 [@media(max-height:700px)]:mb-4">
                                             <GradientText
                                                 colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]}
                                                 animationSpeed={6}
@@ -551,7 +551,7 @@ function SendPageInner() {
                                             >
                                                 Passo 01
                                             </GradientText>
-                                            <h2 className="text-3xl sm:text-4xl lg:text-[3.25rem] font-light tracking-tighter leading-[1.05] mb-2">Para quem vamos <GradientText colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]} className="inline font-black text-foreground" showBorder={false}>enviar?</GradientText></h2>
+                                            <h2 className="mb-2 text-3xl font-light leading-[1.05] tracking-tighter sm:text-4xl lg:text-[3.25rem] [@media(max-height:700px)]:lg:text-4xl">Para quem vamos <GradientText colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]} className="inline font-black text-foreground" showBorder={false}>enviar?</GradientText></h2>
                                             <p className="text-base text-muted-foreground/80 leading-relaxed font-medium">Escolha os contatos ou grupos que receberão a mensagem.</p>
                                         </div>
 
@@ -586,9 +586,10 @@ function SendPageInner() {
 
                                 {/* STEP 2: MERGED MESSAGE + PREVIEW */}
                                 {currentStep === 2 && (
-                                    <div className="h-full flex flex-col overflow-hidden pb-2">
-                                        <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 flex-1 min-h-0 pt-2">
-                                            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                                    <div className="flex h-full min-h-0 flex-col overflow-hidden pb-2">
+                                        <div className="premium-scrollbar min-h-0 flex-1 overflow-y-auto px-1">
+                                          <div className="flex min-h-[30rem] flex-col gap-4 pt-2 sm:gap-6 lg:flex-row lg:gap-8 xl:gap-10">
+                                            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                                                 <div className="mb-6 lg:mb-10 space-y-1 [@media(max-height:1079px)]:hidden">
                                                     <GradientText
                                                         colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]}
@@ -602,7 +603,7 @@ function SendPageInner() {
                                                 </div>
 
                                                 {/* Message Editor */}
-                                                <div className="flex-1 min-h-0">
+                                                <div className="min-h-[16rem] flex-1 sm:min-h-[18rem]">
                                                     <MessageEditor
                                                         message={message}
                                                         onMessageChange={setMessage}
@@ -646,8 +647,8 @@ function SendPageInner() {
                                                     />
                                                 </div>
 
-                                                <div className="mt-4 p-4 bg-muted/20 border border-border/50 rounded-xl space-y-3">
-                                                    <div className="flex items-center justify-between">
+                                                <div className="mt-4 space-y-3 rounded-xl border border-border/50 bg-muted/20 p-3 sm:p-4">
+                                                    <div className="flex flex-wrap items-center justify-between gap-3">
                                                         <div className="flex items-center gap-3">
                                                             <div className="bg-primary/10 p-2 rounded-full">
                                                                 <Users className="w-5 h-5 text-primary" />
@@ -694,7 +695,7 @@ function SendPageInner() {
                                                 </div>
                                             </div>
 
-                                            <div className="hidden lg:flex flex-col w-[340px] shrink-0 [@media(max-height:1079px)]:!hidden">
+                                            <div className="hidden w-[min(30vw,340px)] shrink-0 flex-col lg:flex [@media(max-height:1079px)]:!hidden">
                                                 <div className="flex items-center gap-2 mb-4 px-1">
                                                     <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                                                     <span className="text-[10px] font-black uppercase text-muted-foreground/80 tracking-widest">Preview em Tempo Real</span>
@@ -703,9 +704,10 @@ function SendPageInner() {
                                                     <WhatsAppMockup content={message} media={selectedFile} />
                                                 </div>
                                             </div>
+                                          </div>
                                         </div>
 
-                                        <div className="flex justify-center mt-4 shrink-0 relative z-10">
+                                        <div className="z-20 mt-2 flex shrink-0 justify-center border-t border-border/50 bg-card/95 py-3 backdrop-blur-sm sm:mt-4">
                                             <Button
                                                 onClick={handleSendAction}
                                                 disabled={isSending || isScheduling || (!message && !selectedFile)}
@@ -1126,7 +1128,7 @@ function SendPageInner() {
                         </div>
 
                         {currentStep === 1 && (
-                            <div className="p-6 pt-2 bg-background/50 backdrop-blur-sm z-10 border-t border-border/50">
+                            <div className="z-10 border-t border-border/50 bg-background/80 p-3 backdrop-blur-sm sm:p-4 sm:pt-2 lg:p-6 lg:pt-2">
                                 <WizardNavigation
                                     currentStep={currentStep}
                                     totalSteps={STEPS.length}

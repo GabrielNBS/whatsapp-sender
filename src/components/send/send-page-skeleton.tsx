@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function SendPageSkeleton() {
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] bg-muted/30 -m-6 p-6 overflow-hidden">
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-muted/30 p-3 sm:p-4 lg:p-6">
       {/* Header Compact */}
       <div className="flex justify-between items-center mb-4 shrink-0">
         <div>

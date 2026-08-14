@@ -17,7 +17,7 @@ export function SettingsSheetContent() {
   const [activeTab, setActiveTab] = useState(() => sheetData?.tab === 'connection' ? 'connection' : 'general');
 
   return (
-    <div className="flex flex-col h-full space-y-8">
+    <div className="flex h-full min-h-0 flex-col space-y-4 sm:space-y-6 lg:space-y-8">
       {/* Header */}
       <div className="flex items-center gap-3 shrink-0">
         <div className="p-2 bg-muted rounded-lg">
@@ -33,17 +33,17 @@ export function SettingsSheetContent() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
         <div className="shrink-0 pb-4">
-            <TabsList className="grid w-full grid-cols-4 max-w-[700px]">
-            <TabsTrigger value="general" className="flex items-center gap-2">
+            <TabsList className="grid h-auto w-full max-w-[700px] grid-cols-2 sm:grid-cols-4">
+            <TabsTrigger value="general" className="flex items-center gap-2 py-2">
                 <Settings className="w-4 h-4" /> Geral
             </TabsTrigger>
-            <TabsTrigger value="connection" className="flex items-center gap-2">
+            <TabsTrigger value="connection" className="flex items-center gap-2 py-2">
                 <Smartphone className="w-4 h-4" /> WhatsApp
             </TabsTrigger>
-            <TabsTrigger value="snippets" className="flex items-center gap-2">
+            <TabsTrigger value="snippets" className="flex items-center gap-2 py-2">
                 <Command className="w-4 h-4" /> Snippets
             </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-2">
+            <TabsTrigger value="reports" className="flex items-center gap-2 py-2">
                 <BarChart3 className="w-4 h-4" /> Relatórios
             </TabsTrigger>
             </TabsList>

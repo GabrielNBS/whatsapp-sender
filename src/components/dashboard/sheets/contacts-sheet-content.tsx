@@ -85,8 +85,8 @@ export function ContactsSheetContent() {
   };
 
   return (
-    <div className="flex flex-col h-full space-y-8 overflow-hidden">
-      <div className="flex justify-between items-center shrink-0">
+    <div className="flex h-full min-h-0 flex-col space-y-4 overflow-hidden sm:space-y-6 lg:space-y-8">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 pr-6">
         <SplitText text="Contatos & Grupos" as="h1" className="text-xl font-bold tracking-tight" />
         <div className="text-sm text-muted-foreground">
           Total: {contacts.length}
@@ -94,13 +94,13 @@ export function ContactsSheetContent() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-        <div className="flex justify-between items-center mb-4 shrink-0">
-          <TabsList>
+        <div className="mb-4 flex shrink-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <TabsList className="max-w-full overflow-x-auto">
             <TabsTrigger value="contacts">Todos os Contatos</TabsTrigger>
             <TabsTrigger value="groups">Grupos</TabsTrigger>
           </TabsList>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {/* Modal Novo Contato */}
             <AddContactDialog
               groups={groups}

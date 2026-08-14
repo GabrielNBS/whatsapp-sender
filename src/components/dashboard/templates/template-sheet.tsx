@@ -195,10 +195,10 @@ export function TemplateSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[1200px] w-[90vw] p-0 gap-0 flex flex-col h-full ">
+      <SheetContent className="flex h-full w-[min(96vw,1200px)] max-w-none flex-col gap-0 p-0 sm:max-w-none">
         
         {/* Header */}
-        <div className="px-6 py-4 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-4 py-3 pr-10 sm:px-6 sm:py-4">
             <SheetHeader className="text-left space-y-1">
                 <SheetTitle className="text-lg font-bold flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-500" />
@@ -214,7 +214,7 @@ export function TemplateSheet({
         {/* Content Area - 2 Columns */}
         <div className="flex-1 overflow-hidden">
             {isLoading ? (
-                <div className="grid md:grid-cols-[1fr_400px] h-full">
+                <div className="grid h-full lg:grid-cols-[minmax(0,1fr)_minmax(18rem,400px)]">
                     {/* Left Column Skeleton */}
                     <div className="flex flex-col h-full bg-white/50 overflow-hidden">
                         <div className="flex-1 p-6 space-y-6">
@@ -258,7 +258,7 @@ export function TemplateSheet({
                     </div>
 
                     {/* Right Column Skeleton */}
-                    <div className="bg-[#efe7dd] border-l border-gray-200 p-6 flex flex-col items-center justify-center relative">
+                    <div className="relative hidden flex-col items-center justify-center border-l border-gray-200 bg-[#efe7dd] p-6 lg:flex">
                         <div className="absolute top-6 left-6 flex items-center gap-2">
                             <Skeleton className="h-4 w-24" />
                         </div>
@@ -267,14 +267,14 @@ export function TemplateSheet({
                     </div>
                 </div>
             ) : (
-                <div className="grid md:grid-cols-[1fr_400px] h-full">
+                <div className="grid h-full lg:grid-cols-[minmax(0,1fr)_minmax(18rem,400px)]">
                     
                     {/* Left Column: Editor */}
                     <div className="flex flex-col h-full bg-white/50 overflow-hidden">
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                         <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:space-y-6 sm:p-6">
                             
                             {/* 1. Header Inputs (Compact) */}
-                            <div className="grid grid-cols-[2fr_1fr] gap-4">
+                            <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
                                 <div className="space-y-1.5">
                                     <Label htmlFor="sheet-title" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Título</Label>
                                     <Input 
@@ -336,7 +336,7 @@ export function TemplateSheet({
 
                             {/* 3. Message Editor (Primary Focus) */}
                             <div className="space-y-3 flex-1 flex flex-col min-h-[300px]">
-                                <div className="flex items-center justify-between">
+                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <Label htmlFor="sheet-content" className="text-sm font-semibold text-gray-700">Mensagem</Label>
                                     <div className="flex gap-1.5">
                                         <button
@@ -411,7 +411,7 @@ export function TemplateSheet({
                     </div>
 
                     {/* Right Column: Preview */}
-                    <div className="bg-[#efe7dd] border-l border-gray-200 p-6 flex flex-col items-center justify-center overflow-y-auto md:flex relative">
+                    <div className="relative hidden flex-col items-center justify-center overflow-y-auto border-l border-gray-200 bg-[#efe7dd] p-6 lg:flex">
                         {/* Wallpaper Pattern */}
                         <div className="absolute inset-0 bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] pointer-events-none opacity-[0.06]"></div>
 

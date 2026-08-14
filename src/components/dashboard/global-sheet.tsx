@@ -20,16 +20,17 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 
 export function GlobalSheet() {
   const { activeSheet, closeSheet } = useGlobalSheet();
-  const isDesktop = useMediaQuery("(min-width: 640px)"); 
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   return (
     <Sheet open={activeSheet !== null} onOpenChange={(open) => !open && closeSheet()}>
       <SheetContent 
         side={isDesktop ? "right" : "bottom"} 
         className={cn(
-          "w-full overflow-y-auto bg-background shadow-2xl transition-all duration-500",
-          !isDesktop ? "h-[90vh] rounded-t-2xl border-t border-border p-6" : "border-l border-border p-8",
-          activeSheet === 'monitoring' ? "sm:w-[60vw] sm:max-w-none" : "sm:w-[60vw] sm:max-w-none"
+          "min-w-0 max-w-full overflow-y-auto bg-background shadow-2xl transition-all duration-500",
+          !isDesktop
+            ? "h-[min(92dvh,56rem)] w-full rounded-t-2xl border-t border-border p-4 sm:p-6"
+            : "w-[min(90vw,64rem)] max-w-none border-l border-border p-6 sm:max-w-none xl:p-8"
         )}
       >
         <div className="sr-only">

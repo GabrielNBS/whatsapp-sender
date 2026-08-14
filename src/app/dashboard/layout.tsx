@@ -28,15 +28,15 @@ export default function DashboardLayout({
     <NavigationProvider>
       <DashboardShell>
         <GlobalSheetProvider>
-          <div className="flex h-screen bg-muted/20 relative">
-            <main className="flex-1 overflow-auto">
-              <div className="container mx-auto p-4 sm:p-6 md:p-8 max-w-7xl h-full">
+          <div className="flex h-dvh min-h-0 overflow-hidden bg-muted/20 relative">
+            <main className="min-w-0 flex-1 overflow-auto overscroll-contain">
+              <div className="container mx-auto h-full min-h-0 max-w-7xl p-3 sm:p-4 lg:p-6">
                 <DashboardContent>
                   {children}
                 </DashboardContent>
               </div>
             </main>
-            <div className="fixed top-6 right-6 z-40 flex flex-col gap-3">
+            <div className="fixed right-3 top-3 z-40 flex flex-col gap-2 sm:right-4 sm:top-4 sm:gap-3 lg:right-6 lg:top-6">
               <NotificationBell />
               <ActionMenu />
             </div>

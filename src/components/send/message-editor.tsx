@@ -117,15 +117,15 @@ export function MessageEditor({
       disabled && "opacity-60 pointer-events-none"
     )}>
       {/* Toolbar - Pill-shaped buttons as per reference */}
-      <div className="px-3 md:px-5 py-3 md:py-4 flex flex-wrap gap-2 items-center bg-background border-b border-border/50">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border/50 bg-background px-3 py-3 md:px-5 md:py-4">
         
         {templateSlot && (
-          <div className="mr-auto pr-2">
+          <div className="mr-auto max-w-full pr-2">
             {templateSlot}
           </div>
         )}
         
-        <div className="flex bg-muted/30 p-1 rounded-full border border-border/50 gap-1 overflow-x-auto no-scrollbar">
+        <div className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-full border border-border/50 bg-muted/30 p-1">
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -229,7 +229,7 @@ export function MessageEditor({
       </div>
 
       {/* Media Attachment Area */}
-      <div className="p-4 border-t border-border/50 bg-muted/10">
+      <div className="border-t border-border/50 bg-muted/10 p-3 sm:p-4">
         {selectedFile ? (
           <div className="flex items-center gap-3 bg-background border border-border rounded-xl p-2 pr-4 shadow-sm w-fit">
             <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0 border border-border">
@@ -258,7 +258,7 @@ export function MessageEditor({
             </Button>
           </div>
         ) : (
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <input
               id="image-upload"
               type="file"

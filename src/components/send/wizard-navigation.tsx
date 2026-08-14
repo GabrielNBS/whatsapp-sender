@@ -24,14 +24,14 @@ export function WizardNavigation({
   const isLastStep = currentStep === totalSteps;
 
   return (
-    <div className="flex justify-between items-center w-full">
+    <div className="flex w-full items-center justify-between gap-2">
       <Button
         variant="ghost"
         onClick={onBack}
         disabled={isFirstStep || isSending}
         asChild
         className={cn(
-          "gap-3 h-12 px-6 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2rem] text-muted-foreground hover:text-primary transition-all", 
+          "h-11 gap-2 rounded-2xl px-3 text-[9px] font-bold uppercase tracking-[0.12rem] text-muted-foreground transition-all hover:text-primary sm:h-12 sm:gap-3 sm:px-6 sm:text-[10px] sm:tracking-[0.2rem]",
           isFirstStep && "invisible pointer-events-none"
         )}
       >
@@ -49,7 +49,7 @@ export function WizardNavigation({
         disabled={isNextDisabled || isSending}
         asChild
         className={cn(
-          "h-12 px-8 rounded-2xl text-[10px] font-bold uppercase tracking-[0.2rem] transition-all shadow-xl shadow-primary/10 gap-3",
+          "h-11 gap-2 rounded-2xl px-4 text-[9px] font-bold uppercase tracking-[0.12rem] shadow-xl shadow-primary/10 transition-all sm:h-12 sm:gap-3 sm:px-8 sm:text-[10px] sm:tracking-[0.2rem]",
           isLastStep ? "bg-emerald-500 hover:bg-emerald-600 text-white" : "bg-primary text-primary-foreground"
         )}
       >
