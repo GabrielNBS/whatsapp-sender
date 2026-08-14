@@ -46,6 +46,19 @@ export interface PollingMetrics {
  * - Operações de banco de dados (delegado para AnalyticsService)
  * - Formatação de mensagens (delegado para MessageFormatter)
  */
+
+/**
+ * Serviço principal do WhatsApp
+ * 
+ * RESPONSABILIDADE (após refatoração):
+ * - Gerenciar conexão com WhatsApp Web
+ * - Enviar mensagens (texto e mídia)
+ * - Controle de rate limiting (contagem diária)
+ * 
+ * NÃO FAZ MAIS:
+ * - Operações de banco de dados (delegado para AnalyticsService)
+ * - Formatação de mensagens (delegado para MessageFormatter)
+ */
 export class WhatsAppService {
   private client: Client;
   private qrCode: string | null = null;
@@ -53,7 +66,7 @@ export class WhatsAppService {
   private isReady: boolean = false;
   
   private status: ConnectionStatus = ConnectionStatus.DISCONNECTED;
-
+  
   // Safety Handling
   private dailyCount: number = 0;
   private lastReset: Date = new Date();
@@ -90,7 +103,7 @@ export class WhatsAppService {
   ) {
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
 
-    logger.info("Initializing WhatsApp Service...");
+    logger.info("[WhatsApp] Inicializando servico WhatsApp...");
     this.client = new Client({
       authStrategy: new LocalAuth({
         dataPath: resolveWhatsAppAuthPath(),
@@ -110,7 +123,7 @@ export class WhatsAppService {
     this.initializeEvents();
     this.status = ConnectionStatus.INITIALIZING;
     this.client.initialize().catch((err) => {
-      logger.error({ err }, "Initialization error");
+      logger.error({ err }, "[WhatsApp] Erro na inicializacao do cliente");
       this.status = ConnectionStatus.DISCONNECTED;
     });
     
@@ -119,13 +132,13 @@ export class WhatsAppService {
 
   private initializeEvents() {
     this.client.on("qr", (qr) => {
-      logger.info("QR Code received");
+      logger.info("[WhatsApp] Novo QR Code gerado para autenticacao");
       this.qrCode = qr;
       this.status = ConnectionStatus.QR_READY;
     });
 
     this.client.on("ready", () => {
-      logger.info("WhatsApp Client is ready!");
+      logger.info("[WhatsApp] Cliente WhatsApp conectado e pronto!");
       this.isReady = true;
       this.status = ConnectionStatus.READY;
       this.qrCode = null;
@@ -133,32 +146,31 @@ export class WhatsAppService {
     });
 
     this.client.on("authenticated", () => {
-      logger.info("[WhatsApp] Client authenticated! Initializing synchronization...");
+      logger.info("[WhatsApp] Sessao autenticada com sucesso. Sincronizando dados...");
       this.isAuthenticated = true;
       this.status = ConnectionStatus.AUTHENTICATED;
       this.qrCode = null;
-      logger.info("[WhatsApp] Please wait while we sync your messages. This can take a few minutes for large accounts.");
     });
 
     this.client.on("auth_failure", (msg) => {
-      logger.error({ msg }, "AUTHENTICATION FAILURE");
+      logger.error({ msg }, "[WhatsApp] Falha na autenticacao do cliente");
       this.status = ConnectionStatus.DISCONNECTED;
     });
 
     this.client.on("change_state", (state) => {
-      logger.info({ state }, "CONNECTION STATE CHANGED");
+      logger.info({ state }, `[WhatsApp] Estado da conexao alterado: ${state}`);
     });
 
     this.client.on("message_create", (msg) => {
       if (msg.fromMe) {
-        this.debugLog("[DEBUG] Outgoing message created to:", msg.to);
+        this.debugLog("[WhatsApp] Mensagem enviada para:", msg.to);
       } else {
-        this.debugLog("[DEBUG] Incoming message from:", msg.from);
+        this.debugLog("[WhatsApp] Mensagem recebida de:", msg.from);
       }
     });
 
     this.client.on("disconnected", (reason) => {
-      logger.warn({ reason }, "Client was disconnected");
+      logger.warn({ reason }, "[WhatsApp] Cliente foi desconectado");
       this.isAuthenticated = false;
       this.isReady = false;
       this.status = ConnectionStatus.DISCONNECTED;
@@ -170,10 +182,10 @@ export class WhatsAppService {
       }
 
       this.reconnectTimeout = setTimeout(() => {
-        logger.info("Attempting to reconnect...");
+        logger.info("[WhatsApp] Tentando reconectar...");
         this.status = ConnectionStatus.INITIALIZING;
         this.client.initialize().catch((err) => {
-          logger.error({ err }, "Reconnection error");
+          logger.error({ err }, "[WhatsApp] Erro na tentativa de reconexao");
           this.status = ConnectionStatus.DISCONNECTED;
         });
       }, TIMING.RECONNECT_DELAY_MS);
@@ -185,8 +197,6 @@ export class WhatsAppService {
         `[ACK DEBUG] Message to ${phone} status update: ${ack} (${MessageAckStatus.READ}=Read, ${MessageAckStatus.DELIVERED}=Delivered, ${MessageAckStatus.SENT}=Sent)`,
       );
       
-      // CORREÇÃO: Só processar ACKs de mensagens enviadas pelo nosso sistema
-      // Isso evita contabilizar leituras de mensagens manuais do celular
       const isOurMessage = this.pendingMessages.has(msg.id._serialized);
       
       if (!isOurMessage) {
@@ -194,16 +204,13 @@ export class WhatsAppService {
         return;
       }
       
-      // whatsapp-web.js exposes ack through its own enum type.
       if ((ack as number) >= MessageAckStatus.READ) {
         this.pendingMessages.delete(msg.id._serialized);
       }
 
       if ((ack as number) === MessageAckStatus.READ) {
         this.debugLog(`[ACK DEBUG] Marking as READ for ${phone}`);
-
         this.metrics.readsFoundByEvent++;
-        
         await this.analyticsService.trackMessageRead(phone);
         this.debugLog(`[ACK DEBUG] Database updated for ${phone}`);
       }

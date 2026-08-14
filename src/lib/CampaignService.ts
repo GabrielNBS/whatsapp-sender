@@ -1,15 +1,5 @@
-/**
- * CampaignService
- * 
- * Responsible for tracking campaigns (message broadcasts) and their metrics.
- * Follows SRP: handles only campaign lifecycle and metrics.
- */
-
-import { PrismaClient, Campaign } from '@prisma/client';
-
-// ============================================
-// INTERFACES (DIP)
-// ============================================
+import { PrismaClient, Campaign } from "@prisma/client";
+import { logger } from "./logger";
 
 export interface ICampaignService {
   createCampaign(data: CreateCampaignData): Promise<Campaign>;
@@ -66,7 +56,7 @@ export class CampaignService implements ICampaignService {
    * Create a new campaign when sending starts
    */
   async createCampaign(data: CreateCampaignData): Promise<Campaign> {
-    console.log('[CampaignService] Creating campaign:', data.name);
+    logger.info(`[Campaign] Criando campanha '${data.name}' (${data.totalContacts} contatos)`);
     
     return this.prisma.campaign.create({
       data: {
@@ -86,7 +76,10 @@ export class CampaignService implements ICampaignService {
     campaignId: string,
     metrics: CampaignCompletionMetrics
   ): Promise<Campaign> {
-    console.log('[CampaignService] Completing campaign:', campaignId, metrics);
+    logger.info(
+      { campaignId, ...metrics },
+      `[Campaign] Campanha concluida: ${metrics.sentCount} enviados, ${metrics.failedCount} falhas`
+    );
     
     return this.prisma.campaign.update({
       where: { id: campaignId, workspaceId: this.workspaceId },

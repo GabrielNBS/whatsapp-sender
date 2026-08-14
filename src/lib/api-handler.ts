@@ -56,16 +56,9 @@ export function apiHandler<Context extends ApiRouteContext = ApiRouteContext>(
 
         const response = await handler(nextReq, context as Context);
         const duration = Date.now() - startTime;
+        const statusCode = response.status;
 
-        const logPayload = {
-          msg: `[API Success] ${method} ${routeName}`,
-          method,
-          url,
-          statusCode: response.status,
-          durationMs: duration,
-          correlationId,
-        };
-
+        // Rotas de polling contínuo (não devem poluir o terminal quando bem sucedidas)
         const isPolling = 
           url === '/api/status' || 
           url === '/api/metrics/realtime' || 
@@ -73,10 +66,21 @@ export function apiHandler<Context extends ApiRouteContext = ApiRouteContext>(
           url.startsWith('/api/campaigns/status') || 
           url.startsWith('/api/schedule');
 
-        if (process.env.NODE_ENV === 'development' && isPolling && response.status < 400) {
-          logger.debug(logPayload);
+        if (statusCode >= 400) {
+          logger.warn(
+            { url, method, statusCode, durationMs: duration, correlationId },
+            `[API Warn] ${method} ${routeName} -> ${statusCode} (${duration}ms)`
+          );
+        } else if (isPolling) {
+          logger.debug(
+            { url, method, statusCode, durationMs: duration },
+            `[API Poll] ${method} ${routeName} -> ${statusCode} (${duration}ms)`
+          );
         } else {
-          logger.info(logPayload);
+          logger.info(
+            { url, method, statusCode, durationMs: duration, correlationId },
+            `[API] ${method} ${routeName} -> ${statusCode} (${duration}ms)`
+          );
         }
 
         return response;
@@ -104,16 +108,18 @@ export function apiHandler<Context extends ApiRouteContext = ApiRouteContext>(
           message = "A requisicao foi cancelada pelo cliente.";
         }
 
-        logger.error({
-          msg: `[API Error] ${method} ${routeName} - ${errorCode}`,
-          method,
-          url,
-          statusCode,
-          errorCode,
-          durationMs: duration,
-          correlationId,
-          err: error instanceof Error ? error : undefined,
-        });
+        logger.error(
+          {
+            method,
+            url,
+            statusCode,
+            errorCode,
+            durationMs: duration,
+            correlationId,
+            err: error instanceof Error ? error : undefined,
+          },
+          `[API Error] ${method} ${routeName} -> ${statusCode} [${errorCode}] (${duration}ms) - ${message}`
+        );
 
         const payload: ApiErrorPayload = {
           error: message,

@@ -1,6 +1,7 @@
 import { PrismaClient, Campaign, ReportRecipient, ReportConfig } from "@prisma/client";
 import { IMessageSender } from "./types";
 import { getCurrentWorkspaceId, getWorkspaceScopedId } from "@/server/workspace";
+import { logger } from "./logger";
 
 export interface IReportService {
   formatImmediateReport(campaign: Campaign): string;
@@ -165,7 +166,7 @@ Relatorio gerado automaticamente
     const recipients = await this.getActiveRecipients();
 
     if (recipients.length === 0) {
-      console.log("[ReportService] No active recipients configured");
+      logger.info("[ReportService] Nenhum destinatario ativo configurado para relatorios.");
       return { success: false, sentTo: [], failed: [] };
     }
 
@@ -182,10 +183,10 @@ Relatorio gerado automaticamente
             filename: "report-chart.png",
           };
         } else {
-          console.error("[ReportService] Chart request failed with status:", chartRes.status);
+          logger.error({ status: chartRes.status }, "[ReportService] Falha ao obter imagem do grafico");
         }
       } catch (error) {
-        console.error("[ReportService] Error fetching chart image:", error);
+        logger.error({ err: error }, "[ReportService] Erro ao buscar imagem do grafico");
       }
     }
 
@@ -204,12 +205,12 @@ Relatorio gerado automaticamente
 
           try {
             if (this.debugEnabled) {
-              console.log(`[ReportService] Sending report to ${recipient.name} (${recipient.phone})`);
+              logger.info(`[ReportService] Enviando relatorio para ${recipient.name} (${recipient.phone})`);
             }
             await sender.sendMessage(recipient.phone, message, mediaData);
             sentTo.push(recipient.phone);
           } catch (error) {
-            console.error(`[ReportService] Error sending to ${recipient.name}:`, error);
+            logger.error({ err: error, phone: recipient.phone }, `[ReportService] Erro ao enviar relatorio para ${recipient.name}`);
             failed.push(recipient.phone);
           }
         }

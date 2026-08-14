@@ -8,6 +8,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CheckCheck, Clock, Mail, MailOpen, User } from "lucide-react";
+import { logger } from "./logger";
 
 /**
  * Engagement statistics interface
@@ -144,7 +145,7 @@ export const EngagementService = {
       
       // Validate date is not in the future
       if (lastRead > now) {
-        console.warn("Future read date detected", lastRead);
+        logger.warn({ lastRead }, "[Engagement] Data de leitura futura detectada");
         return EngagementStatus.SENT;
       }
       

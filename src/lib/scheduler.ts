@@ -11,7 +11,7 @@ const IDLE_SLEEP_MS = 2000;
 const OFFLINE_SLEEP_MS = 10000;
 const CLAIM_CONFLICT_BACKOFF_MS = 25;
 const CLAIM_MAX_ATTEMPTS = 20;
-const OFFLINE_LOG_INTERVAL_MS = 30000;
+const OFFLINE_LOG_INTERVAL_MS = 300000; // 5 minutos para logs repetidos de offline
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -53,11 +53,12 @@ export function startScheduler() {
   }
   globalObj.isSchedulerRunning = true;
 
-  logger.info("[Scheduler] Background Worker started.");
+  logger.info("[Scheduler] Background Worker inicializado com sucesso.");
 
   let workerTimeout: NodeJS.Timeout | null = null;
   let isProcessing = false;
   let lastOfflineLogAt = 0;
+  let lastLoggedStatus: string | null = null;
 
   async function workerLoop() {
     if (isProcessing) return;
@@ -69,14 +70,23 @@ export function startScheduler() {
 
       if (!status.isReady) {
         const nowMs = Date.now();
-        if (nowMs - lastOfflineLogAt >= OFFLINE_LOG_INTERVAL_MS) {
-          logger.warn(`[Scheduler] WhatsApp not ready (Status: ${status.status} - Auth: ${status.isAuthenticated}). Sleeping 10s...`);
+        const currentStatusKey = `${status.status}-${status.isAuthenticated}`;
+        const hasStatusChanged = lastLoggedStatus !== currentStatusKey;
+
+        if (hasStatusChanged || nowMs - lastOfflineLogAt >= OFFLINE_LOG_INTERVAL_MS) {
+          logger.warn(`[Scheduler] WhatsApp nao esta pronto (Status: ${status.status} | Autenticado: ${status.isAuthenticated}). Aguardando conexao...`);
           queueLogs.pushLog("WhatsApp desconectado. Aguardando reconexao...", "warning");
           lastOfflineLogAt = nowMs;
+          lastLoggedStatus = currentStatusKey;
         }
 
         workerTimeout = setTimeout(workerLoop, OFFLINE_SLEEP_MS);
         return;
+      }
+
+      if (lastLoggedStatus !== null) {
+        logger.info("[Scheduler] WhatsApp pronto para envio de mensagens agendadas.");
+        lastLoggedStatus = null;
       }
 
       const msg = await claimNextScheduledMessage(new Date());
@@ -90,9 +100,10 @@ export function startScheduler() {
         const mediaData = msg.template.media ? JSON.parse(msg.template.media as string) : undefined;
         await whatsappService.sendMessage(msg.contactPhone, msg.template.content, mediaData, { fallbackName: msg.contactName });
         success = true;
+        logger.info(`[Scheduler] Mensagem enviada para ${msg.contactName} (${msg.contactPhone})`);
         queueLogs.pushLog(`Enviado para ${msg.contactName}`, "success");
       } catch (error: unknown) {
-        logger.error({ err: error, phone: msg.contactPhone }, `[Scheduler] Error sending to contact`);
+        logger.error({ err: error, phone: msg.contactPhone }, `[Scheduler] Erro ao enviar para ${msg.contactName}`);
         queueLogs.pushLog(`Erro ao enviar para ${msg.contactName}`, "error");
       }
 
