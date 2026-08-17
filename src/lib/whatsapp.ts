@@ -64,6 +64,7 @@ export class WhatsAppService {
   private qrCode: string | null = null;
   private isAuthenticated: boolean = false;
   private isReady: boolean = false;
+  private connectionError: string | null = null;
   
   private status: ConnectionStatus = ConnectionStatus.DISCONNECTED;
   
@@ -113,11 +114,6 @@ export class WhatsAppService {
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
         ...(executablePath ? { executablePath } : {}),
       },
-      webVersionCache: {
-        type: "remote",
-        remotePath:
-          "https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html",
-      },
     });
 
     this.initializeEvents();
@@ -125,6 +121,7 @@ export class WhatsAppService {
     this.client.initialize().catch((err) => {
       logger.error({ err }, "[WhatsApp] Erro na inicializacao do cliente");
       this.status = ConnectionStatus.DISCONNECTED;
+      this.connectionError = this.getConnectionError(err);
     });
     
     this.startPolling();
@@ -135,6 +132,7 @@ export class WhatsAppService {
       logger.info("[WhatsApp] Novo QR Code gerado para autenticacao");
       this.qrCode = qr;
       this.status = ConnectionStatus.QR_READY;
+      this.connectionError = null;
     });
 
     this.client.on("ready", () => {
@@ -142,6 +140,7 @@ export class WhatsAppService {
       this.isReady = true;
       this.status = ConnectionStatus.READY;
       this.qrCode = null;
+      this.connectionError = null;
       this.connectionStartTime = new Date();
     });
 
@@ -150,11 +149,13 @@ export class WhatsAppService {
       this.isAuthenticated = true;
       this.status = ConnectionStatus.AUTHENTICATED;
       this.qrCode = null;
+      this.connectionError = null;
     });
 
     this.client.on("auth_failure", (msg) => {
       logger.error({ msg }, "[WhatsApp] Falha na autenticacao do cliente");
       this.status = ConnectionStatus.DISCONNECTED;
+      this.connectionError = "A autenticacao falhou. Aguarde a geracao de um novo QR Code.";
     });
 
     this.client.on("change_state", (state) => {
@@ -187,6 +188,7 @@ export class WhatsAppService {
         this.client.initialize().catch((err) => {
           logger.error({ err }, "[WhatsApp] Erro na tentativa de reconexao");
           this.status = ConnectionStatus.DISCONNECTED;
+          this.connectionError = this.getConnectionError(err);
         });
       }, TIMING.RECONNECT_DELAY_MS);
     });
@@ -399,11 +401,20 @@ export class WhatsAppService {
     return this.qrCode;
   }
 
+  private getConnectionError(error: unknown): string {
+    if (error instanceof Error && error.message.includes("browser is already running")) {
+      return "A sessao do WhatsApp ja esta sendo usada por outra instancia da aplicacao. Encerre a outra instancia e recarregue esta pagina.";
+    }
+
+    return "Nao foi possivel iniciar o WhatsApp Web. Verifique o Chromium e tente novamente.";
+  }
+
   public getStatus() {
     return {
       status: this.status,
       isAuthenticated: this.isAuthenticated,
       isReady: this.isReady,
+      error: this.connectionError,
       stats: {
         dailyCount: this.getDailyCount(),
         riskLevel: this.getRiskLevel(),
@@ -589,6 +600,7 @@ export class WhatsAppService {
     this.isReady = false;
     this.qrCode = null;
     this.status = ConnectionStatus.DISCONNECTED;
+    this.connectionError = null;
     this.client.initialize();
   }
 }
