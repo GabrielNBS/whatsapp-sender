@@ -79,6 +79,8 @@ export class WhatsAppService {
   private pendingMessages: Map<string, PendingMessageData> = new Map();
   private pollingInterval: NodeJS.Timeout | null = null;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private initializationPromise: Promise<void> | null = null;
+  private reconnectEnabled = true;
   private waitReadyPromise: Promise<boolean> | null = null;
   
   private metrics: PollingMetrics = {
@@ -117,14 +119,61 @@ export class WhatsAppService {
     });
 
     this.initializeEvents();
-    this.status = ConnectionStatus.INITIALIZING;
-    this.client.initialize().catch((err) => {
-      logger.error({ err }, "[WhatsApp] Erro na inicializacao do cliente");
-      this.status = ConnectionStatus.DISCONNECTED;
-      this.connectionError = this.getConnectionError(err);
-    });
+    void this.initializeClient("inicializacao inicial");
     
     this.startPolling();
+  }
+
+  /**
+   * Todas as entradas do ciclo de conexao passam por aqui. A biblioteca nao
+   * aceita duas chamadas de `initialize` para o mesmo perfil Chromium; por
+   * isso chamadas simultaneas compartilham a mesma promise.
+   */
+  private initializeClient(reason: string): Promise<void> {
+    if (this.initializationPromise) {
+      this.debugLog(`[WhatsApp] Inicializacao ja em andamento; reutilizando (${reason}).`);
+      return this.initializationPromise;
+    }
+
+    this.status = ConnectionStatus.INITIALIZING;
+    this.connectionError = null;
+    logger.info({ reason }, "[WhatsApp] Iniciando cliente WhatsApp");
+
+    this.initializationPromise = this.client.initialize()
+      .catch((err: unknown) => {
+        logger.error({ err, reason }, "[WhatsApp] Erro na inicializacao do cliente");
+        this.status = ConnectionStatus.DISCONNECTED;
+        this.connectionError = this.getConnectionError(err);
+      })
+      .finally(() => {
+        this.initializationPromise = null;
+      });
+
+    return this.initializationPromise;
+  }
+
+  private clearReconnectTimer() {
+    if (this.reconnectTimeout) {
+      clearTimeout(this.reconnectTimeout);
+      this.reconnectTimeout = null;
+    }
+  }
+
+  private scheduleReconnect() {
+    if (!this.reconnectEnabled || this.reconnectTimeout || this.initializationPromise) {
+      return;
+    }
+
+    this.reconnectTimeout = setTimeout(() => {
+      this.reconnectTimeout = null;
+
+      if (!this.reconnectEnabled) {
+        return;
+      }
+
+      logger.info("[WhatsApp] Tentando reconectar...");
+      void this.initializeClient("reconexao");
+    }, TIMING.RECONNECT_DELAY_MS);
   }
 
   private initializeEvents() {
@@ -175,22 +224,16 @@ export class WhatsAppService {
       this.isAuthenticated = false;
       this.isReady = false;
       this.status = ConnectionStatus.DISCONNECTED;
+      this.qrCode = null;
       this.pendingMessages.clear();
       this.metrics.currentPendingCount = 0;
 
-      if (this.reconnectTimeout) {
-        clearTimeout(this.reconnectTimeout);
+      if (!this.reconnectEnabled) {
+        logger.info("[WhatsApp] Reconexao automatica ignorada durante logout intencional.");
+        return;
       }
 
-      this.reconnectTimeout = setTimeout(() => {
-        logger.info("[WhatsApp] Tentando reconectar...");
-        this.status = ConnectionStatus.INITIALIZING;
-        this.client.initialize().catch((err) => {
-          logger.error({ err }, "[WhatsApp] Erro na tentativa de reconexao");
-          this.status = ConnectionStatus.DISCONNECTED;
-          this.connectionError = this.getConnectionError(err);
-        });
-      }, TIMING.RECONNECT_DELAY_MS);
+      this.scheduleReconnect();
     });
 
     this.client.on("message_ack", async (msg, ack) => {
@@ -591,17 +634,23 @@ export class WhatsAppService {
   public async logout() {
     this.pendingMessages.clear();
     this.metrics.currentPendingCount = 0;
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
-      this.reconnectTimeout = null;
+    this.reconnectEnabled = false;
+    this.clearReconnectTimer();
+
+    try {
+      await this.client.logout();
+    } finally {
+      this.isAuthenticated = false;
+      this.isReady = false;
+      this.qrCode = null;
+      this.status = ConnectionStatus.DISCONNECTED;
+      this.connectionError = null;
+      this.reconnectEnabled = true;
+
+      // O evento `disconnected` gerado pelo logout nao agenda outro cliente.
+      // Esta e a unica reinicializacao que abre o QR de uma nova sessao.
+      await this.initializeClient("logout intencional");
     }
-    await this.client.logout();
-    this.isAuthenticated = false;
-    this.isReady = false;
-    this.qrCode = null;
-    this.status = ConnectionStatus.DISCONNECTED;
-    this.connectionError = null;
-    this.client.initialize();
   }
 }
 
