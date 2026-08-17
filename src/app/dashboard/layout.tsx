@@ -13,6 +13,7 @@ import { useSchedulePolling } from '@/hooks/use-schedule-polling';
 import { useContactHydration } from '@/hooks/use-contact-hydration';
 import { useAppStore } from '@/lib/store';
 import { DebugTransmissionMenu } from '@/components/dashboard/debug-transmission-menu';
+import { PersonalAuthGate } from '@/components/personal-auth-gate';
 
 function PollingManager() {
   useContactHydration();
@@ -29,7 +30,7 @@ export default function DashboardLayout({
   const devMode = useAppStore(state => state.devMode);
 
   return (
-    <NavigationProvider>
+    <PersonalAuthGate><NavigationProvider>
       <DashboardShell>
         <GlobalSheetProvider>
           <div className="flex h-dvh min-h-0 overflow-hidden bg-muted/20 relative">
@@ -51,6 +52,6 @@ export default function DashboardLayout({
           </div>
         </GlobalSheetProvider>
       </DashboardShell>
-    </NavigationProvider>
+    </NavigationProvider></PersonalAuthGate>
   );
 }

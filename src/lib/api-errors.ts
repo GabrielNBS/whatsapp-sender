@@ -24,6 +24,18 @@ export class UnauthorizedError extends ApiError {
   }
 }
 
+export class ForbiddenError extends ApiError {
+  constructor(message: string = "A requisicao foi bloqueada por seguranca") {
+    super(403, "FORBIDDEN", message);
+  }
+}
+
+export class ServiceUnavailableError extends ApiError {
+  constructor(message: string = "Servico indisponivel") {
+    super(503, "SERVICE_UNAVAILABLE", message);
+  }
+}
+
 export class NotFoundError extends ApiError {
   constructor(message: string = "Recurso nao encontrado") {
     super(404, "NOT_FOUND", message);

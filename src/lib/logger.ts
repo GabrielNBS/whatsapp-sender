@@ -31,6 +31,16 @@ export const logger = pino({
       "contactPhone",
       "details.phone",
       "details.contactPhone",
+      "*.phone",
+      "*.number",
+      "*.contactPhone",
+      "*.phones",
+      "*.recipients.*.phone",
+      "*.recipients.*.number",
+      "*.contacts.*.phone",
+      "*.contacts.*.number",
+      "err.phone",
+      "err.number",
       "req.headers.authorization",
       "req.headers.x-app-token",
     ],
@@ -63,4 +73,4 @@ export function maskName(name?: string | null): string {
       return `${part[0]}***${part[part.length - 1]}`;
     })
     .join(' ');
-}
+}

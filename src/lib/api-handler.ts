@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "./logger";
-import { ApiError, mapPrismaError, isPrismaError, UnauthorizedError } from "./api-errors";
+import { ApiError, ForbiddenError, mapPrismaError, isPrismaError, ServiceUnavailableError, UnauthorizedError } from "./api-errors";
 import { nanoid } from "nanoid";
 import { runWithRequestId } from "./CorrelationId";
+import { getRequestAuthMethod, isAuthorizedRequest, isPersonalAuthConfigured, isSameOriginRequest } from "./personal-auth";
 
 export interface ApiErrorPayload {
   error: string;
@@ -10,25 +11,6 @@ export interface ApiErrorPayload {
   details?: unknown;
   timestamp: string;
   correlationId: string;
-}
-
-export function isAuthorizedRequest(req: Request | NextRequest): boolean {
-  const host = req.headers.get("host") || "";
-  const referer = req.headers.get("referer") || "";
-  const origin = req.headers.get("origin") || "";
-
-  const getHost = (value: string) => {
-    if (!value) return '';
-    try {
-      return new URL(value.includes('://') ? value : `http://${value}`).host;
-    } catch {
-      return '';
-    }
-  };
-
-  const requestHost = getHost(host);
-  const isSameHost = (value: string) => !value || getHost(value) === requestHost;
-  return Boolean(requestHost) && isSameHost(referer) && isSameHost(origin);
 }
 
 type ApiRouteContext = { params: Promise<Record<string, string>> };
@@ -50,11 +32,21 @@ export function apiHandler<Context extends ApiRouteContext = ApiRouteContext>(
     return runWithRequestId(correlationId, async () => {
       try {
         const requireAuth = options?.requireAuth ?? true;
+        if (requireAuth && !isPersonalAuthConfigured()) {
+          throw new ServiceUnavailableError("APP_ACCESS_TOKEN precisa ser configurado com pelo menos 32 caracteres.");
+        }
         if (requireAuth && !isAuthorizedRequest(nextReq)) {
           throw new UnauthorizedError("Acesso recusado: requisicao nao autorizada.");
         }
+        const authMethod = getRequestAuthMethod(nextReq);
+        if (requireAuth && authMethod === "cookie" && !["GET", "HEAD", "OPTIONS"].includes(method) && !isSameOriginRequest(nextReq)) {
+          throw new ForbiddenError("A origem da requisicao nao e confiavel.");
+        }
 
         const response = await handler(nextReq, context as Context);
+        response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        response.headers.set("Pragma", "no-cache");
+        response.headers.set("Vary", "Cookie, Authorization");
         const duration = Date.now() - startTime;
         const statusCode = response.status;
 
@@ -129,7 +121,11 @@ export function apiHandler<Context extends ApiRouteContext = ApiRouteContext>(
           correlationId,
         };
 
-        return NextResponse.json(payload, { status: statusCode });
+        const response = NextResponse.json(payload, { status: statusCode });
+        response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+        response.headers.set("Pragma", "no-cache");
+        response.headers.set("Vary", "Cookie, Authorization");
+        return response;
       }
     });
   };

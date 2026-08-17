@@ -1,40 +1,48 @@
-import { describe, expect, it } from 'vitest';
-import { isAuthorizedRequest } from '@/lib/api-handler';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { isAuthorizedRequest, isSameOriginRequest } from '@/lib/personal-auth';
+
+const accessToken = 'a-very-long-personal-access-token-for-tests';
 
 function createRequest(headers: Record<string, string>) {
   return new Request('http://localhost:3000/api/status', { headers });
 }
 
-describe('isAuthorizedRequest', () => {
-  it('accepts a same-origin browser request', () => {
+describe('personal API authorization', () => {
+  beforeEach(() => {
+    process.env.APP_ACCESS_TOKEN = accessToken;
+  });
+
+  it('accepts a valid bearer token regardless of forgeable host headers', () => {
+    const request = createRequest({
+      host: 'localhost:3000',
+      authorization: `Bearer ${accessToken}`,
+    });
+
+    expect(isAuthorizedRequest(request)).toBe(true);
+  });
+
+  it('accepts the HttpOnly-cookie value only when it matches the configured token', () => {
+    const request = createRequest({ cookie: `whatsapp-sender-session=${accessToken}` });
+    expect(isAuthorizedRequest(request)).toBe(true);
+  });
+
+  it('rejects a forged same-origin request without a credential', () => {
     const request = createRequest({
       host: 'localhost:3000',
       origin: 'http://localhost:3000',
       referer: 'http://localhost:3000/dashboard',
     });
 
-    expect(isAuthorizedRequest(request)).toBe(true);
+    expect(isAuthorizedRequest(request)).toBe(false);
   });
 
-  it('accepts a server-to-server request without browser origin headers', () => {
-    expect(isAuthorizedRequest(createRequest({ host: 'service.internal' }))).toBe(true);
-  });
-
-  it('rejects a request from another origin', () => {
+  it('rejects a forged credential and cross-origin cookie mutations', () => {
     const request = createRequest({
-      host: 'localhost:3000',
+      cookie: 'whatsapp-sender-session=not-the-token',
       origin: 'https://attacker.example',
     });
 
     expect(isAuthorizedRequest(request)).toBe(false);
-  });
-
-  it('treats a different port as a different origin', () => {
-    const request = createRequest({
-      host: 'localhost:3000',
-      origin: 'http://localhost:4000',
-    });
-
-    expect(isAuthorizedRequest(request)).toBe(false);
+    expect(isSameOriginRequest(request)).toBe(false);
   });
 });
