@@ -20,6 +20,20 @@ export const TemplateService = {
     });
   },
 
+  async listTemplateSummaries(workspaceId = getCurrentWorkspaceId()) {
+    return prisma.template.findMany({
+      where: {
+        workspaceId,
+        OR: [
+          { category: null },
+          { category: { not: SYSTEM_TEMPLATE_CATEGORY } },
+        ],
+      },
+      select: { id: true, title: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  },
+
   /**
    * Obtém um template específico pelo ID.
    */

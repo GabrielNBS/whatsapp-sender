@@ -25,6 +25,8 @@ export interface RealtimeMetrics {
   };
 }
 
+export type ConnectionStatus = RealtimeMetrics['connection'];
+
 export interface EngagementStats {
   totalContacts: number;
   totalMessagesSent: number;
@@ -36,6 +38,7 @@ export interface EngagementStats {
 
 export interface IMetricsService {
   getRealtimeMetrics(): Promise<RealtimeMetrics>;
+  getConnectionStatus(): Promise<ConnectionStatus>;
   getEngagementStats(): Promise<EngagementStats>;
   getTodayStats(): Promise<{ sent: number; read: number }>;
   getDashboardChartsData(): Promise<{
@@ -51,15 +54,7 @@ export class MetricsService implements IMetricsService {
     const todayStats = await this.getTodayStats();
 
     return {
-      connection: {
-        status: whatsappMetrics.isReady
-          ? "connected"
-          : whatsappMetrics.isAuthenticated
-            ? "initializing"
-            : "disconnected",
-        uptimeSeconds: whatsappMetrics.uptimeSeconds,
-        connectedSince: whatsappMetrics.connectedSince,
-      },
+      connection: this.toConnectionStatus(whatsappMetrics),
       processing: {
         pendingMessages: whatsappMetrics.polling.currentPendingCount,
         pollingCycles: whatsappMetrics.polling.pollingCycles,
@@ -77,6 +72,10 @@ export class MetricsService implements IMetricsService {
         engagementRate: todayStats.sent > 0 ? Math.round((todayStats.read / todayStats.sent) * 100) : 0,
       },
     };
+  }
+
+  async getConnectionStatus(): Promise<ConnectionStatus> {
+    return this.toConnectionStatus(await this.getWhatsAppMetrics());
   }
 
   async getEngagementStats(): Promise<EngagementStats> {
@@ -235,6 +234,18 @@ export class MetricsService implements IMetricsService {
     } catch {
       return this.getDefaultWhatsAppMetrics();
     }
+  }
+
+  private toConnectionStatus(whatsappMetrics: Awaited<ReturnType<MetricsService['getWhatsAppMetrics']>>): ConnectionStatus {
+    return {
+      status: whatsappMetrics.isReady
+        ? 'connected'
+        : whatsappMetrics.isAuthenticated
+          ? 'initializing'
+          : 'disconnected',
+      uptimeSeconds: whatsappMetrics.uptimeSeconds,
+      connectedSince: whatsappMetrics.connectedSince,
+    };
   }
 
   private getDefaultWhatsAppMetrics() {

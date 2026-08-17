@@ -27,6 +27,7 @@ export const campaignQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(API_MAX_PAGE_SIZE).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   logOffset: z.coerce.number().int().min(0).optional(),
+  includeFailures: z.enum(['true', 'false']).optional().transform((value) => value === 'true'),
 });
 
 export const campaignCompleteSchema = z.object({

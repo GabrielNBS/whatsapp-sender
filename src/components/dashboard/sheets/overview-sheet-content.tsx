@@ -5,6 +5,7 @@ import { SplitText } from '@/components/ui/split-text';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
+import { useShallow } from 'zustand/react/shallow';
 import { 
   MessageSquare, 
   Users, 
@@ -24,7 +25,10 @@ import { EngagementTrendsChart } from '@/components/analytics/engagement-trends'
 import { useGlobalSheet } from '@/components/dashboard/global-sheet-provider';
 
 export function OverviewSheetContent() {
-  const { contacts, groups } = useAppStore();
+  const { contacts, groups } = useAppStore(useShallow((state) => ({
+    contacts: state.contacts,
+    groups: state.groups,
+  })));
   const { metrics, isLoading } = useRealtimeMetrics({ pollingInterval: 3000 });
   const { data: chartsData, isLoading: isChartsLoading } = useDashboardCharts();
   const { closeSheet } = useGlobalSheet();

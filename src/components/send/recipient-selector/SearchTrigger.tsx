@@ -5,7 +5,7 @@ import { RecipientValue } from './types';
 import { AvatarDisplay } from '@/components/ui/avatar-display';
 
 interface SearchTriggerProps extends React.HTMLAttributes<HTMLDivElement> {
-  value: RecipientValue;
+  value: RecipientValue[];
   isOpen?: boolean;
 }
 
@@ -14,6 +14,26 @@ interface SearchTriggerProps extends React.HTMLAttributes<HTMLDivElement> {
  */
 export const SearchTrigger = React.forwardRef<HTMLDivElement, SearchTriggerProps>(
   ({ value, isOpen, className, ...props }, ref) => {
+    const singleSelection = value.length === 1 ? value[0] : null;
+    const selectedGroupCount = value.filter((item) => item.type === 'group' && item.id !== 'all').length;
+    const selectedContactCount = value.filter((item) => item.type === 'contact').length;
+    const hasAllContacts = value.some((item) => item.type === 'group' && item.id === 'all');
+
+    const selectionLabel = (() => {
+      if (hasAllContacts) return 'Todos os Contatos';
+      if (singleSelection) return singleSelection.name;
+      if (selectedGroupCount > 0 && selectedContactCount > 0) {
+        return `${selectedGroupCount} ${selectedGroupCount === 1 ? 'grupo' : 'grupos'} + ${selectedContactCount} ${selectedContactCount === 1 ? 'contato' : 'contatos'}`;
+      }
+      if (selectedGroupCount > 0) {
+        return `${selectedGroupCount} ${selectedGroupCount === 1 ? 'grupo selecionado' : 'grupos selecionados'}`;
+      }
+      if (selectedContactCount > 0) {
+        return `${selectedContactCount} ${selectedContactCount === 1 ? 'contato selecionado' : 'contatos selecionados'}`;
+      }
+      return '';
+    })();
+
     return (
       <div
         ref={ref}
@@ -33,14 +53,14 @@ export const SearchTrigger = React.forwardRef<HTMLDivElement, SearchTriggerProps
           </div>
           <div className="flex flex-col items-start truncate leading-tight">
             <span className="text-[10px] font-medium text-muted-foreground/60 mb-0.5">
-              Destinatário
+              Destinatários
             </span>
             <div className="flex items-center gap-2 truncate">
-              {value.type === 'contact' && value.id !== 'all' && (
-                <AvatarDisplay name={value.name} phone={value.id} className="w-5 h-5 shrink-0 opacity-90" />
+              {singleSelection?.type === 'contact' && (
+                <AvatarDisplay name={singleSelection.name} phone={singleSelection.id} className="w-5 h-5 shrink-0 opacity-90" />
               )}
-              <span className={cn("font-medium truncate block text-foreground", !value.name && "text-muted-foreground/40 font-normal italic")}>
-                {value.name || "Selecione o público..."}
+              <span className={cn("font-medium truncate block text-foreground", !selectionLabel && "text-muted-foreground/40 font-normal italic")}>
+                {selectionLabel || "Selecione o público..."}
               </span>
             </div>
           </div>

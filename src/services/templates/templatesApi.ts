@@ -1,5 +1,18 @@
 import { Template } from '@/types/templates';
-import { normalizeTemplates } from './normalizeTemplate';
+import { normalizeTemplates, RawTemplate } from './normalizeTemplate';
+import { requestJson } from '@/services/http/client';
+
+export interface TemplateCatalogItem {
+  id: string;
+  title: string;
+}
+
+export interface TemplatePayload {
+  title: string;
+  content: string;
+  media?: { mimetype: string; data: string; filename?: string } | null;
+  category?: string | null;
+}
 
 /**
  * templatesApi - Funções para interagir com o endpoint de templates.
@@ -10,23 +23,10 @@ export const templatesApi = {
    * aplicando normalizações e verificando erros de requisição.
    */
   async listTemplates(signal?: AbortSignal): Promise<Template[]> {
-    const res = await fetch('/api/templates', {
-      method: 'GET',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
+    const data = await requestJson<RawTemplate[]>('/api/templates', {
       cache: 'no-store',
       signal,
     });
-
-    if (!res.ok) {
-      const errorText = await res.text().catch(() => 'Erro desconhecido');
-      throw new Error(`Falha ao buscar modelos: ${res.status} - ${errorText}`);
-    }
-
-    const data = await res.json();
     
     // Validação estrutural básica (API-003)
     if (!Array.isArray(data)) {
@@ -36,19 +36,35 @@ export const templatesApi = {
     return normalizeTemplates(data);
   },
 
+  async listCatalog(signal?: AbortSignal): Promise<TemplateCatalogItem[]> {
+    return requestJson<TemplateCatalogItem[]>('/api/templates?view=summary', {
+      cache: 'no-store',
+      signal,
+    });
+  },
+
+  async getTemplate(id: string, signal?: AbortSignal): Promise<Template> {
+    const data = await requestJson<RawTemplate>(`/api/templates/${encodeURIComponent(id)}`, { signal });
+    return normalizeTemplates([data])[0];
+  },
+
+  async saveTemplate(id: string | null, payload: TemplatePayload): Promise<Template> {
+    const data = await requestJson<RawTemplate>(
+      id ? `/api/templates/${encodeURIComponent(id)}` : '/api/templates',
+      {
+        method: id ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      },
+    );
+    return normalizeTemplates([data])[0];
+  },
+
   /**
    * Exclui um template pelo seu ID.
    */
   async deleteTemplate(id: string): Promise<boolean> {
-    const res = await fetch(`/api/templates?id=${id}`, {
-      method: 'DELETE',
-    });
-
-    if (!res.ok) {
-      const errorText = await res.text().catch(() => 'Erro desconhecido');
-      throw new Error(`Falha ao excluir modelo: ${res.status} - ${errorText}`);
-    }
-
+    await requestJson(`/api/templates/${encodeURIComponent(id)}`, { method: 'DELETE' });
     return true;
   },
 };

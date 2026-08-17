@@ -8,7 +8,8 @@ export interface ICampaignService {
   updateCampaignMetrics(campaignId: string, metrics: Partial<CampaignMetrics>): Promise<Campaign>;
   getCampaign(campaignId: string): Promise<Campaign | null>;
   getRecentCampaigns(limit?: number): Promise<Campaign[]>;
-  getCampaignHistory(limit?: number): Promise<CampaignHistoryItem[]>;
+  getCampaignHistory(limit?: number): Promise<CampaignHistorySummary[]>;
+  getCampaignHistoryItem(campaignId: string): Promise<CampaignHistoryItem | null>;
   getPendingEngagementReports(): Promise<Campaign[]>;
   markImmediateReportSentIfPending(campaignId: string): Promise<boolean>;
 }
@@ -44,6 +45,8 @@ export interface CampaignHistoryItem extends Campaign {
   templateContent?: string;
   templateMedia?: string | null;
 }
+
+export type CampaignHistorySummary = Campaign;
 
 // ============================================
 // IMPLEMENTATION
@@ -150,100 +153,48 @@ export class CampaignService implements ICampaignService {
     });
   }
 
-  /**
-   * Get full campaign history with failure details
-   */
-  async getCampaignHistory(limit: number = 50): Promise<CampaignHistoryItem[]> {
-    const campaigns = await this.prisma.campaign.findMany({
+  /** Retorna apenas o necessário para a lista do histórico. */
+  async getCampaignHistory(limit: number = 50): Promise<CampaignHistorySummary[]> {
+    return this.prisma.campaign.findMany({
       where: { workspaceId: this.workspaceId },
       orderBy: { startedAt: 'desc' },
       take: limit,
     });
+  }
 
-    if (campaigns.length === 0) {
-      return [];
-    }
+  /** Carrega template e falhas somente quando a campanha é aberta. */
+  async getCampaignHistoryItem(campaignId: string): Promise<CampaignHistoryItem | null> {
+    const campaign = await this.prisma.campaign.findFirst({
+      where: { id: campaignId, workspaceId: this.workspaceId },
+    });
+    if (!campaign) return null;
 
-    const campaignIds = campaigns.map((campaign) => campaign.id);
-    const [failedMessages, templateSamples] = await Promise.all([
+    const [failedMessages, templateSample] = await Promise.all([
       this.prisma.scheduledMessage.findMany({
-        where: {
-          batchId: { in: campaignIds },
-          workspaceId: this.workspaceId,
-          status: 'FAILED',
-        },
-        select: {
-          batchId: true,
-          contactName: true,
-          contactPhone: true,
-          templateId: true,
-        },
+        where: { batchId: campaignId, workspaceId: this.workspaceId, status: 'FAILED' },
+        select: { contactName: true, contactPhone: true, templateId: true },
       }),
-      this.prisma.scheduledMessage.findMany({
-        where: {
-          batchId: { in: campaignIds },
-          workspaceId: this.workspaceId,
-        },
+      this.prisma.scheduledMessage.findFirst({
+        where: { batchId: campaignId, workspaceId: this.workspaceId },
         orderBy: { createdAt: 'asc' },
-        distinct: ['batchId'],
         select: {
-          batchId: true,
-          template: {
-            select: {
-              id: true,
-              title: true,
-              content: true,
-              media: true,
-            },
-          },
+          template: { select: { id: true, title: true, content: true, media: true } },
         },
       }),
     ]);
 
-    const failedByBatch = failedMessages.reduce<Map<string, FailedMessageDetail[]>>((map, message) => {
-      if (!message.batchId) {
-        return map;
-      }
-
-      const currentMessages = map.get(message.batchId) ?? [];
-      currentMessages.push({
+    return {
+      ...campaign,
+      failedDetails: failedMessages.map((message) => ({
         contactName: message.contactName,
         contactPhone: message.contactPhone,
         templateId: message.templateId,
-      });
-      map.set(message.batchId, currentMessages);
-      return map;
-    }, new Map());
-
-    const templateByBatch = templateSamples.reduce<Map<string, {
-      id: string;
-      title: string;
-      content: string;
-      media: string | null;
-    }>>((map, message) => {
-      if (!message.batchId || !message.template) {
-        return map;
-      }
-
-      map.set(message.batchId, message.template);
-      return map;
-    }, new Map());
-
-    const history = campaigns.map((camp) => {
-      const failedDetails = failedByBatch.get(camp.id) ?? [];
-      const templateData = templateByBatch.get(camp.id);
-
-      return {
-        ...camp,
-        failedDetails,
-        templateId: templateData?.id,
-        templateTitle: templateData?.title,
-        templateContent: templateData?.content,
-        templateMedia: templateData?.media ?? null,
-      };
-    });
-
-    return history;
+      })),
+      templateId: templateSample?.template?.id,
+      templateTitle: templateSample?.template?.title,
+      templateContent: templateSample?.template?.content,
+      templateMedia: templateSample?.template?.media ?? null,
+    };
   }
 
   /**

@@ -1,12 +1,22 @@
 import { prisma } from "@/lib/db";
 import { DEFAULT_GROUP_ID, DEFAULT_GROUP_NAME } from "@/constants/contacts";
 import { normalizePhone } from "@/services/contacts/normalizePhone";
+import { normalizeGroupIds } from '@/services/contacts/normalizeGroupIds';
 import { ContactGroupInput, ContactInput } from "../validators/contacts";
 import { getCurrentWorkspaceId, getWorkspaceScopedId } from "../workspace";
 
-function normalizeGroupIds(groupIds: string[] | undefined): string[] {
-  const safeGroupIds = groupIds && groupIds.length > 0 ? groupIds : [DEFAULT_GROUP_ID];
-  return Array.from(new Set(safeGroupIds));
+function toContactSnapshot(contact: {
+  id: string;
+  name: string;
+  phone: string;
+  groupMemberships: Array<{ groupId: string }>;
+}) {
+  return {
+    id: contact.id,
+    name: contact.name,
+    number: contact.phone,
+    groupIds: normalizeGroupIds(contact.groupMemberships.map((membership) => membership.groupId)),
+  };
 }
 
 export const ContactService = {
@@ -35,19 +45,14 @@ export const ContactService = {
         name: group.name,
         description: group.description ?? undefined,
       })),
-      contacts: contacts.map((contact) => ({
-        id: contact.id,
-        name: contact.name,
-        number: contact.phone,
-        groupIds: normalizeGroupIds(contact.groupMemberships.map((membership) => membership.groupId)),
-      })),
+      contacts: contacts.map(toContactSnapshot),
     };
   },
 
   async clearContacts(workspaceId: string = getCurrentWorkspaceId()) {
     await this.ensureLocalDefaults(workspaceId);
     await prisma.contact.deleteMany({ where: { workspaceId } });
-    return this.getSnapshot(workspaceId);
+    return { success: true };
   },
 
   async createContact(data: ContactInput, workspaceId = getCurrentWorkspaceId()) {
@@ -59,7 +64,7 @@ export const ContactService = {
     });
     if (validGroups !== groupIds.length) throw new Error('Um ou mais grupos não pertencem ao workspace atual.');
 
-    await prisma.contact.create({
+    const contact = await prisma.contact.create({
       data: {
         id: data.id,
         workspaceId,
@@ -67,8 +72,9 @@ export const ContactService = {
         phone,
         groupMemberships: { create: groupIds.map((groupId) => ({ groupId })) },
       },
+      include: { groupMemberships: { select: { groupId: true } } },
     });
-    return this.getSnapshot(workspaceId);
+    return { contact: toContactSnapshot(contact) };
   },
 
   async updateContactGroups(contactId: string, groupIdsInput: string[], workspaceId = getCurrentWorkspaceId()) {
@@ -86,32 +92,39 @@ export const ContactService = {
         data: groupIds.map((groupId) => ({ contactId, groupId })),
       });
     });
-    return this.getSnapshot(workspaceId);
+    const contact = await prisma.contact.findFirst({
+      where: { id: contactId, workspaceId },
+      include: { groupMemberships: { select: { groupId: true } } },
+    });
+    if (!contact) throw new Error('Contato não encontrado no workspace atual.');
+    return { contact: toContactSnapshot(contact) };
   },
 
   async deleteContact(contactId: string, workspaceId = getCurrentWorkspaceId()) {
     const deleted = await prisma.contact.deleteMany({ where: { id: contactId, workspaceId } });
     if (deleted.count === 0) throw new Error('Contato não encontrado no workspace atual.');
-    return this.getSnapshot(workspaceId);
+    return { deletedContactId: contactId };
   },
 
-  async createGroup(group: ContactGroupInput, workspaceId = getCurrentWorkspaceId()) {
+  async createGroup(data: ContactGroupInput, workspaceId = getCurrentWorkspaceId()) {
     await this.ensureLocalDefaults(workspaceId);
-    await prisma.contactGroup.create({
-      data: { id: group.id, workspaceId, name: group.name, description: group.description },
+    const group = await prisma.contactGroup.create({
+      data: { id: data.id, workspaceId, name: data.name, description: data.description },
     });
-    return this.getSnapshot(workspaceId);
+    return { group: { id: group.id, name: group.name, description: group.description ?? undefined } };
   },
 
   async deleteGroup(groupId: string, workspaceId = getCurrentWorkspaceId()) {
     const defaultGroupId = getWorkspaceScopedId(workspaceId, DEFAULT_GROUP_ID);
     if (groupId === defaultGroupId) throw new Error('O grupo padrão não pode ser removido.');
 
+    let affectedContactIds: string[] = [];
     await prisma.$transaction(async (tx) => {
       const affectedContacts = await tx.contact.findMany({
         where: { workspaceId, groupMemberships: { some: { groupId } } },
         select: { id: true, _count: { select: { groupMemberships: true } } },
       });
+      affectedContactIds = affectedContacts.map((contact) => contact.id);
       const deleted = await tx.contactGroup.deleteMany({ where: { id: groupId, workspaceId } });
       if (deleted.count === 0) throw new Error('Grupo não encontrado no workspace atual.');
       const contactsWithoutGroups = affectedContacts.filter((contact) => contact._count.groupMemberships === 1);
@@ -121,7 +134,14 @@ export const ContactService = {
         });
       }
     });
-    return this.getSnapshot(workspaceId);
+    const affectedContacts = affectedContactIds.length === 0 ? [] : await prisma.contact.findMany({
+      where: { workspaceId, id: { in: affectedContactIds } },
+      include: { groupMemberships: { select: { groupId: true } } },
+    });
+    return {
+      deletedGroupId: groupId,
+      contacts: affectedContacts.map(toContactSnapshot),
+    };
   },
 
   async importContacts(data: { group?: ContactGroupInput; contacts: ContactInput[] }, workspaceId = getCurrentWorkspaceId()) {
@@ -149,7 +169,19 @@ export const ContactService = {
         ),
       });
     });
-    return this.getSnapshot(workspaceId);
+    const contactIds = data.contacts.map((contact) => contact.id);
+    const contacts = contactIds.length === 0 ? [] : await prisma.contact.findMany({
+      where: { workspaceId, id: { in: contactIds } },
+      include: { groupMemberships: { select: { groupId: true } } },
+    });
+    return {
+      group: data.group ? {
+        id: data.group.id,
+        name: data.group.name,
+        description: data.group.description ?? undefined,
+      } : undefined,
+      contacts: contacts.map(toContactSnapshot),
+    };
   },
 
   async ensureLocalDefaults(workspaceId: string = getCurrentWorkspaceId()) {

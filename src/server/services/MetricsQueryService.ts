@@ -34,6 +34,16 @@ export const MetricsQueryService = {
     return metricsService.getRealtimeMetrics();
   },
 
+  async getConnectionStatus(clientIp: string) {
+    checkRateLimit(
+      `connection-status-${clientIp}`,
+      API_RATE_LIMITS.POLLING_LIMIT,
+      API_RATE_LIMITS.POLLING_WINDOW_MS,
+    );
+
+    return getMetricsService().getConnectionStatus();
+  },
+
   /**
    * Obtém os dados de gráficos agregados do dashboard.
    */

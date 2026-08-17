@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,18 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { FileText, Image as ImageIcon, Plus, Trash2, Smartphone, Save, Loader2, Tag } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { WhatsAppMockup } from "./whatsapp-mockup";
-
-interface Template {
-  id: string;
-  title: string;
-  content: string;
-  media?: string | null;
-  category?: string | null;
-}
+import { useTemplateEditor } from '@/hooks/use-template-editor';
+import type { Template } from '@/types/templates';
 
 interface TemplateSheetProps {
   open: boolean;
@@ -38,160 +30,31 @@ export function TemplateSheet({
   onSave,
   isDuplicate = false,
 }: TemplateSheetProps) {
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("");
-  const [content, setContent] = useState("");
-  const [selectedFile, setSelectedFile] = useState<{
-    data: string;
-    mimetype: string;
-    filename: string;
-  } | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [includeFooter, setIncludeFooter] = useState(false);
-  const [settings, setSettings] = useState({ link: '', cta: '' });
-  const [snippets, setSnippets] = useState<{id: string, trigger: string, content: string}[]>([]);
-
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Fetch settings and snippets on mount
-  useEffect(() => {
-    const loadContent = async () => {
-      try {
-        const [settingsRes, snippetsRes] = await Promise.all([
-          fetch('/api/settings').then(res => res.json()),
-          fetch('/api/snippets').then(res => res.json())
-        ]);
-        
-        setSettings({ 
-          link: settingsRes.defaultLink || '', 
-          cta: settingsRes.defaultCTA || '' 
-        });
-        setSnippets(snippetsRes);
-      } catch (err) {
-        console.error('Failed to load initial content', err);
-      } finally {
-        // Pequeno delay para evitar flash visual se carregar muito rápido
-        setTimeout(() => setIsLoading(false), 300);
-      }
-    };
-
-    if (open) {
-      loadContent();
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (template) {
-      setTitle(isDuplicate ? `${template.title} (Cópia)` : template.title);
-      setCategory(template.category || "");
-      
-      let cleanContent = template.content;
-      let hasFooter = false;
-
-      // Check if content ends with the current footer settings
-      if (settings.link || settings.cta) {
-        const footerText = `\n\n${settings.cta}\n${settings.link}`.trim();
-        if (footerText && template.content.endsWith(footerText)) {
-             cleanContent = template.content.slice(0, -footerText.length).trimEnd();
-             hasFooter = true;
-        }
-      }
-      
-      setContent(cleanContent);
-      setIncludeFooter(hasFooter);
-
-      if (template.media) {
-        try {
-          setSelectedFile(JSON.parse(template.media));
-        } catch {
-          setSelectedFile(null);
-        }
-      } else {
-        setSelectedFile(null);
-      }
-    } else {
-      setTitle("");
-      setCategory("");
-      setContent("");
-      setSelectedFile(null);
-      setIncludeFooter(false);
-    }
-  }, [template, open, settings.link, settings.cta, isDuplicate]);
-
-  const handleToggleFooter = (checked: boolean) => {
-    if (checked && !settings.link && !settings.cta) {
-        toast.error("Configure o link e CTA padrão nas configurações primeiro.");
-        return;
-    }
-    setIncludeFooter(checked);
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const base64Data = reader.result as string;
-        const parts = base64Data.split(",");
-        if (parts.length === 2) {
-          setSelectedFile({
-            data: parts[1],
-            mimetype: file.type,
-            filename: file.name,
-          });
-        }
-      };
-    }
-  };
-  
-  const handleSaveInternal = async () => {
-    if (!title || !content) {
-        toast.warning("Preencha título e mensagem");
-        return;
-    }
-    setIsSaving(true);
-    
-    // Append footer if enabled
-    let finalContent = content;
-    if (includeFooter && (settings.link || settings.cta)) {
-        const footerText = `\n\n${settings.cta}\n${settings.link}`.trim();
-        finalContent = `${content}\n\n${footerText}`;
-    }
-
-    try {
-      const isEditing = template && !isDuplicate;
-      const url = isEditing ? `/api/templates?id=${template?.id}` : "/api/templates";
-      const method = isEditing ? "PUT" : "POST";
-      const body = {
-        title, // title already includes "(Cópia)" if it was a duplicate from useEffect
-        content: finalContent,
-        media: selectedFile,
-        category 
-      };
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      if (res.ok) {
-        toast.success(
-          template
-            ? "Modelo atualizado com sucesso"
-            : "Modelo criado com sucesso"
-        );
-        onOpenChange(false);
-        onSave();
-      }
-    } catch (error) {
-      console.error("Failed to save", error);
-      toast.error("Erro ao salvar modelo");
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const {
+    appendVariable,
+    category,
+    content,
+    includeFooter,
+    isLoading,
+    isSaving,
+    saveTemplate: handleSaveInternal,
+    selectFile: handleFileChange,
+    selectedFile,
+    setCategory,
+    setContent,
+    setSelectedFile,
+    setTitle,
+    settings,
+    snippets,
+    title,
+    toggleFooter: handleToggleFooter,
+  } = useTemplateEditor({
+    open,
+    template,
+    isDuplicate,
+    onClose: () => onOpenChange(false),
+    onSave,
+  });
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -340,13 +203,13 @@ export function TemplateSheet({
                                     <Label htmlFor="sheet-content" className="text-sm font-semibold text-gray-700">Mensagem</Label>
                                     <div className="flex gap-1.5">
                                         <button
-                                            onClick={() => setContent((prev) => prev + " {{name}} ")}
+                                            onClick={() => appendVariable('name')}
                                             className="bg-white border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-600 px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wide transition-all flex items-center gap-1 shadow-sm"
                                         >
                                             <Plus className="w-3 h-3" /> Nome
                                         </button>
                                         <button
-                                            onClick={() => setContent((prev) => prev + " {{phone}} ")}
+                                            onClick={() => appendVariable('phone')}
                                             className="bg-white border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-600 px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wide transition-all flex items-center gap-1 shadow-sm"
                                         >
                                             <Plus className="w-3 h-3" /> Tel

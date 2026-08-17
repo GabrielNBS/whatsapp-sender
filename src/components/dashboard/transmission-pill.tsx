@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, ChevronUp, ChevronDown, X, Users, CheckCircle, AlertTriangle } from "lucide-react";
 import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { getCampaignProgress } from '@/lib/campaign-progress';
 
 export function TransmissionPill() {
     const { isSending, sentCount, failedCount, totalContacts, statusMessage } =
@@ -14,8 +15,7 @@ export function TransmissionPill() {
     const [dismissedKey, setDismissedKey] = useState<number | null>(null);
 
     const isActive = isSending && totalContacts > 0;
-    const processed = sentCount + failedCount;
-    const percent = totalContacts > 0 ? Math.round((processed / totalContacts) * 100) : 0;
+    const { processed, percent, remaining } = getCampaignProgress({ totalContacts, sentCount, failedCount });
     const isDismissed = dismissedKey === totalContacts;
 
     const handleDismiss = useCallback(() => {
@@ -100,7 +100,7 @@ export function TransmissionPill() {
                                         <div className="flex justify-between items-center">
                                             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Progresso</p>
                                             <p className="text-xs text-muted-foreground font-medium">
-                                                {totalContacts - processed} restantes
+                                                {remaining} restantes
                                             </p>
                                         </div>
                                         <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">

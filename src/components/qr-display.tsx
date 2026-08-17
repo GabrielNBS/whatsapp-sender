@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { qrApi } from '@/services/connection/qrApi';
 
 export function QrDisplay() {
   const [qr, setQr] = useState<string | null>(null);
@@ -16,8 +17,7 @@ export function QrDisplay() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const res = await fetch('/api/qr');
-        const data = await res.json();
+        const data = await qrApi.getStatus();
         
         // Update state
         setQr(data.qr);

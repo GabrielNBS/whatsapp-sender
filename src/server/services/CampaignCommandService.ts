@@ -21,8 +21,8 @@ export const CampaignCommandService = {
 
     try {
       const activeStatus = await queueService.getStatus(0);
-      if (activeStatus.isSending) {
-        throw new ConflictError("Ja existe uma campanha ativa em andamento.");
+      if (activeStatus.isSending || activeStatus.isPaused || activeStatus.isScheduled) {
+        throw new ConflictError("Ja existe uma campanha agendada, pausada ou em andamento.");
       }
 
       let campaignMessage = data.message || "";
@@ -79,12 +79,16 @@ export const CampaignCommandService = {
     return true;
   },
 
-  async getStatus(logOffset: number = 0) {
-    return getQueueService(getCurrentWorkspaceId()).getStatus(logOffset);
+  async getStatus(logOffset: number = 0, includeFailures = false) {
+    return getQueueService(getCurrentWorkspaceId()).getStatus(logOffset, includeFailures);
   },
 
   async getHistory(limit: number = 50) {
     return getCampaignService(getCurrentWorkspaceId()).getCampaignHistory(limit);
+  },
+
+  async getHistoryItem(id: string) {
+    return getCampaignService(getCurrentWorkspaceId()).getCampaignHistoryItem(id);
   },
 
   async completeCampaign(id: string, data: CampaignCompleteInput) {

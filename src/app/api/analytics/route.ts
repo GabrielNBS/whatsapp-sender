@@ -13,8 +13,11 @@ export const dynamic = 'force-dynamic';
 const analyticsQuerySchema = z.object({
   from: z.string().datetime().or(z.string().date()).optional().nullable(),
   to: z.string().datetime().or(z.string().date()).optional().nullable(),
-  limit: z.coerce.number().int().min(1).max(2000).default(1000),
+  limit: z.coerce.number().int().min(1).max(2000).default(100),
   offset: z.coerce.number().int().min(0).default(0),
+  phones: z.string().optional().transform((value) => value
+    ? Array.from(new Set(value.split(',').map((phone) => phone.trim()).filter(Boolean))).slice(0, 100)
+    : []),
 });
 
 /**
@@ -40,6 +43,7 @@ export const GET = apiHandler(async (req: NextRequest) => {
     to: searchParams.get('to'),
     limit: searchParams.get('limit') || undefined,
     offset: searchParams.get('offset') || undefined,
+    phones: searchParams.get('phones') || undefined,
   };
 
   const validation = analyticsQuerySchema.safeParse(queryParams);
@@ -47,10 +51,13 @@ export const GET = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Parâmetros de busca de analytics inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const { from, to, limit, offset } = validation.data;
+  const { from, to, limit, offset, phones } = validation.data;
 
   // Monta filtros
   const where: Prisma.ContactAnalyticsWhereInput = { workspaceId: getCurrentWorkspaceId() };
+  if (phones.length > 0) {
+    where.phone = { in: phones };
+  }
   if (from || to) {
     where.OR = [];
     if (from) {

@@ -26,14 +26,16 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ScheduledBatch } from "@/lib/types";
+import { ScheduleBatchSummary } from "@/lib/types";
+import { getCampaignProgress } from '@/lib/campaign-progress';
+import { formatScheduleDateTime } from '@/lib/date-formatters';
 
 export function MonitoringSheetContent() {
-    const { sendingStatus } = useAppStore();
+    const sendingStatus = useAppStore((state) => state.sendingStatus);
     const { activeSchedules, handleCancelSchedule } = useScheduler();
     const { handleStop } = useSender();
     const { sheetData } = useGlobalSheet();
-    const [scheduleToDelete, setScheduleToDelete] = useState<ScheduledBatch | null>(null);
+    const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleBatchSummary | null>(null);
     const [showStopConfirmation, setShowStopConfirmation] = useState(false);
 
     const focusedBatchId = sheetData?.focusedBatchId as string | undefined;
@@ -51,8 +53,7 @@ export function MonitoringSheetContent() {
     }, [focusedBatchId, activeSchedules]);
 
     const isActive = sendingStatus.isSending && sendingStatus.totalContacts > 0;
-    const processed = sendingStatus.sentCount + sendingStatus.failedCount;
-    const percent = sendingStatus.totalContacts > 0 ? Math.round((processed / sendingStatus.totalContacts) * 100) : 0;
+    const { processed, percent } = getCampaignProgress(sendingStatus);
 
     return (
         <div className="h-full flex flex-col bg-background">
@@ -231,12 +232,7 @@ export function MonitoringSheetContent() {
                                                             {schedule.count + (schedule.paused || 0)} leads
                                                         </span>
                                                         <span className="text-[10px] font-bold text-muted-foreground/70">
-                                                            {new Date(schedule.scheduledFor).toLocaleString('pt-BR', {
-                                                                day: '2-digit',
-                                                                month: 'short',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit'
-                                                            })}
+                                                            {formatScheduleDateTime(schedule.scheduledFor)}
                                                         </span>
                                                     </div>
                                                 </div>

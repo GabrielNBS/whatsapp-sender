@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FileData } from './use-send-form';
 import { Contact } from '@/lib/types';
+import { scheduleApi, ScheduleResult } from '@/services/schedules/scheduleApi';
 
 interface SchedulePayload {
     recipients: Contact[];
@@ -12,7 +13,7 @@ interface SchedulePayload {
 }
 
 interface UseScheduleMessagesOptions {
-    onSuccess?: (data: unknown) => void;
+    onSuccess?: (data: ScheduleResult) => void;
     onError?: (error: Error) => void;
 }
 
@@ -25,18 +26,7 @@ export function useScheduleMessages(options: UseScheduleMessagesOptions = {}) {
         setError(null);
 
         try {
-            const res = await fetch('/api/schedule', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.message || 'Falha ao agendar');
-            }
-
-            const data = await res.json();
+            const data = await scheduleApi.create(payload);
 
             if (options.onSuccess) {
                 options.onSuccess(data);

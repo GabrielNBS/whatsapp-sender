@@ -10,9 +10,12 @@ export const dynamic = 'force-dynamic';
  * GET /api/schedule
  * Lista todos os lotes de agendamentos ativos ou recentemente finalizados.
  */
-export const GET = apiHandler(async () => {
-  const activeSchedules = await ScheduleService.listActiveSchedules();
-  return NextResponse.json(activeSchedules);
+export const GET = apiHandler(async (req: NextRequest) => {
+  const batchId = req.nextUrl.searchParams.get('batchId');
+  if (batchId) {
+    return NextResponse.json(await ScheduleService.getScheduleBatchDetails(batchId));
+  }
+  return NextResponse.json(await ScheduleService.listActiveSchedules());
 }, { routeName: '/api/schedule (GET)', requireAuth: true });
 
 /**

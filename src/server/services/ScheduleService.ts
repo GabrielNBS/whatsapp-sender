@@ -5,35 +5,16 @@ import { ACTIVE_BATCH_STATUSES, RECENT_BATCH_WINDOW_MS } from '@/constants/domai
 import { nanoid } from 'nanoid';
 import { NotFoundError } from '@/lib/api-errors';
 import { SchedulerService } from './SchedulerService';
-import { ScheduledMessageStatus } from '@/lib/types';
+import { ScheduledBatch, ScheduledMessageStatus, ScheduleBatchSummary } from '@/lib/types';
 import { getCurrentWorkspaceId } from '@/server/workspace';
-
-interface ScheduleBatchSummary {
-  id: string;
-  batchId: string;
-  batchName: string;
-  scheduledFor: Date;
-  count: number;
-  processing: number;
-  paused: number;
-  total: number;
-  sent: number;
-  failed: number;
-  contacts: Array<{
-    id: string;
-    name: string;
-    phone: string;
-    status: ScheduledMessageStatus;
-  }>;
-  sampleTemplate?: string;
-}
 
 export const ScheduleService = {
   /**
    * Obtém os lotes ativos ou recentemente finalizados agrupados por batchId.
    */
   async listActiveSchedules(workspaceId = getCurrentWorkspaceId()) {
-    const pendingBatches = await prisma.scheduledMessage.findMany({
+    const pendingBatches = await prisma.scheduledMessage.groupBy({
+      by: ['batchId'],
       where: {
         workspaceId,
         OR: [
@@ -41,8 +22,6 @@ export const ScheduleService = {
           { scheduledFor: { gte: new Date(Date.now() - RECENT_BATCH_WINDOW_MS) } }
         ]
       },
-      select: { batchId: true },
-      distinct: ['batchId']
     });
 
     const activeBatchIds = pendingBatches.map(b => b.batchId).filter(Boolean) as string[];
@@ -51,59 +30,88 @@ export const ScheduleService = {
       return [];
     }
 
-    const messages = await prisma.scheduledMessage.findMany({
+    const batchStatusCounts = await prisma.scheduledMessage.groupBy({
+      by: ['batchId', 'batchName', 'status'],
       where: {
         workspaceId,
         batchId: { in: activeBatchIds }
       },
-      include: {
-        template: true
-      },
-      orderBy: {
-        scheduledFor: 'asc'
-      }
+      _count: { _all: true },
+      _min: { scheduledFor: true },
     });
 
     const batches: Record<string, ScheduleBatchSummary> = {};
 
-    for (const msg of messages) {
-      const batchId = msg.batchId || 'unknown';
+    for (const row of batchStatusCounts) {
+      const batchId = row.batchId || 'unknown';
       
       if (!batches[batchId]) {
         batches[batchId] = {
           id: batchId,
           batchId: batchId,
-          batchName: msg.batchName || 'Sem Nome',
-          scheduledFor: msg.scheduledFor,
+          batchName: row.batchName || 'Sem Nome',
+          scheduledFor: row._min.scheduledFor || new Date(),
           count: 0, // Pendente
           processing: 0,
           paused: 0,
           total: 0,
           sent: 0,
           failed: 0,
-          contacts: [],
-          sampleTemplate: msg.template?.content
         };
       }
 
-      batches[batchId].total++;
-
-      const status = msg.status;
-      if (status === 'PENDING') batches[batchId].count++;
-      else if (status === 'PROCESSING') batches[batchId].processing++;
-      else if (status === 'PAUSED') batches[batchId].paused++;
-      else if (status === 'SENT') batches[batchId].sent++;
-      else if (status === 'FAILED') batches[batchId].failed++;
-
-      batches[batchId].contacts.push({
-        id: msg.id,
-        name: msg.contactName,
-        phone: msg.contactPhone,
-        status: status as ScheduledMessageStatus
-      });
+      const batch = batches[batchId]!;
+      const count = row._count._all;
+      batch.total += count;
+      if (row.status === 'PENDING') batch.count += count;
+      else if (row.status === 'PROCESSING') batch.processing += count;
+      else if (row.status === 'PAUSED') batch.paused = (batch.paused ?? 0) + count;
+      else if (row.status === 'SENT') batch.sent += count;
+      else if (row.status === 'FAILED') batch.failed += count;
     }
 
-    return Object.values(batches);
+    return Object.values(batches).sort(
+      (first, second) => new Date(first.scheduledFor).getTime() - new Date(second.scheduledFor).getTime(),
+    );
+  },
+
+  async getScheduleBatchDetails(batchId: string, workspaceId = getCurrentWorkspaceId()): Promise<ScheduledBatch> {
+    const messages = await prisma.scheduledMessage.findMany({
+      where: { workspaceId, batchId },
+      include: { template: { select: { content: true } } },
+      orderBy: { scheduledFor: 'asc' },
+    });
+
+    if (messages.length === 0) throw new NotFoundError('Agendamento não encontrado neste workspace.');
+
+    const summary = await this.listActiveSchedules(workspaceId);
+    const batch = summary.find((item) => item.batchId === batchId);
+    if (!batch) {
+      const statuses = messages.reduce<Record<string, number>>((acc, message) => {
+        acc[message.status] = (acc[message.status] ?? 0) + 1;
+        return acc;
+      }, {});
+      return {
+        id: batchId,
+        batchId,
+        batchName: messages[0].batchName || 'Sem Nome',
+        scheduledFor: messages[0].scheduledFor,
+        count: statuses.PENDING ?? 0,
+        processing: statuses.PROCESSING ?? 0,
+        paused: statuses.PAUSED ?? 0,
+        total: messages.length,
+        sent: statuses.SENT ?? 0,
+        failed: statuses.FAILED ?? 0,
+        contacts: messages.map((message) => ({ id: message.id, name: message.contactName, phone: message.contactPhone, status: message.status as ScheduledMessageStatus })),
+        sampleTemplate: messages[0].template.content,
+      };
+    }
+
+    return {
+      ...batch,
+      contacts: messages.map((message) => ({ id: message.id, name: message.contactName, phone: message.contactPhone, status: message.status as ScheduledMessageStatus })),
+      sampleTemplate: messages[0].template.content,
+    };
   },
 
   /**
@@ -134,9 +142,23 @@ export const ScheduleService = {
         templateId = template.id;
       }
 
+      await tx.campaign.create({
+        data: {
+          id: batchId,
+          workspaceId,
+          name: data.batchName || `Campanha Agendada (${data.recipients.length} contatos)`,
+          startedAt: scheduledDate,
+          totalContacts: data.recipients.length,
+          sentCount: 0,
+          failedCount: 0,
+        },
+      });
+
       await tx.scheduledMessage.createMany({
-        data: data.recipients.map((recipient) => ({
-          scheduledFor: scheduledDate,
+        data: data.recipients.map((recipient, index) => ({
+          // Millisecond offsets preserve recipient order when the scheduler
+          // claims messages with the same requested delivery time.
+          scheduledFor: new Date(scheduledDate.getTime() + index),
           workspaceId,
           status: 'PENDING',
           contactName: recipient.name,
@@ -148,10 +170,8 @@ export const ScheduleService = {
       });
     });
 
-    // Se o agendamento for para agora ou passado imediato, acorda o scheduler
-    if (scheduledDate.getTime() <= Date.now()) {
-      SchedulerService.wakeUp();
-    }
+    // Garante que o scheduler worker esteja em execução
+    SchedulerService.wakeUp();
 
     return {
       success: true,
@@ -205,9 +225,7 @@ export const ScheduleService = {
       throw new NotFoundError('Nenhum agendamento encontrado para reagendar neste lote.');
     }
 
-    if (rescheduledDate.getTime() <= Date.now()) {
-      SchedulerService.wakeUp();
-    }
+    SchedulerService.wakeUp();
 
     return {
       success: true,

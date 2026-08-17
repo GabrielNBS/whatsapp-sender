@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useAppStore, Contact, Group } from '@/lib/store';
+import { useShallow } from 'zustand/react/shallow';
 import { toast } from 'sonner';
 import { GroupService } from '@/lib/GroupService';
 import { updateContactGroups as persistContactGroups } from '@/services/contacts/contactsApi';
@@ -51,7 +52,11 @@ interface UseGroupManagementReturn {
  * separating concerns from the UI component.
  */
 export function useGroupManagement(group: Group | null): UseGroupManagementReturn {
-  const { contacts, groups, replaceContactState } = useAppStore();
+  const { contacts, groups, upsertContacts } = useAppStore(useShallow((state) => ({
+    contacts: state.contacts,
+    groups: state.groups,
+    upsertContacts: state.upsertContacts,
+  })));
   const [actionState, setActionState] = useState<ActionState>(INITIAL_ACTION_STATE);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<Contact | null>(null);
@@ -95,8 +100,8 @@ export function useGroupManagement(group: Group | null): UseGroupManagementRetur
     setIsLoading(true);
     try {
       const newGroupIds = GroupService.calculateGroupIdsAfterRemove(contact, group.id);
-      const snapshot = await persistContactGroups(contact.id, newGroupIds);
-      replaceContactState(snapshot.groups, snapshot.contacts);
+      const result = await persistContactGroups(contact.id, newGroupIds);
+      upsertContacts([result.contact]);
       toast.success(`${contact.name} removido do grupo`);
       setConfirmRemove(null);
     } catch (error) {
@@ -105,7 +110,7 @@ export function useGroupManagement(group: Group | null): UseGroupManagementRetur
     } finally {
       setIsLoading(false);
     }
-  }, [group, replaceContactState]);
+  }, [group, upsertContacts]);
 
   const handleMoveToGroup = useCallback(async (contact: Contact) => {
     if (!actionState.targetGroupId || !group) return;
@@ -131,8 +136,8 @@ export function useGroupManagement(group: Group | null): UseGroupManagementRetur
         actionState.targetGroupId
       );
       
-      const snapshot = await persistContactGroups(contact.id, newGroupIds);
-      replaceContactState(snapshot.groups, snapshot.contacts);
+      const result = await persistContactGroups(contact.id, newGroupIds);
+      upsertContacts([result.contact]);
       toast.success(`${contact.name} movido para ${targetGroup?.name || 'outro grupo'}`);
       setActionState(INITIAL_ACTION_STATE);
     } catch (error) {
@@ -141,7 +146,7 @@ export function useGroupManagement(group: Group | null): UseGroupManagementRetur
     } finally {
       setIsLoading(false);
     }
-  }, [actionState.targetGroupId, group, groups, otherGroups, replaceContactState]);
+  }, [actionState.targetGroupId, group, groups, otherGroups, upsertContacts]);
 
   const startMoveAction = useCallback((contactId: string) => {
     setActionState({ type: 'move', contactId, targetGroupId: '' });

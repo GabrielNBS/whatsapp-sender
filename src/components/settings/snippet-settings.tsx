@@ -6,13 +6,8 @@ import { Plus, Trash2, Command, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { snippetsApi, type Snippet } from '@/services/settings/snippetsApi';
 
-
-interface Snippet {
-  id: string;
-  trigger: string;
-  content: string;
-}
 
 export function SnippetSettings() {
   const [snippets, setSnippets] = useState<Snippet[]>([]);
@@ -27,10 +22,7 @@ export function SnippetSettings() {
 
   const fetchSnippets = async () => {
     try {
-      const res = await fetch("/api/snippets");
-      if (res.ok) {
-        setSnippets(await res.json());
-      }
+      setSnippets(await snippetsApi.list());
     } catch {
       toast.error(`Erro ao carregar snippets`);
     } finally {
@@ -46,20 +38,11 @@ export function SnippetSettings() {
 
     setIsCreating(true);
     try {
-      const res = await fetch("/api/snippets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trigger, content }),
-      });
-
-      if (res.ok) {
-        toast.success("Snippet criado");
-        setTrigger("");
-        setContent("");
-        fetchSnippets();
-      } else {
-        toast.error(`Erro ao criar snippet`);
-      }
+      const snippet = await snippetsApi.create({ trigger, content });
+      setSnippets((current) => [...current, snippet]);
+      toast.success("Snippet criado");
+      setTrigger("");
+      setContent("");
     } catch {
       toast.error(`Erro ao criar snippet`);
     } finally {
@@ -69,14 +52,9 @@ export function SnippetSettings() {
 
   const handleDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/snippets?id=${id}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        toast.success("Snippet removido");
-        setSnippets(snippets.filter((s) => s.id !== id));
-      }
+      await snippetsApi.remove(id);
+      toast.success("Snippet removido");
+      setSnippets((current) => current.filter((snippet) => snippet.id !== id));
     } catch {
       toast.error(`Erro ao remover snippet`);
     }

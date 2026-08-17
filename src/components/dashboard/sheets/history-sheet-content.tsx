@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import type { ComponentType } from 'react';
 import { SplitText } from '@/components/ui/split-text';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -23,31 +23,12 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useCampaignHistory, type CampaignHistoryFilter } from '@/hooks/use-campaign-history';
+import type { CampaignHistoryItem, CampaignHistorySummary } from '@/services/campaigns/campaignHistoryApi';
 
 // ===================================================
 // TYPES
 // ===================================================
-
-interface FailedDetail {
-  contactName: string;
-  contactPhone: string;
-}
-
-interface CampaignHistoryItem {
-  id: string;
-  name: string;
-  startedAt: string;
-  completedAt: string | null;
-  totalContacts: number;
-  sentCount: number;
-  failedCount: number;
-  readCount: number;
-  responseCount: number;
-  failedDetails: FailedDetail[];
-  templateTitle?: string;
-  templateContent?: string;
-  templateMedia?: string | null;
-}
 
 // ===================================================
 // FORMAT HELPERS
@@ -85,7 +66,7 @@ function CampaignRow({
   campaign,
   onClick,
 }: {
-  campaign: CampaignHistoryItem;
+  campaign: CampaignHistorySummary;
   onClick: () => void;
 }) {
   const rate = successRate(campaign.sentCount, campaign.totalContacts);
@@ -423,7 +404,7 @@ function MetricTile({
   color,
   bg,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
   label: string;
   value: string | number;
   color: string;
@@ -444,64 +425,30 @@ function MetricTile({
 // MAIN PAGE
 // ===================================================
 
-const ITEMS_PER_PAGE = 8;
-
-type QuickFilter = 'recent' | 'oldest' | 'failed';
-
-const FILTERS: { key: QuickFilter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const FILTERS: { key: CampaignHistoryFilter; label: string; icon: ComponentType<{ className?: string }> }[] = [
   { key: 'recent', label: 'Mais Recentes', icon: ArrowDownNarrowWide },
   { key: 'oldest', label: 'Mais Antigas', icon: ArrowUpNarrowWide },
   { key: 'failed', label: 'Com Falhas', icon: AlertTriangle },
 ];
 
 export function HistorySheetContent() {
-  const [campaigns, setCampaigns] = useState<CampaignHistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCampaign, setSelectedCampaign] =
-    useState<CampaignHistoryItem | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [activeFilter, setActiveFilter] = useState<QuickFilter>('recent');
-
-  const filteredCampaigns = useMemo(() => {
-    let list = [...campaigns];
-    if (activeFilter === 'oldest') {
-      list.sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
-    } else if (activeFilter === 'failed') {
-      list = list.filter((c) => c.failedCount > 0);
-    }
-    // 'recent' is already the default order from API
-    return list;
-  }, [campaigns, activeFilter]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredCampaigns.length / ITEMS_PER_PAGE));
-  const paginatedCampaigns = filteredCampaigns.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  const handleFilterChange = (filter: QuickFilter) => {
-    setActiveFilter(filter);
-    setCurrentPage(1);
-  };
-
-  const fetchHistory = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/campaigns/history');
-      if (res.ok) {
-        const data = await res.json();
-        setCampaigns(data);
-      }
-    } catch (error) {
-      console.error('Error fetching campaign history:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+  const {
+    activeFilter,
+    campaigns,
+    changeFilter,
+    closeCampaignDetails,
+    currentPage,
+    failedCampaignCount,
+    filteredCampaigns,
+    isDetailLoading,
+    loading,
+    paginatedCampaigns,
+    selectCampaign,
+    selectedCampaign,
+    selectedCampaignId,
+    setCurrentPage,
+    totalPages,
+  } = useCampaignHistory();
 
   return (
     <div className="space-y-8">
@@ -518,7 +465,7 @@ export function HistorySheetContent() {
           </p>
         </div>
 
-        {!selectedCampaign && (
+        {!selectedCampaignId && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-card border border-border rounded-full px-3 py-1.5">
             <CalendarDays className="w-3.5 h-3.5" />
             {filteredCampaigns.length} {filteredCampaigns.length === 1 ? 'campanha' : 'campanhas'}
@@ -527,12 +474,12 @@ export function HistorySheetContent() {
       </div>
 
       {/* Quick Filters */}
-      {!selectedCampaign && !loading && campaigns.length > 0 && (
+      {!selectedCampaignId && !loading && campaigns.length > 0 && (
         <div className="flex items-center gap-2">
           {FILTERS.map(({ key, label, icon: FIcon }) => (
             <button
               key={key}
-              onClick={() => handleFilterChange(key)}
+              onClick={() => changeFilter(key)}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
                 activeFilter === key
@@ -549,7 +496,7 @@ export function HistorySheetContent() {
                     ? 'bg-primary-foreground/20 text-primary-foreground'
                     : 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400'
                 )}>
-                  {campaigns.filter(c => c.failedCount > 0).length}
+                  {failedCampaignCount}
                 </span>
               )}
             </button>
@@ -563,8 +510,18 @@ export function HistorySheetContent() {
           <CampaignDetail
             key="detail"
             campaign={selectedCampaign}
-            onBack={() => setSelectedCampaign(null)}
+            onBack={closeCampaignDetails}
           />
+        ) : selectedCampaignId && isDetailLoading ? (
+          <motion.div
+            key="detail-loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center justify-center py-20 gap-3"
+          >
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-muted-foreground">Carregando detalhes da campanha...</p>
+          </motion.div>
         ) : loading ? (
           <motion.div
             key="loading"
@@ -610,7 +567,7 @@ export function HistorySheetContent() {
               <CampaignRow
                 key={campaign.id}
                 campaign={campaign}
-                onClick={() => setSelectedCampaign(campaign)}
+                onClick={() => void selectCampaign(campaign.id)}
               />
             ))}
 

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Contact, Group } from '@/lib/types';
 import { useContactSearch } from '@/hooks/useContactSearch';
 import { useContactPagination } from '@/hooks/useContactPagination';
@@ -5,12 +6,11 @@ import { ContactSearch } from './ContactSearch';
 import { ContactPagination } from './ContactPagination';
 import { ContactRow } from './ContactRow';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AnalyticsRecord } from '@/hooks/useContactAnalytics';
+import { useContactAnalytics } from '@/hooks/useContactAnalytics';
 
 interface ContactTableProps {
   contacts: Contact[];
   groups: Group[];
-  analytics: Record<string, AnalyticsRecord>;
   onEditClick: (contact: Contact) => void;
   onDeleteClick: (contact: Contact) => void;
 }
@@ -18,7 +18,6 @@ interface ContactTableProps {
 export function ContactTable({
   contacts,
   groups,
-  analytics,
   onEditClick,
   onDeleteClick,
 }: ContactTableProps) {
@@ -32,6 +31,11 @@ export function ContactTable({
     startIndex,
     endIndex,
   } = useContactPagination(filteredContacts);
+  const visiblePhones = useMemo(
+    () => paginatedContacts.map((contact) => contact.number),
+    [paginatedContacts],
+  );
+  const { analytics } = useContactAnalytics(visiblePhones);
 
   if (contacts.length === 0) {
     return (

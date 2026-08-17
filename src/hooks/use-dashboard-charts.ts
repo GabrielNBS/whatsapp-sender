@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react';
+import { metricsApi, type DashboardChartData } from '@/services/metrics/metricsApi';
 
-export interface ChartData {
-  funnel: Array<{ name: string; value: number }>;
-  trends: Array<{ date: string; sent: number; read: number; responses: number }>;
-}
+export type ChartData = DashboardChartData;
 
 export function useDashboardCharts() {
   const [data, setData] = useState<ChartData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/metrics/charts')
-      .then(res => res.json())
+    metricsApi.getCharts()
       .then(d => {
         setData(d);
         setIsLoading(false);

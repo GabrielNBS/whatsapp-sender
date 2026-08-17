@@ -1,48 +1,22 @@
 import { useState, useCallback } from 'react';
-
-interface Campaign {
-  id: string;
-  name: string;
-  totalContacts: number;
-  sentCount: number;
-  failedCount: number;
-  startedAt: string;
-  completedAt: string | null;
-}
-
-interface CreateCampaignParams {
-  name: string;
-  templateName?: string;
-  totalContacts: number;
-}
-
-interface CompleteCampaignParams {
-  sentCount: number;
-  failedCount: number;
-}
+import {
+  campaignApi,
+  type CampaignRecord,
+  type CompleteCampaignPayload,
+  type CreateCampaignPayload,
+} from '@/services/campaigns/campaignApi';
 
 export function useCampaign() {
-  const [currentCampaign, setCurrentCampaign] = useState<Campaign | null>(null);
+  const [currentCampaign, setCurrentCampaign] = useState<CampaignRecord | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   /**
    * Create a new campaign when sending starts
    */
-  const createCampaign = useCallback(async (params: CreateCampaignParams): Promise<Campaign | null> => {
+  const createCampaign = useCallback(async (params: CreateCampaignPayload): Promise<CampaignRecord | null> => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/campaigns', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-
-      if (!response.ok) {
-        console.error('[useCampaign] Failed to create campaign');
-        return null;
-      }
-
-      const campaign = await response.json();
+      const campaign = await campaignApi.create(params);
       setCurrentCampaign(campaign);
       console.log('[useCampaign] Campaign created:', campaign.id);
       return campaign;
@@ -55,7 +29,7 @@ export function useCampaign() {
   }, []);
 
 
-  const completeCampaign = useCallback(async (metrics: CompleteCampaignParams): Promise<boolean> => {
+  const completeCampaign = useCallback(async (metrics: CompleteCampaignPayload): Promise<boolean> => {
     if (!currentCampaign) {
       console.warn('[useCampaign] No active campaign to complete');
       return false;
@@ -63,18 +37,7 @@ export function useCampaign() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/campaigns/${currentCampaign.id}/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(metrics),
-      });
-
-      if (!response.ok) {
-        console.error('[useCampaign] Failed to complete campaign');
-        return false;
-      }
-
-      const result = await response.json();
+      const result = await campaignApi.complete(currentCampaign.id, metrics);
       console.log('[useCampaign] Campaign completed:', result);
       
       // Clear current campaign

@@ -10,8 +10,10 @@ export const dynamic = 'force-dynamic';
  * GET /api/templates
  * Lista todos os modelos de mensagem do sistema (excluindo os do sistema/ocultos).
  */
-export const GET = apiHandler(async () => {
-  const templates = await TemplateService.listTemplates();
+export const GET = apiHandler(async (req: NextRequest) => {
+  const templates = req.nextUrl.searchParams.get('view') === 'summary'
+    ? await TemplateService.listTemplateSummaries()
+    : await TemplateService.listTemplates();
   return NextResponse.json(templates, {
     headers: {
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',

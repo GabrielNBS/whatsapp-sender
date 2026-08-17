@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, ChangeEvent, useEffect } from 'react';
-import { Contact, Template } from '@/lib/types';
+import { Contact } from '@/lib/types';
+import type { TemplateCatalogItem } from '@/services/templates/templatesApi';
+import { estimateCampaignDurationMinutes } from '@/lib/campaign-progress';
 
 /**
  * File data structure for media uploads
@@ -19,13 +21,23 @@ export interface RecipientConfig {
   name: string;
 }
 
+export interface RecipientBatch extends RecipientConfig {
+  recipients: Contact[];
+  startIndex: number;
+  endIndex: number;
+}
+
 /**
  * Hook parameters
  */
 interface UseSendFormParams {
   contacts: Contact[];
   getContactsByGroup: (groupId: string) => Contact[];
-  templates: Template[];
+  templates: TemplateCatalogItem[];
+  loadTemplate: (templateId: string) => Promise<{
+    content: string;
+    media?: string | null;
+  }>;
 }
 
 /**
@@ -33,7 +45,7 @@ interface UseSendFormParams {
  */
 interface UseSendFormReturn {
   // State
-  recipientConfig: RecipientConfig;
+  recipientConfigs: RecipientConfig[];
   message: string;
   selectedFile: FileData | null;
   isScheduleMode: boolean;
@@ -42,19 +54,66 @@ interface UseSendFormReturn {
   
   // Computed
   recipients: Contact[];
+  recipientBatches: RecipientBatch[];
   recipientsCount: number;
   estimatedTime: number;
   canSubmit: boolean;
   
   // Actions
-  setRecipientConfig: (config: RecipientConfig) => void;
+  setRecipientConfigs: (configs: RecipientConfig[]) => void;
   setMessage: (message: string) => void;
   setSelectedFile: (file: FileData | null) => void;
   setIsScheduleMode: (mode: boolean) => void;
   setScheduleDate: (date: string) => void;
-  handleTemplateSelect: (templateId: string) => void;
+  handleTemplateSelect: (templateId: string) => Promise<void>;
   handleFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
   resetForm: () => void;
+}
+
+export function resolveRecipientBatches(
+  recipientConfigs: RecipientConfig[],
+  contacts: Contact[],
+  getContactsByGroup: (groupId: string) => Contact[],
+): RecipientBatch[] {
+  const selectedContactIds = new Set<string>();
+  const orderedRecipients: Contact[] = [];
+  const batches: RecipientBatch[] = [];
+
+  for (const config of recipientConfigs) {
+    const batchRecipients = config.type === 'group'
+      ? config.id === 'all'
+        ? contacts
+        : getContactsByGroup(config.id)
+      : contacts.filter((contact) => contact.id === config.id);
+    const startIndex = orderedRecipients.length;
+
+    for (const contact of batchRecipients) {
+      if (selectedContactIds.has(contact.id)) continue;
+      selectedContactIds.add(contact.id);
+      orderedRecipients.push(contact);
+    }
+
+    batches.push({
+      ...config,
+      recipients: orderedRecipients.slice(startIndex),
+      startIndex,
+      endIndex: orderedRecipients.length,
+    });
+  }
+
+  return batches;
+}
+
+export function resolveRecipients(
+  recipientConfigs: RecipientConfig[],
+  contacts: Contact[],
+  getContactsByGroup: (groupId: string) => Contact[],
+): Contact[] {
+  return resolveRecipientBatches(
+    recipientConfigs,
+    contacts,
+    getContactsByGroup,
+  ).flatMap((batch) => batch.recipients);
 }
 
 /**
@@ -67,13 +126,16 @@ export function useSendForm({
   contacts,
   getContactsByGroup,
   templates,
+  loadTemplate,
 }: UseSendFormParams): UseSendFormReturn {
   // Form state
-  const [recipientConfig, setRecipientConfig] = useState<RecipientConfig>({
-    type: 'group',
-    id: 'all',
-    name: 'Todos os Contatos',
-  });
+  const [recipientConfigs, setRecipientConfigs] = useState<RecipientConfig[]>([
+    {
+      type: 'group',
+      id: 'all',
+      name: 'Todos os Contatos',
+    },
+  ]);
   const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState<FileData | null>(null);
   const [isScheduleMode, setIsScheduleMode] = useState(false);
@@ -81,22 +143,21 @@ export function useSendForm({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
 
-  // Computed: recipients based on selection
-  const recipients = useMemo(() => {
-    if (recipientConfig.type === 'group') {
-      return recipientConfig.id === 'all'
-        ? contacts
-        : getContactsByGroup(recipientConfig.id);
-    }
-    return contacts.filter(c => c.id === recipientConfig.id);
-  }, [recipientConfig, contacts, getContactsByGroup]);
+  // Computed: batches and recipients preserve the exact selection order.
+  const recipientBatches = useMemo(() => {
+    return resolveRecipientBatches(recipientConfigs, contacts, getContactsByGroup);
+  }, [recipientConfigs, contacts, getContactsByGroup]);
+  const recipients = useMemo(
+    () => recipientBatches.flatMap((batch) => batch.recipients),
+    [recipientBatches],
+  );
 
   const recipientsCount = recipients.length;
 
-  // Estimated time: ~20 seconds per contact
-  const estimatedTime = useMemo(() => {
-    return Math.ceil((recipientsCount * 20) / 60);
-  }, [recipientsCount]);
+  const estimatedTime = useMemo(
+    () => estimateCampaignDurationMinutes(recipientsCount),
+    [recipientsCount],
+  );
 
   useEffect(() => {
     const intervalId = window.setInterval(() => {
@@ -127,7 +188,7 @@ export function useSendForm({
   }, [recipientsCount, message, selectedFile, isScheduleMode, scheduleDate, nowTimestamp]);
 
   // Handlers
-  const handleTemplateSelect = useCallback((templateId: string) => {
+  const handleTemplateSelect = useCallback(async (templateId: string) => {
     if (templateId === 'none') {
       setSelectedTemplateId(null);
       setMessage('');
@@ -135,10 +196,9 @@ export function useSendForm({
       return;
     }
     
-    setSelectedTemplateId(templateId);
-    const template = templates.find(t => t.id === templateId);
-    
-    if (template) {
+    try {
+      const template = await loadTemplate(templateId);
+      setSelectedTemplateId(templateId);
       setMessage(template.content);
       
       if (template.media) {
@@ -152,8 +212,11 @@ export function useSendForm({
       } else {
         setSelectedFile(null);
       }
+    } catch (error) {
+      console.error('Error loading template', error);
+      setSelectedTemplateId(null);
     }
-  }, [templates]);
+  }, [loadTemplate]);
 
   const handleFileChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -185,7 +248,7 @@ export function useSendForm({
 
   return {
     // State
-    recipientConfig,
+    recipientConfigs,
     message,
     selectedFile,
     isScheduleMode,
@@ -194,12 +257,13 @@ export function useSendForm({
     
     // Computed
     recipients,
+    recipientBatches,
     recipientsCount,
     estimatedTime,
     canSubmit,
     
     // Actions
-    setRecipientConfig,
+    setRecipientConfigs,
     setMessage,
     setSelectedFile,
     setIsScheduleMode,

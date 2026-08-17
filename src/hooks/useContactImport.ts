@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useAppStore, Contact } from '@/lib/store';
+import { useShallow } from 'zustand/react/shallow';
 import { parseContactsCsv } from '@/services/contacts/parseContactsCsv';
 import { dedupeContacts } from '@/services/contacts/dedupeContacts';
 import { DEFAULT_GROUP_ID } from '@/constants/contacts';
@@ -15,7 +16,12 @@ export function isImportTargetType(value: unknown): value is ImportTargetType {
 }
 
 export function useContactImport() {
-  const { contacts, groups, replaceContactState } = useAppStore();
+  const { contacts, groups, upsertContacts, upsertGroup } = useAppStore(useShallow((state) => ({
+    contacts: state.contacts,
+    groups: state.groups,
+    upsertContacts: state.upsertContacts,
+    upsertGroup: state.upsertGroup,
+  })));
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importedContacts, setImportedContacts] = useState<Omit<Contact, 'id'>[]>([]);
@@ -107,11 +113,12 @@ export function useContactImport() {
     }
 
     try {
-      const snapshot = await importContacts(
+      const result = await importContacts(
         newGroup,
         uniqueContacts.map((contact) => ({ id: nanoid(), ...contact })),
       );
-      replaceContactState(snapshot.groups, snapshot.contacts);
+      if (result.group) upsertGroup(result.group);
+      upsertContacts(result.contacts);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Falha ao importar contatos.');
       return;
@@ -129,7 +136,7 @@ export function useContactImport() {
     setImportTargetType('default');
     setImportTargetGroupId('');
     setImportNewGroupName('');
-  }, [importedContacts, importTargetType, importTargetGroupId, importNewGroupName, groups, contacts, replaceContactState]);
+  }, [importedContacts, importTargetType, importTargetGroupId, importNewGroupName, groups, contacts, upsertContacts, upsertGroup]);
 
   const handleCloseImport = useCallback(() => {
     setIsImportModalOpen(false);

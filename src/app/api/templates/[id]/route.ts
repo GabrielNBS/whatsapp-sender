@@ -9,6 +9,19 @@ interface RouteParams {
 }
 
 /**
+ * GET /api/templates/[id]
+ * Retorna o conteúdo completo somente quando ele é necessário.
+ */
+export const GET = apiHandler(async (_req: NextRequest, { params }: RouteParams) => {
+  const { id } = await params;
+  const template = await TemplateService.getTemplateById(id);
+  if (!template) {
+    throw new NotFoundError('O modelo solicitado não foi encontrado.');
+  }
+  return NextResponse.json(template);
+}, { routeName: '/api/templates/[id] (GET)', requireAuth: true });
+
+/**
  * PUT /api/templates/[id]
  * Atualiza um modelo de mensagem.
  */

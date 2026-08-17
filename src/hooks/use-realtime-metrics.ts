@@ -7,8 +7,9 @@
  * Polling configurável para métricas em tempo real
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { RealtimeMetrics } from "@/lib/MetricsService";
+import { metricsApi } from '@/services/metrics/metricsApi';
 
 interface UseRealtimeMetricsOptions {
   /** Intervalo de polling em ms (default: 3000) */
@@ -37,21 +38,20 @@ export function useRealtimeMetrics(
   const [metrics, setMetrics] = useState<RealtimeMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const inFlightRef = useRef(false);
 
-  const fetchMetrics = useCallback(async () => {
+  const fetchMetrics = useCallback(async (signal?: AbortSignal) => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     try {
-      const response = await fetch("/api/metrics/realtime");
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setMetrics(data);
+      setMetrics(await metricsApi.getRealtime(signal));
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error("Unknown error"));
+      if (err instanceof Error && err.name !== 'AbortError') {
+        setError(err);
+      }
     } finally {
+      inFlightRef.current = false;
       setIsLoading(false);
     }
   }, []);
@@ -60,12 +60,18 @@ export function useRealtimeMetrics(
     if (!autoStart) return;
     
     // Fetch inicial
-    fetchMetrics();
+    const controller = new AbortController();
+    void fetchMetrics(controller.signal);
     
     // Polling
-    const intervalId = setInterval(fetchMetrics, pollingInterval);
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') void fetchMetrics();
+    }, pollingInterval);
     
-    return () => clearInterval(intervalId);
+    return () => {
+      controller.abort();
+      clearInterval(intervalId);
+    };
   }, [fetchMetrics, pollingInterval, autoStart]);
 
   return {

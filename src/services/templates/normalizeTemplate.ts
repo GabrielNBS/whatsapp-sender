@@ -1,7 +1,7 @@
 import { Template } from '@/types/templates';
 import { parseTemplateMedia } from './parseTemplateMedia';
 
-interface RawTemplate {
+export interface RawTemplate {
   id?: unknown;
   title?: string | null;
   content?: string | null;

@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useRouter } from "next/navigation";
+import { getCampaignProgress } from '@/lib/campaign-progress';
 import {
     Popover,
     PopoverContent,
@@ -38,6 +39,7 @@ export function NotificationBell() {
     const emptyGroupsCount = emptyGroups.length;
     
     const isActive = isSending && totalContacts > 0;
+    const campaignProgress = getCampaignProgress({ totalContacts, sentCount, failedCount });
     const pendingCount = activeSchedules.length;
     const hasAlerts = emptyGroupsCount > 0;
     
@@ -157,10 +159,10 @@ export function NotificationBell() {
                                                 <motion.div 
                                                     className="bg-primary h-full rounded-full"
                                                     initial={{ width: 0 }}
-                                                    animate={{ width: `${((sentCount + failedCount) / totalContacts) * 100}%` }}
+                                                    animate={{ width: `${campaignProgress.percent}%` }}
                                                 />
                                             </div>
-                                            <p className="text-[10px] text-muted-foreground">{(sentCount + failedCount)} de {totalContacts} enviados</p>
+                                            <p className="text-[10px] text-muted-foreground">{campaignProgress.processed} de {totalContacts} enviados</p>
                                         </div>
                                     </div>
                                 </button>

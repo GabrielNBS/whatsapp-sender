@@ -13,12 +13,19 @@ export const dynamic = 'force-dynamic';
 export const GET = apiHandler(async (req: NextRequest) => {
   const { searchParams } = req.nextUrl;
   const logOffsetParam = searchParams.get('logOffset') || '0';
+  const includeFailuresParam = searchParams.get('includeFailures') || undefined;
 
-  const validation = campaignQuerySchema.safeParse({ logOffset: logOffsetParam });
+  const validation = campaignQuerySchema.safeParse({
+    logOffset: logOffsetParam,
+    includeFailures: includeFailuresParam,
+  });
   if (!validation.success) {
     throw new ValidationError('Parâmetros de status inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const status = await CampaignCommandService.getStatus(validation.data.logOffset || 0);
+  const status = await CampaignCommandService.getStatus(
+    validation.data.logOffset || 0,
+    validation.data.includeFailures,
+  );
   return NextResponse.json(status);
 }, { routeName: '/api/campaigns/status (GET)', requireAuth: true });

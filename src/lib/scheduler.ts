@@ -97,8 +97,15 @@ export function startScheduler() {
 
       let success = false;
       try {
-        const mediaData = msg.template.media ? JSON.parse(msg.template.media as string) : undefined;
-        await whatsappService.sendMessage(msg.contactPhone, msg.template.content, mediaData, { fallbackName: msg.contactName });
+        let mediaData = undefined;
+        if (msg.template.media) {
+          try {
+            mediaData = typeof msg.template.media === 'string' ? JSON.parse(msg.template.media) : msg.template.media;
+          } catch (err) {
+            logger.warn({ err }, `[Scheduler] Erro ao parsear media do template ${msg.template.id}`);
+          }
+        }
+        await whatsappService.sendMessage(msg.contactPhone, msg.template.content || '', mediaData, { fallbackName: msg.contactName });
         success = true;
         logger.info(`[Scheduler] Mensagem enviada para ${msg.contactName} (${msg.contactPhone})`);
         queueLogs.pushLog(`Enviado para ${msg.contactName}`, "success");

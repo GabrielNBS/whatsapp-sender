@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Users, Check, UserPlus } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Users, UserPlus } from "lucide-react";
 import { useGlobalSheet } from "@/components/dashboard/global-sheet-provider";
 import { Button } from "@/components/ui/button";
 import { Group, Contact } from "@/lib/store";
@@ -21,17 +21,16 @@ import {
 interface RecipientSelectorProps {
   groups: Group[];
   contacts: Contact[];
-  value: {
+  value: Array<{
     type: "group" | "contact";
     id: string;
     name: string;
-  };
-  onChange: (value: {
+  }>;
+  onChange: (value: Array<{
     type: "group" | "contact";
     id: string;
     name: string;
-  }) => void;
-  getContactsByGroup: (groupId: string) => Contact[];
+  }>) => void;
   disabled?: boolean;
 }
 
@@ -40,7 +39,6 @@ export function RecipientSelector({
   contacts,
   value,
   onChange,
-  getContactsByGroup,
   disabled = false,
 }: RecipientSelectorProps) {
   const { openSheet } = useGlobalSheet();
@@ -49,9 +47,19 @@ export function RecipientSelector({
 
   const hasNoData = groups.length === 0 && contacts.length === 0;
 
+  const groupContactCounts = useMemo(() => {
+    const counts = new Map(groups.map((group) => [group.id, 0]));
+    for (const contact of contacts) {
+      for (const groupId of contact.groupIds) {
+        counts.set(groupId, (counts.get(groupId) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [contacts, groups]);
+
   const filteredGroups = groups.filter((group) => {
     const matchesSearch = group.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const hasContacts = getContactsByGroup(group.id).length > 0;
+    const hasContacts = (groupContactCounts.get(group.id) ?? 0) > 0;
     return matchesSearch && hasContacts;
   });
 
@@ -61,11 +69,40 @@ export function RecipientSelector({
       contact.number.includes(searchTerm)
   );
 
+  const selectedGroupIds = value
+    .filter((item) => item.type === "group")
+    .map((item) => item.id);
+  const isAllSelected = selectedGroupIds.includes("all");
+  const getSelectionOrder = (type: "group" | "contact", id: string) => {
+    const index = value.findIndex((item) => item.type === type && item.id === id);
+    return index >= 0 ? index + 1 : null;
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) setSearchTerm("");
+  };
+
   const handleSelect = (type: "group" | "contact", id: string, name: string) => {
     if (disabled) return;
-    onChange({ type, id, name });
-    setIsOpen(false);
-    setSearchTerm("");
+
+    if (type === "group" && id === "all") {
+      onChange(isAllSelected ? [] : [{ type, id, name }]);
+      return;
+    }
+
+    const granularSelection = value.filter(
+      (item) => !(item.type === "group" && item.id === "all")
+    );
+    const isSelected = granularSelection.some(
+      (item) => item.type === type && item.id === id
+    );
+
+    onChange(
+      isSelected
+        ? granularSelection.filter((item) => !(item.type === type && item.id === id))
+        : [...granularSelection, { type, id, name }]
+    );
   };
 
   return (
@@ -112,7 +149,7 @@ export function RecipientSelector({
             Público alvo da campanha
           </p>
 
-          <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <Popover open={isOpen} onOpenChange={handleOpenChange}>
             <PopoverTrigger asChild>
               <SearchTrigger
                 value={value}
@@ -138,6 +175,7 @@ export function RecipientSelector({
 
                   <CommandGroup heading="Ações">
                     <CommandItem
+                      value="group:all:Todos os Contatos"
                       onSelect={() => handleSelect("group", "all", "Todos os Contatos")}
                       className="flex items-center justify-between cursor-pointer py-2.5 px-3 rounded-lg mx-1"
                     >
@@ -147,25 +185,47 @@ export function RecipientSelector({
                         </div>
                         <span className="font-medium text-sm">Todos os Contatos</span>
                       </div>
-                      {value.id === "all" && (
-                        <Check className="w-4 h-4 text-primary" />
-                      )}
+                      <div className={`flex size-5 items-center justify-center rounded-full border text-[10px] font-bold transition-colors ${isAllSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border/70 bg-background'}`}>
+                        {isAllSelected ? 1 : null}
+                      </div>
                     </CommandItem>
                   </CommandGroup>
 
                   <GroupList
                     groups={filteredGroups}
-                    selectedId={value.id}
-                    getContactCount={(id) => getContactsByGroup(id).length}
+                    getSelectionOrder={(id) => getSelectionOrder("group", id)}
+                    getContactCount={(id) => groupContactCounts.get(id) ?? 0}
                     onSelect={(group) => handleSelect("group", group.id, group.name)}
                   />
 
                   <ContactList
                     contacts={filteredContacts}
-                    selectedId={value.id}
+                    getSelectionOrder={(id) => getSelectionOrder("contact", id)}
                     onSelect={(contact) => handleSelect("contact", contact.id, contact.name)}
                   />
                 </CommandList>
+                <div className="flex items-center justify-between border-t border-border/40 px-3 py-2.5">
+                  <div className="leading-tight">
+                    <p className="text-[11px] font-medium text-muted-foreground">
+                      {value.length === 0
+                        ? "Nenhuma seleção"
+                        : `${value.length} ${value.length === 1 ? "seleção" : "seleções"}`}
+                    </p>
+                    {value.length > 1 && (
+                      <p className="text-[10px] text-muted-foreground/70">
+                        A numeração define a ordem de envio
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleOpenChange(false)}
+                    className="h-7 rounded-md px-3 text-[11px] font-semibold"
+                  >
+                    Concluir
+                  </Button>
+                </div>
               </Command>
             </PopoverContent>
           </Popover>

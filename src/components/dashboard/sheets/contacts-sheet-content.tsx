@@ -15,7 +15,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useContacts } from '@/hooks/useContacts';
 import { useGroups } from '@/hooks/useGroups';
 import { useContactImport } from '@/hooks/useContactImport';
-import { useContactAnalytics } from '@/hooks/useContactAnalytics';
 
 // Subcomponentes
 import { ContactTable } from './components/contacts/ContactTable';
@@ -27,7 +26,7 @@ import { ConfirmDeleteContactDialog } from './components/contacts/ConfirmDeleteC
 import { clearContacts } from '@/services/contacts/contactsApi';
 
 export function ContactsSheetContent() {
-  const { replaceContactState } = useAppStore();
+  const clearContactsFromState = useAppStore((state) => state.clearContactsFromState);
   
   const {
     contacts,
@@ -56,8 +55,6 @@ export function ContactsSheetContent() {
     handleConfirmImport,
   } = useContactImport();
 
-  const { analytics } = useContactAnalytics();
-
   // Estados locais da UI
   const [activeTab, setActiveTab] = useState('contacts');
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -68,8 +65,8 @@ export function ContactsSheetContent() {
 
   const handleClearAll = async () => {
     try {
-      const snapshot = await clearContacts();
-      replaceContactState(snapshot.groups, snapshot.contacts);
+      await clearContacts();
+      clearContactsFromState();
       setIsClearConfirmOpen(false);
       toast.success("Todos os contatos foram removidos");
     } catch (error) {
@@ -155,7 +152,6 @@ export function ContactsSheetContent() {
             <ContactTable
               contacts={contacts}
               groups={groups}
-              analytics={analytics}
               onEditClick={setEditingContact}
               onDeleteClick={setDeletingContact}
             />

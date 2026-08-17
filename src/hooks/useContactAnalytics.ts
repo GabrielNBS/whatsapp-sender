@@ -1,20 +1,20 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { ANALYTICS_REFETCH_INTERVAL } from '@/constants/contacts';
+import { metricsApi, type ContactAnalyticsRecord } from '@/services/metrics/metricsApi';
 
-export interface AnalyticsRecord {
-  sentCount: number;
-  readCount: number;
-  lastSentAt?: string | null;
-  lastReadAt?: string | null;
-}
+export type AnalyticsRecord = ContactAnalyticsRecord;
 
-export function useContactAnalytics() {
+export function useContactAnalytics(phones: string[]) {
   const [analytics, setAnalytics] = useState<Record<string, AnalyticsRecord>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Usamos ref para manter o estado atualizado no visibility handler sem re-registrar timers
   const isTabActive = useRef(true);
+  const phoneQuery = useMemo(
+    () => Array.from(new Set(phones)).sort().join(','),
+    [phones],
+  );
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -28,6 +28,12 @@ export function useContactAnalytics() {
   }, []);
 
   useEffect(() => {
+    if (!phoneQuery) {
+      setAnalytics({});
+      setIsLoading(false);
+      return undefined;
+    }
+
     let active = true;
     let timerId: NodeJS.Timeout;
 
@@ -36,16 +42,7 @@ export function useContactAnalytics() {
 
       setIsLoading(true);
       try {
-        const response = await fetch('/api/analytics', {
-          cache: 'no-store',
-          signal: controller?.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`Erro HTTP: ${response.status}`);
-        }
-
-        const data = await response.json();
+        const data = await metricsApi.getContactAnalytics(phoneQuery, controller?.signal);
         
         if (active && Array.isArray(data)) {
           const map: Record<string, AnalyticsRecord> = {};
@@ -87,7 +84,7 @@ export function useContactAnalytics() {
       clearTimeout(timerId);
       cleanPoll();
     };
-  }, []);
+  }, [phoneQuery]);
 
   return { analytics, isLoading, error };
 }

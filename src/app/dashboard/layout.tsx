@@ -9,11 +9,15 @@ import { ActionMenu } from '@/components/dashboard/action-menu';
 import { TransmissionPill } from '@/components/dashboard/transmission-pill';
 import { NotificationBell } from '@/components/dashboard/notification-bell';
 import { useSendPolling } from '@/hooks/use-send-polling';
+import { useSchedulePolling } from '@/hooks/use-schedule-polling';
+import { useContactHydration } from '@/hooks/use-contact-hydration';
 import { useAppStore } from '@/lib/store';
 import { DebugTransmissionMenu } from '@/components/dashboard/debug-transmission-menu';
 
 function PollingManager() {
+  useContactHydration();
   useSendPolling();
+  useSchedulePolling();
   return null;
 }
 

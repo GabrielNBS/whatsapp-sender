@@ -31,7 +31,27 @@ describe('API payload contracts', () => {
   it('rejects schedules without a template, message or media', () => {
     expect(createScheduleSchema.safeParse({
       recipients: [{ name: 'Contato', number: '5511999999999' }],
-      scheduledFor: new Date().toISOString(),
+      scheduledFor: new Date(Date.now() + 3 * 60 * 1000).toISOString(),
     }).success).toBe(false);
+  });
+
+  it('rejects schedules that start in less than two minutes', () => {
+    const result = createScheduleSchema.safeParse({
+      recipients: [{ name: 'Contato', number: '5511999999999' }],
+      message: 'Mensagem agendada',
+      scheduledFor: new Date(Date.now() + 60 * 1000).toISOString(),
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts a valid future schedule', () => {
+    const result = createScheduleSchema.safeParse({
+      recipients: [{ name: 'Contato', number: '5511999999999' }],
+      message: 'Mensagem agendada',
+      scheduledFor: new Date(Date.now() + 3 * 60 * 1000).toISOString(),
+    });
+
+    expect(result.success).toBe(true);
   });
 });

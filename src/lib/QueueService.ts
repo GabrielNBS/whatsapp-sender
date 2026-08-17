@@ -36,11 +36,31 @@ class QueueService {
     }
   }
 
-  public async getStatus(logOffset: number = 0) {
+  private getIdleStatus() {
+    return {
+      isSending: false,
+      isPaused: false,
+      isScheduled: false,
+      progress: 100,
+      currentContactIndex: 0,
+      totalContacts: 0,
+      statusMessage: null,
+      logs: [],
+      failedContacts: [],
+      sentCount: 0,
+      failedCount: 0,
+      totalLogs: this.totalLogs,
+      failedContactsTotal: 0,
+      failedContactsTruncated: false,
+    };
+  }
+
+  public async getStatus(logOffset: number = 0, includeFailures = false) {
     if (this.isInitializing) {
       return {
         isSending: true,
         isPaused: false,
+        isScheduled: false,
         progress: 0,
         currentContactIndex: 0,
         totalContacts: 0,
@@ -61,26 +81,31 @@ class QueueService {
         select: { id: true },
       });
       const openCampaignIds = openCampaigns.map((campaign) => campaign.id);
+      const activeBatchWhere = {
+        workspaceId: this.workspaceId,
+        batchId: { in: openCampaignIds },
+      } as const;
+      const now = new Date();
       const activeBatch = await prisma.scheduledMessage.findFirst({
         where: {
-          workspaceId: this.workspaceId,
-          status: { in: ["PENDING", "PROCESSING", "PAUSED"] },
-          batchId: { in: openCampaignIds },
+          ...activeBatchWhere,
+          status: { in: ["PENDING", "PROCESSING"] },
+          scheduledFor: { lte: now },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { scheduledFor: "asc" },
+        select: { batchId: true },
+      }) ?? await prisma.scheduledMessage.findFirst({
+        where: { ...activeBatchWhere, status: "PAUSED" },
+        orderBy: { scheduledFor: "asc" },
+        select: { batchId: true },
+      }) ?? await prisma.scheduledMessage.findFirst({
+        where: { ...activeBatchWhere, status: "PENDING" },
+        orderBy: { scheduledFor: "asc" },
         select: { batchId: true },
       });
 
       if (!activeBatch?.batchId) {
-        return {
-          isSending: false,
-          isPaused: false,
-          progress: 100,
-          logs: [],
-          failedContacts: [],
-          failedContactsTotal: 0,
-          failedContactsTruncated: false,
-        };
+        return this.getIdleStatus();
       }
 
       this.activeCampaignId = activeBatch.batchId;
@@ -92,32 +117,27 @@ class QueueService {
 
     if (!campaign) {
       this.activeCampaignId = null;
-      return {
-        isSending: false,
-        isPaused: false,
-        progress: 100,
-        logs: [],
-        failedContacts: [],
-        failedContactsTotal: 0,
-        failedContactsTruncated: false,
-      };
+      return this.getIdleStatus();
     }
 
-    const [pendingCount, activePendingCount, processingCount, pausedCount, failedCountTotal, failedRecords] = await Promise.all([
-      prisma.scheduledMessage.count({ where: { workspaceId: this.workspaceId, batchId: this.activeCampaignId, status: "PENDING" } }),
-      prisma.scheduledMessage.count({
-        where: { workspaceId: this.workspaceId, batchId: this.activeCampaignId, status: "PENDING", scheduledFor: { lte: new Date() } },
+    const campaignId = this.activeCampaignId;
+
+    const [statusGroups, activePendingCount] = await Promise.all([
+      prisma.scheduledMessage.groupBy({
+        by: ['status'],
+        where: { workspaceId: this.workspaceId, batchId: campaignId },
+        _count: { _all: true },
       }),
-      prisma.scheduledMessage.count({ where: { workspaceId: this.workspaceId, batchId: this.activeCampaignId, status: "PROCESSING" } }),
-      prisma.scheduledMessage.count({ where: { workspaceId: this.workspaceId, batchId: this.activeCampaignId, status: "PAUSED" } }),
-      prisma.scheduledMessage.count({ where: { workspaceId: this.workspaceId, batchId: this.activeCampaignId, status: "FAILED" } }),
-      prisma.scheduledMessage.findMany({
-        where: { workspaceId: this.workspaceId, batchId: this.activeCampaignId, status: "FAILED" },
-        select: { contactName: true, contactPhone: true },
-        orderBy: { createdAt: "desc" },
-        take: QueueService.MAX_FAILED_CONTACTS,
+      prisma.scheduledMessage.count({
+        where: { workspaceId: this.workspaceId, batchId: campaignId, status: "PENDING", scheduledFor: { lte: new Date() } },
       }),
     ]);
+
+    const countsByStatus = new Map(statusGroups.map((group) => [group.status, group._count._all]));
+    const pendingCount = countsByStatus.get('PENDING') ?? 0;
+    const processingCount = countsByStatus.get('PROCESSING') ?? 0;
+    const pausedCount = countsByStatus.get('PAUSED') ?? 0;
+    const failedCountTotal = countsByStatus.get('FAILED') ?? 0;
 
     const isSending = (activePendingCount > 0 || processingCount > 0) && !campaign.completedAt && !this.abortSignal;
     const isPaused = !isSending && pausedCount > 0 && !campaign.completedAt;
@@ -134,9 +154,19 @@ class QueueService {
       this.activeCampaignId = null;
     }
 
+    const failedRecords = includeFailures && failedCountTotal > 0
+      ? await prisma.scheduledMessage.findMany({
+        where: { workspaceId: this.workspaceId, batchId: campaignId, status: 'FAILED' },
+        select: { contactName: true, contactPhone: true },
+        orderBy: { createdAt: 'desc' },
+        take: QueueService.MAX_FAILED_CONTACTS,
+      })
+      : [];
+
     return {
       isSending,
       isPaused,
+      isScheduled,
       progress: campaign.completedAt ? 100 : progress,
       currentContactIndex,
       totalContacts: total,
@@ -151,7 +181,7 @@ class QueueService {
               : "Processamento finalizado",
       failedContacts: failedRecords.map((record) => ({ name: record.contactName, number: record.contactPhone })),
       failedContactsTotal: failedCountTotal,
-      failedContactsTruncated: failedCountTotal > QueueService.MAX_FAILED_CONTACTS,
+      failedContactsTruncated: includeFailures && failedCountTotal > QueueService.MAX_FAILED_CONTACTS,
       sentCount: campaign.sentCount,
       failedCount: campaign.failedCount,
       logs: newLogs,
@@ -188,9 +218,13 @@ class QueueService {
           },
         })).id;
 
+        const queueStartAt = Date.now() - recipients.length;
+
         await prisma.scheduledMessage.createMany({
-          data: recipients.map((recipient) => ({
-            scheduledFor: new Date(),
+          data: recipients.map((recipient, index) => ({
+            // A unique timestamp keeps the database queue in the same order
+            // as the groups and contacts selected by the user.
+            scheduledFor: new Date(queueStartAt + index),
             workspaceId: this.workspaceId,
             status: "PENDING",
             contactName: recipient.name,

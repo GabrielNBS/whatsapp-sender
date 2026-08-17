@@ -1,0 +1,335 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { useShallow } from 'zustand/react/shallow';
+import { useGlobalSheet } from '@/components/dashboard/global-sheet-provider';
+import { useAppLogger } from '@/hooks/use-app-logger';
+import { useConnectionStatus } from '@/hooks/use-connection-status';
+import { useHydrated } from '@/hooks/use-hydrated';
+import { useScheduleMessages } from '@/hooks/use-schedule-messages';
+import { useScheduler } from '@/hooks/use-scheduler';
+import { useSendForm } from '@/hooks/use-send-form';
+import { useSender } from '@/hooks/use-sender';
+import { useSendPageInitialStep } from '@/hooks/use-send-page-initial-step';
+import { useTemplateCatalog } from '@/hooks/use-template-catalog';
+import { getCampaignProgress } from '@/lib/campaign-progress';
+import { useAppStore } from '@/lib/store';
+import { isScheduleDateValid } from '@/lib/utils';
+
+export interface ScheduledCampaignOverlay {
+  batchId: string;
+  batchName: string;
+  scheduledFor: string;
+  contactCount: number;
+}
+
+export type RecipientMode = 'GRUPOS' | 'CONTATOS' | 'MISTO';
+
+export function useDashboardCampaign() {
+  const {
+    groups,
+    contacts,
+    getContactsByGroup,
+    sendingStatus,
+    cleanupLogs,
+    clearLogs,
+    finishSending,
+    resetSending,
+  } = useAppStore(useShallow((state) => ({
+    groups: state.groups,
+    contacts: state.contacts,
+    getContactsByGroup: state.getContactsByGroup,
+    sendingStatus: state.sendingStatus,
+    cleanupLogs: state.cleanupLogs,
+    clearLogs: state.clearLogs,
+    finishSending: state.finishSending,
+    resetSending: state.resetSending,
+  })));
+  const { activeSchedules, fetchSchedules, completedSchedules } = useScheduler();
+  const { handleSend, handleStop } = useSender();
+  const { templates, loadTemplate } = useTemplateCatalog();
+  const hydrated = useHydrated();
+  const { openSheet } = useGlobalSheet();
+  const { status: connectionStatus } = useConnectionStatus({ pollingInterval: 5000 });
+  const addLog = useAppLogger();
+  const initialStep = useSendPageInitialStep();
+
+  const [currentStep, setCurrentStep] = useState(initialStep);
+  const [scheduledOverlayData, setScheduledOverlayData] = useState<ScheduledCampaignOverlay | null>(null);
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [debugForceScreen, setDebugForceScreen] = useState<string | null>(null);
+
+  const {
+    recipientConfigs,
+    message,
+    selectedFile,
+    isScheduleMode,
+    scheduleDate,
+    selectedTemplateId,
+    recipients,
+    recipientBatches,
+    setRecipientConfigs,
+    setMessage,
+    setSelectedFile,
+    setIsScheduleMode,
+    setScheduleDate,
+    handleTemplateSelect,
+    resetForm,
+  } = useSendForm({ contacts, getContactsByGroup, templates, loadTemplate });
+
+  const isSending = sendingStatus.isSending;
+  const isConnected = connectionStatus === 'connected';
+  const campaignProgress = getCampaignProgress(sendingStatus);
+
+  const scheduledOverlay = useMemo<ScheduledCampaignOverlay | null>(() => {
+    if (scheduledOverlayData) return scheduledOverlayData;
+    if (sendingStatus.statusMessage !== 'Agendado') return null;
+
+    const nextScheduledBatch = activeSchedules.find((schedule) => schedule.count > 0);
+    return nextScheduledBatch
+      ? {
+          batchId: nextScheduledBatch.batchId,
+          batchName: nextScheduledBatch.batchName,
+          scheduledFor: String(nextScheduledBatch.scheduledFor),
+          contactCount: nextScheduledBatch.total,
+        }
+      : null;
+  }, [activeSchedules, scheduledOverlayData, sendingStatus.statusMessage]);
+
+  useEffect(() => {
+    const interval = window.setInterval(cleanupLogs, 60_000);
+    return () => window.clearInterval(interval);
+  }, [cleanupLogs]);
+
+  useEffect(() => {
+    const handleGoToStep = (event: Event) => {
+      setCurrentStep((event as CustomEvent<number>).detail);
+    };
+    const handleScheduledOverlay = (event: Event) => {
+      const detail = (event as CustomEvent<(ScheduledCampaignOverlay & { force?: boolean }) | null>).detail;
+      if (detail) {
+        setScheduledOverlayData(detail);
+        setCurrentStep(3);
+        if (detail.force) setDebugForceScreen('scheduled');
+        return;
+      }
+
+      setScheduledOverlayData(null);
+      setDebugForceScreen(null);
+    };
+    const handleForceScreen = (event: Event) => {
+      const detail = (event as CustomEvent<string | null>).detail;
+      setDebugForceScreen(detail);
+      if (detail) setCurrentStep(3);
+    };
+
+    window.addEventListener('go-to-step', handleGoToStep);
+    window.addEventListener('debug-scheduled-overlay', handleScheduledOverlay);
+    window.addEventListener('debug-force-screen', handleForceScreen);
+    return () => {
+      window.removeEventListener('go-to-step', handleGoToStep);
+      window.removeEventListener('debug-scheduled-overlay', handleScheduledOverlay);
+      window.removeEventListener('debug-force-screen', handleForceScreen);
+    };
+  }, []);
+
+  useEffect(() => {
+    if ((isSending || scheduledOverlay) && currentStep !== 3) {
+      const timeoutId = window.setTimeout(() => setCurrentStep(3), 0);
+      return () => window.clearTimeout(timeoutId);
+    }
+    return undefined;
+  }, [currentStep, isSending, scheduledOverlay]);
+
+  useEffect(() => {
+    if (!scheduledOverlayData) return;
+
+    const completedSchedule = completedSchedules.find(
+      (schedule) => schedule.batchId === scheduledOverlayData.batchId,
+    );
+    if (!completedSchedule) return;
+
+    const timeoutId = window.setTimeout(() => {
+      finishSending({
+        isPaused: false,
+        stoppedByUser: false,
+        statusMessage: completedSchedule.failed > 0
+          ? 'Agendamento concluído com falhas.'
+          : 'Agendamento concluído.',
+        progress: 100,
+        currentContactIndex: completedSchedule.total,
+        totalContacts: completedSchedule.total,
+        sentCount: completedSchedule.sent,
+        failedCount: completedSchedule.failed,
+      });
+      setScheduledOverlayData(null);
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [completedSchedules, finishSending, scheduledOverlayData]);
+
+  const scheduledStatusComplete = Boolean(
+    scheduledOverlay
+      && !isSending
+      && sendingStatus.totalContacts > 0
+      && sendingStatus.progress >= 100
+      && campaignProgress.processed >= sendingStatus.totalContacts,
+  );
+
+  const singleRecipientConfig = recipientConfigs.length === 1 ? recipientConfigs[0] : null;
+  const hasSelectedGroups = recipientConfigs.some((config) => config.type === 'group');
+  const hasSelectedContacts = recipientConfigs.some((config) => config.type === 'contact');
+  const recipientMode: RecipientMode = hasSelectedGroups && hasSelectedContacts
+    ? 'MISTO'
+    : hasSelectedContacts
+      ? 'CONTATOS'
+      : 'GRUPOS';
+  const batchName = singleRecipientConfig?.type === 'contact'
+    ? `Envio para ${singleRecipientConfig.name}`
+    : `Campanha para ${recipients.length} contatos`;
+
+  const canNavigateTo = (targetStep: number) => {
+    if (targetStep === 3 && (isSending || scheduledOverlay)) return true;
+    if (targetStep <= currentStep) return true;
+    if (targetStep === 1 && currentStep === 0) return true;
+    if (targetStep === 2) return recipients.length > 0;
+    if (targetStep === 3) return recipients.length > 0 && Boolean(message || selectedFile);
+    return false;
+  };
+
+  const handleNext = () => {
+    if (currentStep >= 2) return;
+    if (canNavigateTo(currentStep + 1)) {
+      setCurrentStep((step) => step + 1);
+      return;
+    }
+    if (currentStep === 1) toast.error('Selecione os destinatários antes de prosseguir.');
+  };
+
+  const handleBack = () => {
+    if (currentStep > 0) setCurrentStep((step) => step - 1);
+  };
+
+  const { mutate: scheduleMessages } = useScheduleMessages({
+    onSuccess: () => {
+      addLog('Agendamento realizado com sucesso!', 'success');
+      toast.success('Agendamento realizado com sucesso!');
+      resetForm();
+      fetchSchedules();
+      setCurrentStep(3);
+      setIsScheduling(false);
+    },
+    onError: (error) => {
+      addLog(`Erro ao agendar: ${error.message}`, 'error');
+      toast.error('Erro ao agendar envio.');
+      setIsScheduling(false);
+    },
+  });
+
+  const handleSchedule = async () => {
+    if (!scheduleDate) {
+      toast.error('Selecione uma data para agendar.');
+      return;
+    }
+    if (!isScheduleDateValid(scheduleDate)) {
+      toast.error('O agendamento deve ser feito com pelo menos 2 minutos de antecedência.');
+      return;
+    }
+
+    setIsScheduling(true);
+    const scheduledFor = new Date(scheduleDate).toISOString();
+    const result = await scheduleMessages({
+      recipients,
+      message,
+      media: selectedFile,
+      scheduledFor,
+      batchName,
+      templateId: selectedTemplateId || null,
+    });
+    if (result) {
+      setScheduledOverlayData({
+        batchId: result.batchId,
+        batchName,
+        scheduledFor,
+        contactCount: recipients.length,
+      });
+    }
+  };
+
+  const handleSendAction = async () => {
+    if (!canNavigateTo(3)) {
+      toast.error('Preencha todos os campos obrigatórios.');
+      return;
+    }
+    if (isScheduleMode) {
+      await handleSchedule();
+      return;
+    }
+
+    const started = await handleSend(recipients, message, selectedFile, batchName);
+    if (started) setCurrentStep(3);
+  };
+
+  const handleStepperClick = (navStepId: number) => {
+    if (canNavigateTo(navStepId)) {
+      setCurrentStep(navStepId);
+      return;
+    }
+    if (navStepId === 1) toast.error('Comece a campanha primeiro.');
+    if (navStepId === 2) toast.error('Selecione os destinatários primeiro.');
+  };
+
+  const handleNewTransmission = () => {
+    resetForm();
+    setCurrentStep(0);
+    setRecipientConfigs([{ type: 'group', id: 'all', name: 'Todos os Contatos' }]);
+    setScheduledOverlayData(null);
+    clearLogs();
+    resetSending();
+  };
+
+  return {
+    activeSchedules,
+    batchName,
+    campaignProgress,
+    canNavigateTo,
+    contacts,
+    currentStep,
+    debugForceScreen,
+    groups,
+    handleBack,
+    handleNewTransmission,
+    handleNext,
+    handleSendAction,
+    handleStop,
+    handleStepperClick,
+    handleTemplateSelect,
+    hydrated,
+    isConnected,
+    isScheduleMode,
+    isScheduling,
+    isSending,
+    message,
+    openConnectionSettings: () => openSheet('settings', { tab: 'connection' }),
+    openMonitoring: (focusedBatchId?: string) => openSheet('monitoring', focusedBatchId ? { focusedBatchId } : undefined),
+    openTemplates: () => openSheet('templates'),
+    recipientBatches,
+    recipientConfigs,
+    recipientMode,
+    recipients,
+    scheduleDate,
+    scheduledOverlay,
+    scheduledStatusComplete,
+    selectedFile,
+    sendingStatus,
+    setCurrentStep,
+    setIsScheduleMode,
+    setMessage,
+    setRecipientConfigs,
+    setScheduleDate,
+    setSelectedFile,
+    templates,
+  };
+}
+
+export type DashboardCampaignController = ReturnType<typeof useDashboardCampaign>;

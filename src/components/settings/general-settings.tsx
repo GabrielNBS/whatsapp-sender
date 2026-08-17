@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useAppStore } from "@/lib/store";
 import { Code2 } from "lucide-react";
+import { settingsApi } from '@/services/settings/settingsApi';
 
 export function GeneralSettings() {
   const [defaultLink, setDefaultLink] = useState("");
@@ -26,12 +27,9 @@ export function GeneralSettings() {
 
   const fetchSettings = async () => {
     try {
-      const res = await fetch("/api/settings");
-      if (res.ok) {
-        const data = await res.json();
-        setDefaultLink(data.defaultLink || "");
-        setDefaultCTA(data.defaultCTA || "");
-      }
+      const data = await settingsApi.get();
+      setDefaultLink(data.defaultLink || "");
+      setDefaultCTA(data.defaultCTA || "");
     } catch (error) {
       console.error("Failed to fetch settings", error);
       toast.error("Erro ao carregar configurações gerais");
@@ -70,17 +68,8 @@ export function GeneralSettings() {
 
     setIsSaving(true);
     try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ defaultLink, defaultCTA }),
-      });
-
-      if (res.ok) {
-        toast.success("Configurações salvas com sucesso");
-      } else {
-        throw new Error("Failed to save");
-      }
+      await settingsApi.update({ defaultLink, defaultCTA });
+      toast.success("Configurações salvas com sucesso");
     } catch (error) {
       console.error("Failed to save settings", error);
       toast.error("Erro ao salvar configurações");

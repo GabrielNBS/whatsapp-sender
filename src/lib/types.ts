@@ -66,7 +66,7 @@ export interface MessageStatus {
     status: ScheduledMessageStatus;
 }
 
-export interface ScheduledBatch {
+export interface ScheduleBatchSummary {
     id: string;
     batchId: string;
     batchName: string;
@@ -77,6 +77,9 @@ export interface ScheduledBatch {
     total: number; // Total messages in batch
     sent: number; // Sent messages in batch
     failed: number; // Failed messages
+}
+
+export interface ScheduledBatch extends ScheduleBatchSummary {
     contacts: MessageStatus[];
     sampleTemplate?: string; // Sample message template for display
 }

@@ -13,7 +13,7 @@ export interface RecipientValue {
  * Props for SearchInput
  */
 export interface SearchInputProps {
-  value: RecipientValue;
+  value: RecipientValue[];
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -23,7 +23,7 @@ export interface SearchInputProps {
  */
 export interface GroupListProps {
   groups: Group[];
-  selectedId: string;
+  getSelectionOrder: (groupId: string) => number | null;
   getContactCount: (groupId: string) => number;
   onSelect: (group: Group) => void;
 }
@@ -33,7 +33,7 @@ export interface GroupListProps {
  */
 export interface ContactListProps {
   contacts: Contact[];
-  selectedId: string;
+  getSelectionOrder: (contactId: string) => number | null;
   onSelect: (contact: Contact) => void;
 }
 

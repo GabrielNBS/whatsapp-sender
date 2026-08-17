@@ -3,14 +3,11 @@ import { persist } from "zustand/middleware";
 import { nanoid } from "nanoid";
 import { Group, Contact, LogEntry, Campaign } from "./types";
 import { normalizePhone } from "@/services/contacts/normalizePhone";
+import { normalizeGroupIds } from '@/services/contacts/normalizeGroupIds';
+import { avatarApi } from '@/services/contacts/avatarApi';
 
 const DEFAULT_GROUP_ID = "default";
 const AVATAR_CACHE_TTL_MS = 5 * 60 * 1000;
-
-function normalizeGroupIds(groupIds?: string[]): string[] {
-  const safeGroupIds = groupIds && groupIds.length > 0 ? groupIds : [DEFAULT_GROUP_ID];
-  return Array.from(new Set(safeGroupIds));
-}
 
 function normalizeContactPayload(contact: Omit<Contact, "id">): Omit<Contact, "id"> {
   return {
@@ -25,6 +22,11 @@ interface AppState {
   groups: Group[];
   contacts: Contact[];
   replaceContactState: (groups: Group[], contacts: Contact[]) => void;
+  upsertContacts: (contacts: Contact[]) => void;
+  removeContactFromState: (contactId: string) => void;
+  clearContactsFromState: () => void;
+  upsertGroup: (group: Group) => void;
+  removeGroupFromState: (groupId: string) => void;
   addGroup: (name: string, description?: string, customId?: string) => void;
   deleteGroup: (id: string) => void;
   addContact: (name: string, number: string, groupIds?: string[]) => void;
@@ -37,19 +39,12 @@ interface AppState {
   addLog: (entry: LogEntry) => void;
   cleanupLogs: () => void;
   clearLogs: () => void;
-  sendingStatus: {
-    isSending: boolean;
-    progress: number;
-    currentContactIndex: number;
-    totalContacts: number;
-    statusMessage: string | null;
-    failedContacts: { name: string; number: string }[];
-    stoppedByUser: boolean;
-    isPaused: boolean;
-    sentCount: number;
-    failedCount: number;
-  };
-  setSendingStatus: (status: Partial<AppState["sendingStatus"]>) => void;
+  sendingStatus: SendingStatus;
+  setSendingStatus: (status: Partial<SendingStatus>) => void;
+  startSending: (totalContacts: number) => void;
+  pauseSending: (statusMessage: string, status?: Partial<SendingStatus>) => void;
+  finishSending: (status?: Partial<SendingStatus>) => void;
+  resetSending: () => void;
   history: Campaign[];
   addCampaign: (campaign: Campaign) => void;
   avatars: Record<string, string | null>;
@@ -59,24 +54,39 @@ interface AppState {
   setDevMode: (enabled: boolean) => void;
 }
 
+export interface SendingStatus {
+  isSending: boolean;
+  progress: number;
+  currentContactIndex: number;
+  totalContacts: number;
+  statusMessage: string | null;
+  failedContacts: { name: string; number: string }[];
+  stoppedByUser: boolean;
+  isPaused: boolean;
+  sentCount: number;
+  failedCount: number;
+}
+
+const INITIAL_SENDING_STATUS: SendingStatus = {
+  isSending: false,
+  progress: 0,
+  currentContactIndex: 0,
+  totalContacts: 0,
+  statusMessage: null,
+  failedContacts: [],
+  stoppedByUser: false,
+  isPaused: false,
+  sentCount: 0,
+  failedCount: 0,
+};
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
       groups: [{ id: DEFAULT_GROUP_ID, name: "Geral", description: "Lista Padr?o" }],
       contacts: [],
       logs: [],
-      sendingStatus: {
-        isSending: false,
-        progress: 0,
-        currentContactIndex: 0,
-        totalContacts: 0,
-        statusMessage: null,
-        failedContacts: [],
-        stoppedByUser: false,
-        isPaused: false,
-        sentCount: 0,
-        failedCount: 0,
-      },
+      sendingStatus: INITIAL_SENDING_STATUS,
       history: [],
       avatars: {},
       avatarFetchedAt: {},
@@ -86,6 +96,29 @@ export const useAppStore = create<AppState>()(
         groups: groups.length > 0 ? groups : [{ id: DEFAULT_GROUP_ID, name: "Geral", description: "Lista Padrao" }],
         contacts,
       }),
+
+      upsertContacts: (contacts) => set((state) => {
+        const byId = new Map(state.contacts.map((contact) => [contact.id, contact]));
+        contacts.forEach((contact) => byId.set(contact.id, contact));
+        return { contacts: Array.from(byId.values()) };
+      }),
+
+      removeContactFromState: (contactId) => set((state) => ({
+        contacts: state.contacts.filter((contact) => contact.id !== contactId),
+      })),
+
+      clearContactsFromState: () => set({ contacts: [] }),
+
+      upsertGroup: (group) => set((state) => {
+        const exists = state.groups.some((current) => current.id === group.id);
+        return { groups: exists
+          ? state.groups.map((current) => current.id === group.id ? group : current)
+          : [...state.groups, group] };
+      }),
+
+      removeGroupFromState: (groupId) => set((state) => ({
+        groups: state.groups.filter((group) => group.id !== groupId),
+      })),
 
       addGroup: (name, description, customId) => set((state) => {
         const normalizedName = name.trim();
@@ -181,6 +214,39 @@ export const useAppStore = create<AppState>()(
         sendingStatus: { ...state.sendingStatus, ...status },
       })),
 
+      startSending: (totalContacts) => set({
+        sendingStatus: {
+          ...INITIAL_SENDING_STATUS,
+          isSending: true,
+          totalContacts,
+          statusMessage: 'Iniciando transmissão no servidor...',
+        },
+      }),
+
+      pauseSending: (statusMessage, status = {}) => set((state) => ({
+        sendingStatus: {
+          ...state.sendingStatus,
+          ...status,
+          isSending: false,
+          isPaused: true,
+          stoppedByUser: true,
+          statusMessage,
+        },
+      })),
+
+      finishSending: (status = {}) => set((state) => ({
+        sendingStatus: {
+          ...state.sendingStatus,
+          ...status,
+          isSending: false,
+          isPaused: false,
+          progress: 100,
+          currentContactIndex: status.currentContactIndex ?? status.totalContacts ?? state.sendingStatus.totalContacts,
+        },
+      })),
+
+      resetSending: () => set({ sendingStatus: INITIAL_SENDING_STATUS }),
+
       addCampaign: (campaign) => set((state) => ({
         history: [campaign, ...state.history].slice(0, 50),
       })),
@@ -196,16 +262,13 @@ export const useAppStore = create<AppState>()(
         }
 
         try {
-          const res = await fetch(`/api/contacts/avatar?phone=${encodeURIComponent(normalizedPhone)}`);
-          if (res.ok) {
-            const data = await res.json();
-            const url = data.url || null;
-            set((state) => ({
-              avatars: { ...state.avatars, [normalizedPhone]: url },
-              avatarFetchedAt: { ...state.avatarFetchedAt, [normalizedPhone]: Date.now() },
-            }));
-            return url;
-          }
+          const data = await avatarApi.get(normalizedPhone);
+          const url = data.url || null;
+          set((state) => ({
+            avatars: { ...state.avatars, [normalizedPhone]: url },
+            avatarFetchedAt: { ...state.avatarFetchedAt, [normalizedPhone]: Date.now() },
+          }));
+          return url;
         } catch (error) {
           console.error("Failed to fetch avatar", error);
         }

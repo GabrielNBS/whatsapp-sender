@@ -1,18 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Template } from '@/lib/types';
+import { templatesApi, TemplateCatalogItem } from '@/services/templates/templatesApi';
 
-export function useTemplateCatalog(): Template[] {
-  const [templates, setTemplates] = useState<Template[]>([]);
+export function useTemplateCatalog() {
+  const [templates, setTemplates] = useState<TemplateCatalogItem[]>([]);
 
   useEffect(() => {
     let canceled = false;
     const fetchTemplates = async () => {
       try {
-        const response = await fetch(`/api/templates?_t=${Date.now()}`);
-        if (!response.ok) return;
-        const data: Template[] = await response.json();
+        const data = await templatesApi.listCatalog();
         if (!canceled) setTemplates(data);
       } catch (error) {
         console.error('Falha ao buscar modelos', error);
@@ -28,15 +26,14 @@ export function useTemplateCatalog(): Template[] {
 
     window.addEventListener('templates-updated', handleUpdate);
 
-    // Polling opcional como redundância (cada 15 segundos)
-    const interval = setInterval(fetchTemplates, 15000);
-
     return () => {
       canceled = true;
       window.removeEventListener('templates-updated', handleUpdate);
-      clearInterval(interval);
     };
   }, []);
 
-  return templates;
+  return {
+    templates,
+    loadTemplate: templatesApi.getTemplate,
+  };
 }
