@@ -41,7 +41,25 @@ A aplicacao fica disponivel em [http://localhost:3000](http://localhost:3000).
 
 ## Producao
 
-Execute as migracoes antes de iniciar cada nova versao:
+Para configurar uma maquina nova, execute o bootstrap. Ele completa o `.env`, gera uma chave pessoal se faltar, instala dependencias, aplica migracoes, valida o Chromium e so executa o build se todas as etapas anteriores passarem:
+
+```bash
+npm run setup:production
+```
+
+Para auditar o que seria feito sem escrever no disco ou executar comandos, use:
+
+```bash
+node scripts/setup-production.mjs --dry-run
+```
+
+Depois, inicie a aplicacao:
+
+```bash
+npm start
+```
+
+O fluxo manual equivalente e:
 
 ```bash
 npm ci

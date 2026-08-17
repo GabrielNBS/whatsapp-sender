@@ -19,7 +19,8 @@
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "db:status": "prisma migrate status"
+    "db:status": "prisma migrate status",
+    "setup:production": "node scripts/setup-production.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.10.2",
