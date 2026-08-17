@@ -23,12 +23,16 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*.pfx
 
 # debug
 npm-debug.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -38,9 +42,9 @@ npm-debug.log*
 next-env.d.ts
 
 # whatsapp-web.js
-.wwebjs_auth
-.wwebjs_cache
-# Sessao legada preservada ate migracao ou logout explicito.
+.wwebjs_auth/
+.wwebjs_auth_baileys/
+.wwebjs_cache/
 /runtime/
 
 /src/generated/prisma
@@ -48,4 +52,8 @@ next-env.d.ts
 # sqlite
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
 *.backup

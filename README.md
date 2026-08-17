@@ -13,17 +13,20 @@ O processo precisa ser de longa duracao. A integracao com `whatsapp-web.js`, o a
 
 ## Configuracao
 
-Crie um arquivo `.env` local:
+Copie `.env.example` para `.env` e preencha uma chave pessoal aleatoria de ao menos 32 caracteres:
 
 ```dotenv
 DATABASE_URL="file:./dev.db"
+APP_ACCESS_TOKEN="gere-uma-chave-aleatoria-longa-e-secreta"
 # Opcional quando o Chromium empacotado pelo Puppeteer nao puder ser usado.
 # PUPPETEER_EXECUTABLE_PATH="/usr/bin/google-chrome"
 # Opcional. O padrao e ./.wwebjs_auth.
 # WWEBJS_AUTH_PATH="/var/lib/whatsapp-sender/session"
 ```
 
-Em producao, `DATABASE_URL` e `WWEBJS_AUTH_PATH` devem apontar para volumes persistentes. Nunca publique o banco, a pasta de autenticacao ou arquivos `.env`.
+Ao abrir a aplicacao, informe essa chave na tela de acesso. Ela e mantida apenas em um cookie `HttpOnly`, `SameSite=Strict` e `Secure` em producao. Integracoes nao-interativas podem enviar a mesma chave no cabecalho `Authorization: Bearer`.
+
+Em producao, use HTTPS e configure `DATABASE_URL` e `WWEBJS_AUTH_PATH` em volumes persistentes privados. Nunca publique o banco, a pasta de autenticacao, chaves ou arquivos `.env`.
 
 ## Desenvolvimento
 
@@ -60,6 +63,6 @@ npm audit
 
 ## Limites atuais
 
-- A aplicacao opera em um workspace padrao enquanto autenticacao e planos ainda nao existem.
-- As APIs aceitam apenas chamadas sem `Origin`/`Referer` ou chamadas de mesma origem. Isso reduz requisicoes indevidas do navegador, mas nao substitui autenticacao.
+- A aplicacao opera propositalmente em um unico workspace local, pois esta instancia e de uso pessoal. O resolvedor esta centralizado para uma futura migracao multi-tenant.
+- Todas as APIs exigem a chave pessoal; para requisicoes autenticadas por cookie, operacoes que alteram dados tambem exigem mesma origem.
 - Uma instancia do servico deve controlar uma unica sessao do WhatsApp. Escala horizontal exigira coordenacao externa da fila e das sessoes.

@@ -1,8 +1,12 @@
+/**
+ * Esta instancia e deliberadamente de uso pessoal e opera em um unico tenant.
+ * A migracao para multi-tenant deve substituir este resolvedor por identidade autenticada.
+ */
 export const LOCAL_WORKSPACE_ID = "local";
 
 /**
- * Single replacement point for the future authenticated workspace resolver.
- * Domain services must not hard-code a workspace outside this module.
+ * Ponto unico para o tenant pessoal atual. Servicos de dominio nao devem
+ * codificar um workspace fora deste modulo.
  */
 export function getCurrentWorkspaceId(): string {
   return LOCAL_WORKSPACE_ID;
