@@ -133,10 +133,10 @@ async function waitForServer(url) {
 async function startAndOpenBrowser() {
   const port = getPort();
   const url = `http://localhost:${port}`;
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const nextCli = join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
 
   console.log(`\n[setup] Iniciando aplicacao em ${url}...`);
-  const server = spawn(npmCommand, ['run', 'start', '--', '-p', String(port)], {
+  const server = spawn(process.execPath, [nextCli, 'start', '-p', String(port)], {
     cwd: root,
     stdio: 'inherit',
   });
