@@ -3,7 +3,7 @@ import { calculateSafetyDelay } from "./utils";
 import whatsappService from "./whatsapp";
 import { getCampaignService } from "./CampaignService";
 import { getQueueService } from "./QueueService";
-import { logger } from "./logger";
+import { logger, maskName, maskPhone } from "./logger";
 import { getCurrentWorkspaceId } from "@/server/workspace";
 
 
@@ -107,10 +107,10 @@ export function startScheduler() {
         }
         await whatsappService.sendMessage(msg.contactPhone, msg.template.content || '', mediaData, { fallbackName: msg.contactName });
         success = true;
-        logger.info(`[Scheduler] Mensagem enviada para ${msg.contactName} (${msg.contactPhone})`);
+        logger.info(`[Scheduler] Mensagem enviada para ${maskName(msg.contactName)} (${maskPhone(msg.contactPhone)})`);
         queueLogs.pushLog(`Enviado para ${msg.contactName}`, "success");
       } catch (error: unknown) {
-        logger.error({ err: error, phone: msg.contactPhone }, `[Scheduler] Erro ao enviar para ${msg.contactName}`);
+        logger.error({ err: error }, `[Scheduler] Erro ao enviar para ${maskName(msg.contactName)}`);
         queueLogs.pushLog(`Erro ao enviar para ${msg.contactName}`, "error");
       }
 

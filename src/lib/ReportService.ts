@@ -1,7 +1,7 @@
 import { PrismaClient, Campaign, ReportRecipient, ReportConfig } from "@prisma/client";
 import { IMessageSender } from "./types";
 import { getCurrentWorkspaceId, getWorkspaceScopedId } from "@/server/workspace";
-import { logger } from "./logger";
+import { logger, maskName, maskPhone } from "./logger";
 
 export interface IReportService {
   formatImmediateReport(campaign: Campaign): string;
@@ -205,12 +205,12 @@ Relatorio gerado automaticamente
 
           try {
             if (this.debugEnabled) {
-              logger.info(`[ReportService] Enviando relatorio para ${recipient.name} (${recipient.phone})`);
+              logger.info(`[ReportService] Enviando relatorio para ${maskName(recipient.name)} (${maskPhone(recipient.phone)})`);
             }
             await sender.sendMessage(recipient.phone, message, mediaData);
             sentTo.push(recipient.phone);
           } catch (error) {
-            logger.error({ err: error, phone: recipient.phone }, `[ReportService] Erro ao enviar relatorio para ${recipient.name}`);
+            logger.error({ err: error }, `[ReportService] Erro ao enviar relatorio para ${maskName(recipient.name)}`);
             failed.push(recipient.phone);
           }
         }
