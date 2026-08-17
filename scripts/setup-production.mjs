@@ -2,12 +2,13 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const envPath = join(root, '.env');
 const envExamplePath = join(root, '.env.example');
 const dryRun = process.argv.includes('--dry-run');
+const buildOnly = process.argv.includes('--build-only');
 
 function fail(message) {
   console.error(`\n[setup] ${message}`);
@@ -97,6 +98,57 @@ async function verifyChromium() {
   }
 }
 
+function getPort() {
+  const port = Number(process.env.PORT || 3000);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    fail('PORT precisa ser um inteiro entre 1 e 65535.');
+  }
+  return port;
+}
+
+function openBrowser(url) {
+  if (process.platform === 'win32') {
+    spawn(process.env.ComSpec || 'cmd.exe', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
+  } else if (process.platform === 'darwin') {
+    spawn('open', [url], { detached: true, stdio: 'ignore' }).unref();
+  } else {
+    spawn('xdg-open', [url], { detached: true, stdio: 'ignore' }).unref();
+  }
+}
+
+async function waitForServer(url) {
+  const timeoutAt = Date.now() + 30_000;
+  while (Date.now() < timeoutAt) {
+    try {
+      const response = await fetch(url, { redirect: 'manual' });
+      if (response.status > 0) return;
+    } catch {
+      // O servidor ainda esta iniciando.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  fail(`A aplicacao nao respondeu em ${url} dentro de 30 segundos.`);
+}
+
+async function startAndOpenBrowser() {
+  const port = getPort();
+  const url = `http://localhost:${port}`;
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
+  console.log(`\n[setup] Iniciando aplicacao em ${url}...`);
+  const server = spawn(npmCommand, ['run', 'start', '--', '-p', String(port)], {
+    cwd: root,
+    stdio: 'inherit',
+  });
+
+  server.once('error', (error) => fail(`Nao foi possivel iniciar a aplicacao: ${error.message}`));
+  await waitForServer(url);
+  openBrowser(url);
+  console.log(`[setup] Navegador aberto em ${url}. Pressione Ctrl+C para encerrar o servidor.`);
+
+  await new Promise((resolve) => server.once('exit', resolve));
+}
+
 getNodeVersion();
 configureEnvironment();
 run('npm', ['ci']);
@@ -105,6 +157,10 @@ run('npm', ['run', 'db:migrate']);
 await verifyChromium();
 run('npm', ['run', 'build']);
 
-console.log(dryRun
-  ? '\n[setup] Dry run concluido; nenhuma configuracao foi alterada e nenhum build foi executado.'
-  : '\n[setup] Ambiente pronto. Inicie com: npm start');
+if (dryRun) {
+  console.log('\n[setup] Dry run concluido; nenhuma configuracao foi alterada, nenhum build foi executado e o navegador nao foi aberto.');
+} else if (buildOnly) {
+  console.log('\n[setup] Ambiente pronto. Build concluida sem iniciar o servidor (--build-only).');
+} else {
+  await startAndOpenBrowser();
+}
