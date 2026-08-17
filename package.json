@@ -26,9 +26,7 @@
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.8",
-    "@radix-ui/react-progress": "^1.1.8",
     "@radix-ui/react-radio-group": "^1.3.8",
-    "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-switch": "^1.2.6",
@@ -46,7 +44,7 @@
     "papaparse": "^5.5.3",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
-    "puppeteer": "^24.38.0",
+    "puppeteer": "^25.8.0",
     "qrcode.react": "^4.2.0",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
@@ -55,9 +53,14 @@
     "recharts": "^3.7.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
-    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js",
+    "whatsapp-web.js": "^1.34.7",
     "zod": "^4.4.3",
     "zustand": "^5.0.9"
+  },
+  "overrides": {
+    "whatsapp-web.js": {
+      "puppeteer": "25.8.0"
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
