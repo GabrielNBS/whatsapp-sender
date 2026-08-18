@@ -13,6 +13,7 @@ import { SendPageSkeleton } from '@/components/send/send-page-skeleton';
 import { WizardNavigation } from '@/components/send/wizard-navigation';
 import { WizardStepper } from '@/components/send/wizard-stepper';
 import { useDashboardCampaign } from '@/hooks/use-dashboard-campaign';
+import { BrandLogo } from '@/components/brand-logo';
 
 const STEPS = [
     { id: 1, label: "Público", icon: Users },
@@ -53,6 +54,9 @@ function SendPageInner() {
 
     return (
         <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+            <header className="flex h-10 shrink-0 items-center">
+                <BrandLogo animateIntro className="h-6 w-auto sm:h-7" compact subtleWhenIdle />
+            </header>
 
             {/* Main Grid Content */}
             <div className="flex flex-1 min-h-0 min-w-0 gap-3 overflow-hidden sm:gap-4 lg:gap-6">

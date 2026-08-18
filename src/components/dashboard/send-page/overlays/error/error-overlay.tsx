@@ -101,7 +101,7 @@ export function ErrorOverlay({
         whileHover="hover"
         whileTap={{ scale: 0.98 }}
         onClick={handleNewTransmission}
-        className="w-full h-12 lg:h-12 2xl:h-14 rounded-2xl font-black text-[10px] lg:text-[10px] 2xl:text-xs bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center justify-center gap-3 group tracking-[0.2em] uppercase"
+        className="p-6 h-12 lg:h-12 2xl:h-14 rounded-2xl font-black text-[10px] lg:text-[10px] 2xl:text-xs bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center justify-center gap-3 group tracking-[0.2em] uppercase"
       >
         <span>NOVA TRANSMISSÃO</span>
         <motion.div

@@ -2,7 +2,8 @@
 
 import { FormEvent, Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { KeyRound, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { BrandLogo } from '@/components/brand-logo';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -39,9 +40,9 @@ function LoginForm() {
     <main className="flex min-h-screen items-center justify-center bg-muted/20 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2 text-center">
-          <KeyRound className="mx-auto h-8 w-8 text-primary" />
-          <CardTitle>Acesso pessoal</CardTitle>
-          <CardDescription>Informe a chave definida em APP_ACCESS_TOKEN para abrir esta instancia.</CardDescription>
+          <BrandLogo className="mx-auto h-8 w-auto" compact />
+          <CardTitle>Acessar Regula Send</CardTitle>
+          <CardDescription>Informe a chave definida em APP_ACCESS_TOKEN para abrir sua central de envios.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>

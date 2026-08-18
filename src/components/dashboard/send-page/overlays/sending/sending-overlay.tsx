@@ -50,35 +50,35 @@ export function SendingOverlay({
     >
       {/* Animated SVG illustration */}
       <div className="relative mb-2 lg:mb-2 2xl:mb-8 flex-1 flex items-center justify-center min-h-0 max-h-[30vh]">
-        <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full" />
+        <div className="absolute inset-0 bg-success/10 blur-3xl rounded-full" />
         <svg viewBox="0 0 220 180" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-40 h-32 lg:w-40 lg:h-32 2xl:w-56 2xl:h-40 relative z-10 transition-all">
-          <rect x="20" y="20" width="80" height="140" rx="20" fill="currentColor" className="text-primary/10" stroke="currentColor" strokeWidth="2.5" />
-          <rect x="30" y="38" width="60" height="104" rx="8" fill="currentColor" className="text-primary/5" />
-          <circle cx="60" cy="152" r="6" fill="currentColor" className="text-primary/20" />
+          <rect x="20" y="20" width="80" height="140" rx="20" fill="currentColor" className="text-success/10" stroke="currentColor" strokeWidth="2.5" />
+          <rect x="30" y="38" width="60" height="104" rx="8" fill="currentColor" className="text-success/5" />
+          <circle cx="60" cy="152" r="6" fill="currentColor" className="text-success/20" />
 
           <motion.g animate={{ x: [0, 8, 0], opacity: [1, 0.7, 1] }} transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}>
-            <rect x="110" y="55" width="70" height="28" rx="14" fill="var(--primary)" />
-            <path d="M110 72 L102 80 L118 72" fill="var(--primary)" />
+            <rect x="110" y="55" width="70" height="28" rx="14" fill="#25D366" />
+            <path d="M110 72 L102 80 L118 72" fill="#25D366" />
             <rect x="118" y="63" width="54" height="6" rx="3" fill="white" opacity="0.8" />
             <rect x="118" y="73" width="36" height="4" rx="2" fill="white" opacity="0.5" />
           </motion.g>
 
           <motion.g animate={{ x: [0, 10, 0], opacity: [0.8, 0.5, 0.8] }} transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut", delay: 0.3 }}>
-            <rect x="115" y="100" width="58" height="24" rx="12" fill="var(--primary)" className="opacity-70" />
-            <path d="M115 116 L107 123 L122 116" fill="var(--primary)" className="opacity-70" />
+            <rect x="115" y="100" width="58" height="24" rx="12" fill="#128C7E" className="opacity-70" />
+            <path d="M115 116 L107 123 L122 116" fill="#128C7E" className="opacity-70" />
             <rect x="122" y="107" width="44" height="5" rx="2.5" fill="white" opacity="0.7" />
             <rect x="122" y="115" width="28" height="3.5" rx="1.75" fill="white" opacity="0.45" />
           </motion.g>
 
           <motion.g animate={{ x: [0, 6, 0], opacity: [0.6, 0.3, 0.6] }} transition={{ repeat: Infinity, duration: 2.1, ease: "easeInOut", delay: 0.7 }}>
-            <rect x="120" y="136" width="46" height="20" rx="10" fill="var(--primary)" className="opacity-40" />
-            <path d="M120 150 L113 156 L127 150" fill="var(--primary)" className="opacity-40" />
+            <rect x="120" y="136" width="46" height="20" rx="10" fill="#075E54" className="opacity-40" />
+            <path d="M120 150 L113 156 L127 150" fill="#075E54" className="opacity-40" />
             <rect x="127" y="142" width="32" height="4" rx="2" fill="white" opacity="0.6" />
             <rect x="127" y="149" width="20" height="3" rx="1.5" fill="white" opacity="0.4" />
           </motion.g>
 
           <motion.circle cx="195" cy="48" r="4" fill="#fbbf24" animate={{ opacity: [0.2, 0.8, 0.2] }} transition={{ repeat: Infinity, duration: 2 }} />
-          <motion.circle cx="205" cy="90" r="2.5" fill="var(--primary)" animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ repeat: Infinity, duration: 2, delay: 0.5 }} />
+          <motion.circle cx="205" cy="90" r="2.5" fill="#25D366" animate={{ opacity: [0.3, 0.7, 0.3] }} transition={{ repeat: Infinity, duration: 2, delay: 0.5 }} />
           <motion.circle cx="198" cy="128" r="3" fill="#fbbf24" animate={{ opacity: [0.1, 0.6, 0.1] }} transition={{ repeat: Infinity, duration: 2, delay: 1 }} />
         </svg>
       </div>
@@ -113,7 +113,7 @@ export function SendingOverlay({
           {/* Progress bar */}
           <div className="w-full h-3 bg-muted rounded-full overflow-hidden shadow-inner border border-border/50">
             <motion.div
-              className="h-full rounded-full bg-linear-to-r from-primary to-primary/60"
+              className="h-full rounded-full bg-linear-to-r from-success to-success/60"
               initial={{ width: 0 }}
               animate={{ width: `${campaignProgress.percent}%` }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
@@ -153,7 +153,7 @@ export function SendingOverlay({
       <motion.button
         whileHover="hover"
         whileTap={{ scale: 0.98 }}
-        className="mt-6 lg:mt-6 2xl:mt-10 w-full h-12 lg:h-12 2xl:h-14 rounded-2xl font-black text-[10px] lg:text-[10px] 2xl:text-xs bg-destructive text-destructive-foreground shadow-xl shadow-destructive/20 flex items-center justify-center gap-3 group transition-all tracking-[0.2em] uppercase"
+        className="mt-6 lg:mt-6 2xl:mt-10 p-6 h-12 lg:h-12 2xl:h-14 rounded-2xl font-black text-[10px] lg:text-[10px] 2xl:text-xs bg-destructive text-destructive-foreground shadow-xl shadow-destructive/20 flex items-center justify-center gap-3 group transition-all tracking-[0.2em] uppercase"
         onClick={() => setShowStopConfirmation(true)}
       >
         <motion.div

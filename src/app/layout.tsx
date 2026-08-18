@@ -20,8 +20,8 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "WhatsApp Sender",
-  description: "Automação de envio de mensagens em massa",
+  title: "Regula Send",
+  description: "Automação de campanhas e envios pelo WhatsApp",
 };
 
 export default function RootLayout({
