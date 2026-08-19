@@ -63,4 +63,26 @@ describe('resolveRecipients', () => {
   it('returns no recipients when every option is deselected', () => {
     expect(resolveRecipients([], contacts, getContactsByGroup)).toEqual([]);
   });
+
+  it('excludes contacts with opt-out from every recipient selection', () => {
+    const optedOutContacts: Contact[] = [
+      ...contacts,
+      { id: 'duda', name: 'Duda', number: '5511666666666', groupIds: ['sales'], consentStatus: 'OPTED_OUT' },
+    ];
+    const optedOutGroupLookup = (groupId: string) => (
+      optedOutContacts.filter((contact) => contact.groupIds.includes(groupId))
+    );
+
+    expect(resolveRecipients(
+      [{ type: 'group', id: 'all', name: 'Todos os Contatos' }],
+      optedOutContacts,
+      optedOutGroupLookup,
+    )).not.toContain(optedOutContacts[3]);
+
+    expect(resolveRecipients(
+      [{ type: 'contact', id: 'duda', name: 'Duda' }],
+      optedOutContacts,
+      optedOutGroupLookup,
+    )).toEqual([]);
+  });
 });

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { ScheduleService } from '@/server/services/ScheduleService';
 import { rescheduleSchema } from '@/server/validators/schedule';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 import { ValidationError } from '@/lib/api-errors';
 
 interface RouteParams {
@@ -26,6 +27,6 @@ export const POST = apiHandler(async (req: NextRequest, { params }: RouteParams)
     throw new ValidationError('Nova data de reagendamento inválida.', validation.error.flatten().fieldErrors);
   }
 
-  const result = await ScheduleService.rescheduleBatch(batchId, validation.data.scheduledFor);
+  const result = await ScheduleService.rescheduleBatch(batchId, validation.data.scheduledFor, getCurrentWorkspaceId());
   return NextResponse.json(result);
 }, { routeName: '/api/schedule/[batchId]/reschedule (POST)', requireAuth: true });

@@ -28,7 +28,7 @@ export function RemoveConfirmDialog({
 
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
-      <AlertDialogContent className="rounded-2xl max-w-[400px] border-border bg-card/95 backdrop-blur-xl shadow-2xl">
+      <AlertDialogContent className="max-w-[400px] rounded-xl border-border bg-card shadow-lg">
         <div className="flex flex-col items-center text-center pt-4">
           <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
             <AlertTriangle className="w-7 h-7 text-destructive" />
@@ -38,7 +38,7 @@ export function RemoveConfirmDialog({
             <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2 text-center">
               Tem certeza que deseja remover <strong className="text-foreground font-black">&quot;{contact?.name}&quot;</strong> do grupo <strong className="text-primary font-black">&quot;{groupName}&quot;</strong>?
               {isOnlyGroup && (
-                <span className="block mt-3 text-destructive font-bold text-[11px] uppercase tracking-wide bg-destructive/5 py-2 px-3 rounded-lg border border-destructive/10">
+                <span className="mt-3 block rounded-lg border border-destructive/10 bg-destructive/5 px-3 py-2 text-xs font-semibold text-destructive">
                   Atenção: Este é o único grupo do contato. Ele será movido para o grupo Geral.
                 </span>
               )}

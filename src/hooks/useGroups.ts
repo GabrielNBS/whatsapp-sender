@@ -1,19 +1,19 @@
 import { useCallback } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useContactStore } from '@/stores/contact-store';
 import { useShallow } from 'zustand/react/shallow';
 import { validateGroup } from '@/services/contacts/validateGroup';
 import { DEFAULT_GROUP_ID } from '@/constants/contacts';
 import { nanoid } from 'nanoid';
-import { toast } from 'sonner';
+import type { FeedbackPort } from '@/presentation/feedback';
 import * as contactsApi from '@/services/contacts/contactsApi';
 
-export function useGroups() {
+export function useGroups(feedback: FeedbackPort) {
   const { 
     groups, 
     upsertGroup,
     removeGroupFromState,
     upsertContacts,
-  } = useAppStore(useShallow((state) => ({
+  } = useContactStore(useShallow((state) => ({
     groups: state.groups,
     upsertGroup: state.upsertGroup,
     removeGroupFromState: state.removeGroupFromState,
@@ -24,24 +24,24 @@ export function useGroups() {
     const validation = validateGroup(name, groups);
     
     if (!validation.isValid) {
-      toast.error(validation.error || 'Erro ao validar grupo');
+      feedback.error(validation.error || 'Erro ao validar grupo');
       return false;
     }
 
     try {
       const result = await contactsApi.createGroup({ id: nanoid(), name: name.trim() });
       upsertGroup(result.group);
-      toast.success('Grupo criado com sucesso');
+      feedback.success('Grupo criado com sucesso');
       return true;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Falha ao criar grupo.');
+      feedback.error(error instanceof Error ? error.message : 'Falha ao criar grupo.');
       return false;
     }
-  }, [groups, upsertGroup]);
+  }, [feedback, groups, upsertGroup]);
 
   const deleteGroup = useCallback(async (id: string) => {
     if (id === DEFAULT_GROUP_ID) {
-      toast.error('Não é possível remover o grupo padrão Geral');
+      feedback.error('Não é possível remover o grupo padrão Geral');
       return;
     }
 
@@ -49,11 +49,11 @@ export function useGroups() {
       const result = await contactsApi.deleteGroup(id);
       removeGroupFromState(result.deletedGroupId);
       upsertContacts(result.contacts);
-      toast.success('Grupo excluído com sucesso');
+      feedback.success('Grupo excluído com sucesso');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Falha ao excluir grupo.');
+      feedback.error(error instanceof Error ? error.message : 'Falha ao excluir grupo.');
     }
-  }, [removeGroupFromState, upsertContacts]);
+  }, [feedback, removeGroupFromState, upsertContacts]);
 
   return {
     groups,

@@ -18,7 +18,7 @@ import GradientText from '@/components/ui/gradient-text';
 import type { RecipientMode } from '@/hooks/use-dashboard-campaign';
 import type { RecipientBatch } from '@/hooks/use-send-form';
 import { estimateCampaignDurationMinutes, type CampaignProgress } from '@/lib/campaign-progress';
-import type { SendingStatus } from '@/lib/store';
+import type { SendingStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export interface SendingOverlayProps {
@@ -89,7 +89,7 @@ export function SendingOverlay({
           Enviando <GradientText className="font-black">mensagens...</GradientText>
         </h3>
         <div className="flex justify-center">
-          <p className="text-[9px] lg:text-[9px] 2xl:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 bg-muted/20 border border-border/40 px-4 py-1.5 2xl:px-5 2xl:py-2 rounded-full backdrop-blur-md">
+          <p className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-xs font-semibold text-muted-foreground">
             {sendingStatus.statusMessage || 'Transmissão em andamento. Não feche esta janela.'}
           </p>
         </div>
@@ -128,17 +128,17 @@ export function SendingOverlay({
       {/* Info grid */}
       <div className="w-full grid grid-cols-3 gap-3 lg:gap-3 2xl:gap-4 pt-4 lg:pt-4 2xl:pt-6 border-t border-border">
         <div className="text-center">
-          <p className="text-[8px] lg:text-[8px] 2xl:text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Estimativa</p>
+          <p className="text-xs font-medium text-muted-foreground">Estimativa</p>
           <p className="text-xs lg:text-xs 2xl:text-sm font-bold">~{estimateCampaignDurationMinutes(recipients.length)} min</p>
         </div>
         <div className="text-center">
-          <p className="text-[8px] lg:text-[8px] 2xl:text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Atraso</p>
+          <p className="text-xs font-medium text-muted-foreground">Atraso</p>
           <p className="text-xs lg:text-xs 2xl:text-sm font-bold text-success">Ativo ✓</p>
         </div>
         <div className="text-center">
-          <p className="text-[8px] lg:text-[8px] 2xl:text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Modo</p>
+          <p className="text-xs font-medium text-muted-foreground">Modo</p>
           <span className={cn(
-            "inline-block px-2 py-0.5 rounded-full text-[9px] lg:text-[9px] 2xl:text-[10px] font-bold",
+            "inline-block rounded-full px-2 py-0.5 text-xs font-semibold",
             recipientMode === 'GRUPOS'
               ? "bg-info/10 text-info"
               : recipientMode === 'CONTATOS'
@@ -153,7 +153,7 @@ export function SendingOverlay({
       <motion.button
         whileHover="hover"
         whileTap={{ scale: 0.98 }}
-        className="mt-6 lg:mt-6 2xl:mt-10 p-6 h-12 lg:h-12 2xl:h-14 rounded-2xl font-black text-[10px] lg:text-[10px] 2xl:text-xs bg-destructive text-destructive-foreground shadow-xl shadow-destructive/20 flex items-center justify-center gap-3 group transition-all tracking-[0.2em] uppercase"
+        className="mt-6 flex h-12 items-center justify-center gap-3 rounded-xl bg-destructive px-6 text-sm font-semibold text-destructive-foreground shadow-sm 2xl:mt-10"
         onClick={() => setShowStopConfirmation(true)}
       >
         <motion.div
@@ -167,7 +167,7 @@ export function SendingOverlay({
 
       {/* Stop Confirmation Dialog */}
       <AlertDialog open={showStopConfirmation} onOpenChange={setShowStopConfirmation}>
-        <AlertDialogContent className="rounded-2xl border-border/50 shadow-2xl">
+        <AlertDialogContent className="rounded-xl border-border shadow-lg">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-black tracking-tight">Interromper Envio?</AlertDialogTitle>
             <AlertDialogDescription>

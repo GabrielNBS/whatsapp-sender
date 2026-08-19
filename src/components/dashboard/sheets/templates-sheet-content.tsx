@@ -7,6 +7,7 @@ import { Template } from '@/types/templates';
 import { useTemplates } from '@/hooks/useTemplates';
 import { useTemplateFilters } from '@/hooks/useTemplateFilters';
 import { useTemplateClipboard } from '@/hooks/useTemplateClipboard';
+import { sonnerFeedback } from '@/presentation/feedback';
 
 // Subcomponentes
 import { TemplatesHeader } from './components/templates/TemplatesHeader';
@@ -25,7 +26,7 @@ export function TemplatesSheetContent() {
     deletingIds,
     deleteTemplate,
     handleSaveSuccess,
-  } = useTemplates();
+  } = useTemplates(sonnerFeedback);
 
   const {
     filter,
@@ -39,7 +40,7 @@ export function TemplatesSheetContent() {
     clearFilters,
   } = useTemplateFilters(templates);
 
-  const { copyToClipboard } = useTemplateClipboard();
+  const { copyToClipboard } = useTemplateClipboard(sonnerFeedback);
 
   // Estados locais de controle de diálogos e sheets
   const [isSheetOpen, setIsSheetOpen] = useState(false);

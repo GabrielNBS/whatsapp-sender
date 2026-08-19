@@ -2,13 +2,12 @@ import { prisma } from '@/lib/db';
 import { getMetricsService } from '@/lib/MetricsService';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { API_RATE_LIMITS, API_MAX_PAGE_SIZE } from '@/constants/api';
-import { getCurrentWorkspaceId } from '@/server/workspace';
 
 export const MetricsQueryService = {
   /**
    * Obtém a lista de engajamento/analytics dos contatos com limites seguros de paginação.
    */
-  async getContactAnalytics(limit: number = 50, offset: number = 0, workspaceId = getCurrentWorkspaceId()) {
+  async getContactAnalytics(limit: number, offset: number, workspaceId: string) {
     const safeLimit = Math.min(limit, API_MAX_PAGE_SIZE);
     
     return prisma.contactAnalytics.findMany({
@@ -22,33 +21,33 @@ export const MetricsQueryService = {
   /**
    * Obtém as métricas em tempo real aplicando rate-limit de polling.
    */
-  async getRealtimeMetrics(clientIp: string) {
+  async getRealtimeMetrics(clientIp: string, workspaceId: string) {
     // Aplica rate limit por IP cliente para consultas de polling agressivo (API-011)
     checkRateLimit(
-      `metrics-realtime-${clientIp}`, 
+      `metrics-realtime-${workspaceId}-${clientIp}`,
       API_RATE_LIMITS.POLLING_LIMIT, 
       API_RATE_LIMITS.POLLING_WINDOW_MS
     );
 
-    const metricsService = getMetricsService();
+    const metricsService = getMetricsService(workspaceId);
     return metricsService.getRealtimeMetrics();
   },
 
-  async getConnectionStatus(clientIp: string) {
+  async getConnectionStatus(clientIp: string, workspaceId: string) {
     checkRateLimit(
-      `connection-status-${clientIp}`,
+      `connection-status-${workspaceId}-${clientIp}`,
       API_RATE_LIMITS.POLLING_LIMIT,
       API_RATE_LIMITS.POLLING_WINDOW_MS,
     );
 
-    return getMetricsService().getConnectionStatus();
+    return getMetricsService(workspaceId).getConnectionStatus();
   },
 
   /**
    * Obtém os dados de gráficos agregados do dashboard.
    */
-  async getDashboardChartsData() {
-    const metricsService = getMetricsService();
+  async getDashboardChartsData(workspaceId: string) {
+    const metricsService = getMetricsService(workspaceId);
     return metricsService.getDashboardChartsData();
   },
 };

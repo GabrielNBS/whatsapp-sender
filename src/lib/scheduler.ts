@@ -5,6 +5,7 @@ import { getCampaignService } from "./CampaignService";
 import { getQueueService } from "./QueueService";
 import { logger, maskName, maskPhone } from "./logger";
 import { getCurrentWorkspaceId } from "@/server/workspace";
+import { getContactConsentService } from "@/server/services/ContactConsentService";
 
 
 const IDLE_SLEEP_MS = 2000;
@@ -96,19 +97,26 @@ export function startScheduler() {
       }
 
       let success = false;
+      let blockedByOptOut = false;
       try {
-        let mediaData = undefined;
-        if (msg.template.media) {
-          try {
-            mediaData = typeof msg.template.media === 'string' ? JSON.parse(msg.template.media) : msg.template.media;
-          } catch (err) {
-            logger.warn({ err }, `[Scheduler] Erro ao parsear media do template ${msg.template.id}`);
+        if (await getContactConsentService().isPhoneOptedOut(msg.contactPhone, workspaceId)) {
+          blockedByOptOut = true;
+          logger.warn(`[Scheduler] Opt-out bloqueou o envio para ${maskName(msg.contactName)} (${maskPhone(msg.contactPhone)})`);
+          queueLogs.pushLog(`Envio bloqueado por opt-out: ${msg.contactName}`, "warning");
+        } else {
+          let mediaData = undefined;
+          if (msg.template.media) {
+            try {
+              mediaData = typeof msg.template.media === 'string' ? JSON.parse(msg.template.media) : msg.template.media;
+            } catch (err) {
+              logger.warn({ err }, `[Scheduler] Erro ao parsear media do template ${msg.template.id}`);
+            }
           }
+          await whatsappService.sendMessage(msg.contactPhone, msg.template.content || '', mediaData, { fallbackName: msg.contactName });
+          success = true;
+          logger.info(`[Scheduler] Mensagem enviada para ${maskName(msg.contactName)} (${maskPhone(msg.contactPhone)})`);
+          queueLogs.pushLog(`Enviado para ${msg.contactName}`, "success");
         }
-        await whatsappService.sendMessage(msg.contactPhone, msg.template.content || '', mediaData, { fallbackName: msg.contactName });
-        success = true;
-        logger.info(`[Scheduler] Mensagem enviada para ${maskName(msg.contactName)} (${maskPhone(msg.contactPhone)})`);
-        queueLogs.pushLog(`Enviado para ${msg.contactName}`, "success");
       } catch (error: unknown) {
         logger.error({ err: error }, `[Scheduler] Erro ao enviar para ${maskName(msg.contactName)}`);
         queueLogs.pushLog(`Erro ao enviar para ${msg.contactName}`, "error");
@@ -118,7 +126,7 @@ export function startScheduler() {
         await prisma.$transaction([
           prisma.scheduledMessage.update({
             where: { id: msg.id, workspaceId },
-            data: { status: success ? "SENT" : "FAILED" },
+            data: { status: success ? "SENT" : blockedByOptOut ? "CANCELED" : "FAILED" },
           }),
           prisma.campaign.updateMany({
             where: { id: msg.batchId, workspaceId },
@@ -164,7 +172,7 @@ export function startScheduler() {
       } else {
         await prisma.scheduledMessage.update({
           where: { id: msg.id, workspaceId },
-          data: { status: success ? "SENT" : "FAILED" },
+          data: { status: success ? "SENT" : blockedByOptOut ? "CANCELED" : "FAILED" },
         });
       }
 

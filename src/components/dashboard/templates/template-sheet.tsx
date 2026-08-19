@@ -14,6 +14,7 @@ import Image from "next/image";
 import { WhatsAppMockup } from "./whatsapp-mockup";
 import { useTemplateEditor } from '@/hooks/use-template-editor';
 import type { Template } from '@/types/templates';
+import { sonnerFeedback } from '@/presentation/feedback';
 
 interface TemplateSheetProps {
   open: boolean;
@@ -54,7 +55,7 @@ export function TemplateSheet({
     isDuplicate,
     onClose: () => onOpenChange(false),
     onSave,
-  });
+  }, sonnerFeedback);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -139,7 +140,7 @@ export function TemplateSheet({
                             {/* 1. Header Inputs (Compact) */}
                             <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="sheet-title" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Título</Label>
+                                    <Label htmlFor="sheet-title">Título</Label>
                                     <Input 
                                         id="sheet-title" 
                                         placeholder="Ex: Promoção de Natal" 
@@ -149,7 +150,7 @@ export function TemplateSheet({
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="sheet-category" className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+                                    <Label htmlFor="sheet-category" className="flex items-center gap-1">
                                         <Tag className="w-3 h-3" /> Categoria
                                     </Label>
                                     <Input 
@@ -204,13 +205,13 @@ export function TemplateSheet({
                                     <div className="flex gap-1.5">
                                         <button
                                             onClick={() => appendVariable('name')}
-                                            className="bg-white border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-600 px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wide transition-all flex items-center gap-1 shadow-sm"
+                                            className="flex min-h-9 items-center gap-1 rounded-lg border border-border bg-background px-2 text-xs font-semibold text-muted-foreground shadow-sm hover:border-primary/40 hover:text-primary"
                                         >
                                             <Plus className="w-3 h-3" /> Nome
                                         </button>
                                         <button
                                             onClick={() => appendVariable('phone')}
-                                            className="bg-white border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-600 px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wide transition-all flex items-center gap-1 shadow-sm"
+                                            className="flex min-h-9 items-center gap-1 rounded-lg border border-border bg-background px-2 text-xs font-semibold text-muted-foreground shadow-sm hover:border-primary/40 hover:text-primary"
                                         >
                                             <Plus className="w-3 h-3" /> Tel
                                         </button>
@@ -234,7 +235,7 @@ export function TemplateSheet({
                                     {includeFooter && (
                                         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-dashed border-gray-100 bg-gray-50/50 rounded-b-xl text-xs text-muted-foreground pointer-events-none select-none">
                                             <div className="flex items-center gap-2 mb-1.5 opacity-70">
-                                                <span className="text-[10px] uppercase font-bold text-blue-500 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">Rodapé Automático</span>
+                                                <span className="rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">Rodapé automático</span>
                                             </div>
                                             {settings.cta && <p className="whitespace-pre-wrap font-medium text-gray-600">{settings.cta}</p>}
                                             {settings.link && <p className="text-blue-500 underline mt-0.5">{settings.link}</p>}
@@ -250,7 +251,7 @@ export function TemplateSheet({
                             <div className="flex items-center justify-between">
                                 <div className="space-y-0.5">
                                     <Label htmlFor="include-footer" className="text-sm font-medium cursor-pointer text-gray-700">
-                                    Incluir Rodapé Padrão
+                                    Incluir rodapé padrão
                                     </Label>
                                     <p className="text-xs text-muted-foreground">
                                     {settings.link ? "Link e CTA configurados serão adicionados." : "Configure nas opções gerais."}
@@ -264,7 +265,7 @@ export function TemplateSheet({
                                 />
                                 <div className="flex items-center gap-3">
                                     <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                                    <Button onClick={handleSaveInternal} disabled={isSaving} size="sm" className="bg-blue-600 hover:bg-blue-700 min-w-[100px]">
+                                    <Button onClick={handleSaveInternal} disabled={isSaving} size="sm" className="min-w-[100px]">
                                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Salvar</>}
                                     </Button>
                                 </div>
@@ -278,7 +279,7 @@ export function TemplateSheet({
                         {/* Wallpaper Pattern */}
                         <div className="absolute inset-0 bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')] pointer-events-none opacity-[0.06]"></div>
 
-                        <div className="absolute top-6 left-6 flex items-center gap-2 text-gray-400 font-medium text-xs uppercase tracking-wider z-10">
+                        <div className="absolute left-6 top-6 z-10 flex items-center gap-2 text-xs font-medium text-muted-foreground">
                             <Smartphone className="w-4 h-4" />
                             Preview Real
                         </div>

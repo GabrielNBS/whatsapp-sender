@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import { useGlobalSheet } from '@/components/dashboard/global-sheet-provider';
 import { useAppLogger } from '@/hooks/use-app-logger';
@@ -14,40 +13,36 @@ import { useSender } from '@/hooks/use-sender';
 import { useSendPageInitialStep } from '@/hooks/use-send-page-initial-step';
 import { useTemplateCatalog } from '@/hooks/use-template-catalog';
 import { getCampaignProgress } from '@/lib/campaign-progress';
-import { useAppStore } from '@/lib/store';
+import { useContactStore, selectContactsByGroup } from '@/stores/contact-store';
+import { useTransmissionStore } from '@/stores/transmission-store';
 import { isScheduleDateValid } from '@/lib/utils';
-
-export interface ScheduledCampaignOverlay {
-  batchId: string;
-  batchName: string;
-  scheduledFor: string;
-  contactCount: number;
-}
+import type { ConfirmationPort, FeedbackPort } from '@/presentation/feedback';
+import { useDebugSimulationStore } from '@/stores/debug-simulation-store';
+import type { ScheduledCampaignOverlay } from '@/lib/types';
 
 export type RecipientMode = 'GRUPOS' | 'CONTATOS' | 'MISTO';
 
-export function useDashboardCampaign() {
+export function useDashboardCampaign(feedback: FeedbackPort, confirmAction: ConfirmationPort) {
+  const { groups, contacts } = useContactStore(useShallow((state) => ({
+    groups: state.groups,
+    contacts: state.contacts,
+  })));
   const {
-    groups,
-    contacts,
-    getContactsByGroup,
     sendingStatus,
     cleanupLogs,
     clearLogs,
     finishSending,
     resetSending,
-  } = useAppStore(useShallow((state) => ({
-    groups: state.groups,
-    contacts: state.contacts,
-    getContactsByGroup: state.getContactsByGroup,
+  } = useTransmissionStore(useShallow((state) => ({
     sendingStatus: state.sendingStatus,
     cleanupLogs: state.cleanupLogs,
     clearLogs: state.clearLogs,
     finishSending: state.finishSending,
     resetSending: state.resetSending,
   })));
-  const { activeSchedules, fetchSchedules, completedSchedules } = useScheduler();
-  const { handleSend, handleStop } = useSender();
+  const getContactsByGroup = (groupId: string) => selectContactsByGroup(contacts, groupId);
+  const { activeSchedules, fetchSchedules, completedSchedules } = useScheduler(feedback);
+  const { handleSend, handleStop } = useSender(feedback, confirmAction);
   const { templates, loadTemplate } = useTemplateCatalog();
   const hydrated = useHydrated();
   const { openSheet } = useGlobalSheet();
@@ -58,7 +53,7 @@ export function useDashboardCampaign() {
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [scheduledOverlayData, setScheduledOverlayData] = useState<ScheduledCampaignOverlay | null>(null);
   const [isScheduling, setIsScheduling] = useState(false);
-  const [debugForceScreen, setDebugForceScreen] = useState<string | null>(null);
+  const debugForceScreen = useDebugSimulationStore((state) => state.forceScreen);
 
   const {
     recipientConfigs,
@@ -103,35 +98,12 @@ export function useDashboardCampaign() {
   }, [cleanupLogs]);
 
   useEffect(() => {
-    const handleGoToStep = (event: Event) => {
-      setCurrentStep((event as CustomEvent<number>).detail);
-    };
-    const handleScheduledOverlay = (event: Event) => {
-      const detail = (event as CustomEvent<(ScheduledCampaignOverlay & { force?: boolean }) | null>).detail;
-      if (detail) {
-        setScheduledOverlayData(detail);
-        setCurrentStep(3);
-        if (detail.force) setDebugForceScreen('scheduled');
-        return;
-      }
-
-      setScheduledOverlayData(null);
-      setDebugForceScreen(null);
-    };
-    const handleForceScreen = (event: Event) => {
-      const detail = (event as CustomEvent<string | null>).detail;
-      setDebugForceScreen(detail);
-      if (detail) setCurrentStep(3);
-    };
-
-    window.addEventListener('go-to-step', handleGoToStep);
-    window.addEventListener('debug-scheduled-overlay', handleScheduledOverlay);
-    window.addEventListener('debug-force-screen', handleForceScreen);
-    return () => {
-      window.removeEventListener('go-to-step', handleGoToStep);
-      window.removeEventListener('debug-scheduled-overlay', handleScheduledOverlay);
-      window.removeEventListener('debug-force-screen', handleForceScreen);
-    };
+    return useDebugSimulationStore.subscribe((state, previousState) => {
+      if (state.revision === previousState.revision) return;
+      setScheduledOverlayData(state.scheduledOverlay);
+      if (state.step !== null) setCurrentStep(state.step);
+      if (state.forceScreen || state.scheduledOverlay) setCurrentStep(3);
+    });
   }, []);
 
   useEffect(() => {
@@ -203,7 +175,7 @@ export function useDashboardCampaign() {
       setCurrentStep((step) => step + 1);
       return;
     }
-    if (currentStep === 1) toast.error('Selecione os destinatários antes de prosseguir.');
+    if (currentStep === 1) feedback.error('Selecione os destinatários antes de prosseguir.');
   };
 
   const handleBack = () => {
@@ -213,7 +185,7 @@ export function useDashboardCampaign() {
   const { mutate: scheduleMessages } = useScheduleMessages({
     onSuccess: () => {
       addLog('Agendamento realizado com sucesso!', 'success');
-      toast.success('Agendamento realizado com sucesso!');
+      feedback.success('Agendamento realizado com sucesso!');
       resetForm();
       fetchSchedules();
       setCurrentStep(3);
@@ -221,18 +193,18 @@ export function useDashboardCampaign() {
     },
     onError: (error) => {
       addLog(`Erro ao agendar: ${error.message}`, 'error');
-      toast.error('Erro ao agendar envio.');
+      feedback.error('Erro ao agendar envio.');
       setIsScheduling(false);
     },
   });
 
   const handleSchedule = async () => {
     if (!scheduleDate) {
-      toast.error('Selecione uma data para agendar.');
+      feedback.error('Selecione uma data para agendar.');
       return;
     }
     if (!isScheduleDateValid(scheduleDate)) {
-      toast.error('O agendamento deve ser feito com pelo menos 2 minutos de antecedência.');
+      feedback.error('O agendamento deve ser feito com pelo menos 2 minutos de antecedência.');
       return;
     }
 
@@ -258,7 +230,7 @@ export function useDashboardCampaign() {
 
   const handleSendAction = async () => {
     if (!canNavigateTo(3)) {
-      toast.error('Preencha todos os campos obrigatórios.');
+      feedback.error('Preencha todos os campos obrigatórios.');
       return;
     }
     if (isScheduleMode) {
@@ -275,8 +247,8 @@ export function useDashboardCampaign() {
       setCurrentStep(navStepId);
       return;
     }
-    if (navStepId === 1) toast.error('Comece a campanha primeiro.');
-    if (navStepId === 2) toast.error('Selecione os destinatários primeiro.');
+    if (navStepId === 1) feedback.error('Comece a campanha primeiro.');
+    if (navStepId === 2) feedback.error('Selecione os destinatários primeiro.');
   };
 
   const handleNewTransmission = () => {

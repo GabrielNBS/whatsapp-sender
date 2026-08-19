@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import type { FeedbackPort } from '@/presentation/feedback';
 import {
   reportsApi,
   type ReportConfig,
@@ -22,7 +22,7 @@ export function maskReportPhone(value: string) {
   return `+${digits.slice(0, 2)} (${digits.slice(2, 4)}) ${digits.slice(4, 9)}-${digits.slice(9)}`;
 }
 
-export function useReportSettings() {
+export function useReportSettings(feedback: FeedbackPort) {
   const [recipients, setRecipients] = useState<ReportRecipient[]>([]);
   const [config, setConfig] = useState<ReportConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,11 +39,11 @@ export function useReportSettings() {
       setConfig(data.config);
     } catch (error) {
       console.error('Error fetching report data:', error);
-      toast.error('Erro ao carregar configurações');
+      feedback.error('Erro ao carregar configurações');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [feedback]);
 
   useEffect(() => {
     void fetchSettings();
@@ -52,7 +52,7 @@ export function useReportSettings() {
   const addRecipient = async () => {
     const rawPhone = newPhone.replace(/\D/g, '');
     if (!newName.trim() || rawPhone.length < 12) {
-      toast.error('Preencha nome e telefone completo (ex: +55 11 99999-9999)');
+      feedback.error('Preencha nome e telefone completo (ex: +55 11 99999-9999)');
       return;
     }
 
@@ -62,9 +62,9 @@ export function useReportSettings() {
       setRecipients((current) => [recipient, ...current]);
       setNewName('');
       setNewPhone('');
-      toast.success('Gestor adicionado!');
+      feedback.success('Gestor adicionado!');
     } catch {
-      toast.error('Erro ao adicionar gestor');
+      feedback.error('Erro ao adicionar gestor');
     } finally {
       setIsAdding(false);
     }
@@ -76,9 +76,9 @@ export function useReportSettings() {
       setRecipients((current) => current.map(
         (recipient) => recipient.id === recipientId ? updatedRecipient : recipient,
       ));
-      toast.success(isActive ? 'Gestor desativado' : 'Gestor ativado');
+      feedback.success(isActive ? 'Gestor desativado' : 'Gestor ativado');
     } catch {
-      toast.error('Erro ao atualizar');
+      feedback.error('Erro ao atualizar');
     }
   };
 
@@ -86,9 +86,9 @@ export function useReportSettings() {
     try {
       await reportsApi.removeRecipient(recipientId);
       setRecipients((current) => current.filter((recipient) => recipient.id !== recipientId));
-      toast.success('Gestor removido');
+      feedback.success('Gestor removido');
     } catch {
-      toast.error('Erro ao remover');
+      feedback.error('Erro ao remover');
     }
   };
 
@@ -96,9 +96,9 @@ export function useReportSettings() {
     setIsSaving(true);
     try {
       setConfig(await reportsApi.updateConfig(updates));
-      toast.success('Configurações salvas');
+      feedback.success('Configurações salvas');
     } catch {
-      toast.error('Erro ao salvar');
+      feedback.error('Erro ao salvar');
     } finally {
       setIsSaving(false);
     }
@@ -106,7 +106,7 @@ export function useReportSettings() {
 
   const sendTestReport = async () => {
     if (!recipients.some((recipient) => recipient.isActive)) {
-      toast.error('Cadastre pelo menos um gestor ativo');
+      feedback.error('Cadastre pelo menos um gestor ativo');
       return;
     }
 
@@ -114,9 +114,9 @@ export function useReportSettings() {
     try {
       const data = await reportsApi.sendTest();
       const successCount = data.results?.filter((result) => result.success).length || 0;
-      toast.success(`Teste enviado para ${successCount} gestor(es)`);
+      feedback.success(`Teste enviado para ${successCount} gestor(es)`);
     } catch {
-      toast.error('Erro de conexão');
+      feedback.error('Erro de conexão');
     } finally {
       setIsTesting(false);
     }

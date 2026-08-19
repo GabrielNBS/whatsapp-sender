@@ -33,16 +33,17 @@ export function TemplateFilters({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
         <Input
+          aria-label="Pesquisar modelos"
           placeholder="Pesquisar por título ou conteúdo..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9 pr-9 bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800 focus-visible:bg-white dark:focus-visible:bg-zinc-950 transition-all h-10"
+          className="bg-muted/30 pl-9 pr-11"
         />
         {searchTerm && (
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-zinc-400 hover:text-zinc-600 hover:bg-transparent"
+            className="absolute right-0 top-1/2 h-10 w-10 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             onClick={() => onSearchChange('')}
             aria-label="Limpar busca"
           >
@@ -59,10 +60,10 @@ export function TemplateFilters({
             onClick={() => onFilterChange('all')}
             aria-pressed={filter === 'all'}
             className={cn(
-              "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border whitespace-nowrap cursor-pointer",
+              "min-h-10 whitespace-nowrap rounded-lg border px-4 text-sm font-medium",
               filter === 'all'
-                ? "bg-indigo-600 border-indigo-600 text-white"
-                : "bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
             Todos
@@ -72,10 +73,10 @@ export function TemplateFilters({
             onClick={() => onFilterChange('media')}
             aria-pressed={filter === 'media'}
             className={cn(
-              "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border whitespace-nowrap cursor-pointer",
+              "min-h-10 whitespace-nowrap rounded-lg border px-4 text-sm font-medium",
               filter === 'media'
-                ? "bg-indigo-600 border-indigo-600 text-white"
-                : "bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
             Mídia
@@ -85,10 +86,10 @@ export function TemplateFilters({
             onClick={() => onFilterChange('text')}
             aria-pressed={filter === 'text'}
             className={cn(
-              "px-4 py-1.5 rounded-full text-sm font-medium transition-colors border whitespace-nowrap cursor-pointer",
+              "min-h-10 whitespace-nowrap rounded-lg border px-4 text-sm font-medium",
               filter === 'text'
-                ? "bg-indigo-600 border-indigo-600 text-white"
-                : "bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
             Texto
@@ -106,10 +107,10 @@ export function TemplateFilters({
                   onClick={() => onCategoryChange(selectedCategory === cat ? null : cat)}
                   aria-pressed={selectedCategory === cat}
                   className={cn(
-                    "px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors border whitespace-nowrap flex items-center gap-1.5 cursor-pointer",
+                    "flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg border px-3.5 text-sm font-medium",
                     selectedCategory === cat
-                      ? "bg-zinc-800 dark:bg-zinc-200 border-zinc-800 dark:border-zinc-200 text-white dark:text-zinc-900"
-                      : "bg-white dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
                   {cat}
@@ -123,9 +124,9 @@ export function TemplateFilters({
               variant="ghost"
               size="sm"
               onClick={onClearFilters}
-              className="text-xs h-8 text-zinc-400 hover:text-red-500 hover:bg-transparent px-2 ml-auto"
+              className="ml-auto h-10 px-3 text-sm text-muted-foreground hover:text-destructive"
             >
-              Limpar Filtros
+              Limpar filtros
             </Button>
           )}
         </div>

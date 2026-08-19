@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ChangeEvent } from 'react';
-import { toast } from 'sonner';
+import type { FeedbackPort } from '@/presentation/feedback';
 import { templateEditorApi, type TemplateSnippet } from '@/services/templates/templateEditorApi';
 import { templatesApi } from '@/services/templates/templatesApi';
 import type { Template, TemplateMedia } from '@/types/templates';
@@ -20,7 +20,7 @@ export function useTemplateEditor({
   isDuplicate,
   onClose,
   onSave,
-}: UseTemplateEditorOptions) {
+}: UseTemplateEditorOptions, feedback: FeedbackPort) {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [content, setContent] = useState('');
@@ -97,7 +97,7 @@ export function useTemplateEditor({
 
   const toggleFooter = (checked: boolean) => {
     if (checked && !settings.link && !settings.cta) {
-      toast.error('Configure o link e CTA padrão nas configurações primeiro.');
+      feedback.error('Configure o link e CTA padrão nas configurações primeiro.');
       return;
     }
     setIncludeFooter(checked);
@@ -122,7 +122,7 @@ export function useTemplateEditor({
 
   const saveTemplate = async () => {
     if (!title || !content) {
-      toast.warning('Preencha título e mensagem');
+      feedback.warning('Preencha título e mensagem');
       return;
     }
 
@@ -141,12 +141,12 @@ export function useTemplateEditor({
         media: selectedFile,
         category,
       });
-      toast.success(isEditing ? 'Modelo atualizado com sucesso' : 'Modelo criado com sucesso');
+      feedback.success(isEditing ? 'Modelo atualizado com sucesso' : 'Modelo criado com sucesso');
       onClose();
       onSave();
     } catch (error) {
       console.error('Failed to save', error);
-      toast.error('Erro ao salvar modelo');
+      feedback.error('Erro ao salvar modelo');
     } finally {
       setIsSaving(false);
     }

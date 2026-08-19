@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { MetricsQueryService } from '@/server/services/MetricsQueryService';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic';
  * Retorna dados agregados para exibição de gráficos no dashboard.
  */
 export const GET = apiHandler(async () => {
-  const data = await MetricsQueryService.getDashboardChartsData();
+  const data = await MetricsQueryService.getDashboardChartsData(getCurrentWorkspaceId());
   
   const response = NextResponse.json(data);
   

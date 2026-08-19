@@ -1,66 +1,18 @@
-import { useState, useMemo, useSyncExternalStore } from 'react';
-import { Template, TemplateFilterType } from '@/types/templates';
-
-const LOCAL_STORAGE_FILTER_KEY = 'templates-filter-type';
-const LOCAL_STORAGE_CAT_KEY = 'templates-filter-category';
-const FILTERS_CHANGED_EVENT = 'template-filters-changed';
-
-function subscribeToStoredFilters(onStoreChange: () => void) {
-  window.addEventListener('storage', onStoreChange);
-  window.addEventListener(FILTERS_CHANGED_EVENT, onStoreChange);
-  return () => {
-    window.removeEventListener('storage', onStoreChange);
-    window.removeEventListener(FILTERS_CHANGED_EVENT, onStoreChange);
-  };
-}
-
-function getStoredFilter(): TemplateFilterType {
-  const saved = localStorage.getItem(LOCAL_STORAGE_FILTER_KEY);
-  return saved === 'media' || saved === 'text' ? saved : 'all';
-}
-
-function notifyStoredFiltersChanged() {
-  window.dispatchEvent(new Event(FILTERS_CHANGED_EVENT));
-}
+import { useState, useMemo } from 'react';
+import type { Template } from '@/types/templates';
+import { useTemplateFilterStore } from '@/stores/template-filter-store';
 
 export function useTemplateFilters(templates: Template[]) {
-  const filter = useSyncExternalStore<TemplateFilterType>(
-    subscribeToStoredFilters,
-    getStoredFilter,
-    () => 'all',
-  );
-  const selectedCategory = useSyncExternalStore(
-    subscribeToStoredFilters,
-    () => localStorage.getItem(LOCAL_STORAGE_CAT_KEY),
-    () => null,
-  );
+  const filter = useTemplateFilterStore((state) => state.filter);
+  const selectedCategory = useTemplateFilterStore((state) => state.selectedCategory);
+  const changeFilter = useTemplateFilterStore((state) => state.setFilter);
+  const changeCategory = useTemplateFilterStore((state) => state.setSelectedCategory);
+  const clearStoredFilters = useTemplateFilterStore((state) => state.clear);
   const [searchTerm, setSearchTerm] = useState('');
-
-  const changeFilter = (type: TemplateFilterType) => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_FILTER_KEY, type);
-      notifyStoredFiltersChanged();
-    } catch {}
-  };
-
-  const changeCategory = (category: string | null) => {
-    try {
-      if (category) {
-        localStorage.setItem(LOCAL_STORAGE_CAT_KEY, category);
-      } else {
-        localStorage.removeItem(LOCAL_STORAGE_CAT_KEY);
-      }
-      notifyStoredFiltersChanged();
-    } catch {}
-  };
 
   const clearFilters = () => {
     setSearchTerm('');
-    try {
-      localStorage.removeItem(LOCAL_STORAGE_FILTER_KEY);
-      localStorage.removeItem(LOCAL_STORAGE_CAT_KEY);
-      notifyStoredFiltersChanged();
-    } catch {}
+    clearStoredFilters();
   };
 
   // Memoiza a extração de categorias normalizadas disponíveis (PERF-001 e FILTER-001)

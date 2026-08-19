@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { ScheduleService } from '@/server/services/ScheduleService';
 import { createScheduleSchema } from '@/server/validators/schedule';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 import { ValidationError } from '@/lib/api-errors';
 
 export const dynamic = 'force-dynamic';
@@ -13,9 +14,9 @@ export const dynamic = 'force-dynamic';
 export const GET = apiHandler(async (req: NextRequest) => {
   const batchId = req.nextUrl.searchParams.get('batchId');
   if (batchId) {
-    return NextResponse.json(await ScheduleService.getScheduleBatchDetails(batchId));
+    return NextResponse.json(await ScheduleService.getScheduleBatchDetails(batchId, getCurrentWorkspaceId()));
   }
-  return NextResponse.json(await ScheduleService.listActiveSchedules());
+  return NextResponse.json(await ScheduleService.listActiveSchedules(getCurrentWorkspaceId()));
 }, { routeName: '/api/schedule (GET)', requireAuth: true });
 
 /**
@@ -31,7 +32,7 @@ export const POST = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Parâmetros de agendamento inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const result = await ScheduleService.createSchedule(validation.data);
+  const result = await ScheduleService.createSchedule(validation.data, getCurrentWorkspaceId());
   return NextResponse.json(result);
 }, { routeName: '/api/schedule (POST)', requireAuth: true });
 
@@ -47,6 +48,6 @@ export const DELETE = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('O batchId é obrigatório para cancelamento.');
   }
 
-  const result = await ScheduleService.cancelScheduleBatch(batchId);
+  const result = await ScheduleService.cancelScheduleBatch(batchId, getCurrentWorkspaceId());
   return NextResponse.json(result);
 }, { routeName: '/api/schedule (DELETE)', requireAuth: true });

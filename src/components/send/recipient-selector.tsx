@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Users, UserPlus } from "lucide-react";
 import { useGlobalSheet } from "@/components/dashboard/global-sheet-provider";
 import { Button } from "@/components/ui/button";
-import { Group, Contact } from "@/lib/store";
+import type { Group, Contact } from '@/lib/types';
 import { SearchTrigger, GroupList, ContactList } from "./recipient-selector/";
 import {
   Popover,
@@ -49,7 +49,7 @@ export function RecipientSelector({
 
   const groupContactCounts = useMemo(() => {
     const counts = new Map(groups.map((group) => [group.id, 0]));
-    for (const contact of contacts) {
+    for (const contact of contacts.filter((item) => item.consentStatus !== 'OPTED_OUT')) {
       for (const groupId of contact.groupIds) {
         counts.set(groupId, (counts.get(groupId) ?? 0) + 1);
       }
@@ -65,8 +65,9 @@ export function RecipientSelector({
 
   const filteredContacts = contacts.filter(
     (contact) =>
-      contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.number.includes(searchTerm)
+      contact.consentStatus !== 'OPTED_OUT' &&
+      (contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.number.includes(searchTerm))
   );
 
   const selectedGroupIds = value
@@ -106,7 +107,7 @@ export function RecipientSelector({
   };
 
   return (
-    <div className={`bg-card rounded-xl border border-border/50 p-5 space-y-5 relative transition-all duration-300 ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+    <div className={`relative space-y-5 rounded-xl border border-border bg-card p-5 ${disabled ? 'pointer-events-none opacity-60' : ''}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-1 h-4 bg-primary rounded-full" />
@@ -119,7 +120,7 @@ export function RecipientSelector({
           variant="ghost"
           size="sm"
           onClick={() => openSheet('contacts')}
-          className="h-7 rounded-md text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 px-2.5 transition-colors"
+          className="h-9 rounded-lg px-3 text-sm text-muted-foreground hover:text-primary"
         >
           <UserPlus className="w-3.5 h-3.5 mr-1.5 opacity-70" />
           Agenda
@@ -145,8 +146,8 @@ export function RecipientSelector({
         </div>
       ) : (
         <div className="space-y-1.5">
-          <p className="text-[11px] font-medium text-muted-foreground/70 ml-0.5">
-            Público alvo da campanha
+          <p className="ml-0.5 text-sm font-medium text-muted-foreground">
+            Público-alvo da campanha
           </p>
 
           <Popover open={isOpen} onOpenChange={handleOpenChange}>
@@ -156,7 +157,7 @@ export function RecipientSelector({
                 isOpen={isOpen}
               />
             </PopoverTrigger>
-            <PopoverContent className="p-0 w-(--radix-popover-trigger-width) overflow-hidden rounded-xl border-border/60 shadow-xl" align="start">
+            <PopoverContent className="w-(--radix-popover-trigger-width) overflow-hidden rounded-xl border-border p-0 shadow-lg" align="start">
               <Command shouldFilter={false} className="bg-popover">
                 <div className="flex items-center px-3 border-b border-border/40">
                   <CommandInput
@@ -185,7 +186,7 @@ export function RecipientSelector({
                         </div>
                         <span className="font-medium text-sm">Todos os Contatos</span>
                       </div>
-                      <div className={`flex size-5 items-center justify-center rounded-full border text-[10px] font-bold transition-colors ${isAllSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border/70 bg-background'}`}>
+                      <div className={`flex size-5 items-center justify-center rounded-full border text-xs font-bold ${isAllSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'}`}>
                         {isAllSelected ? 1 : null}
                       </div>
                     </CommandItem>
@@ -206,13 +207,13 @@ export function RecipientSelector({
                 </CommandList>
                 <div className="flex items-center justify-between border-t border-border/40 px-3 py-2.5">
                   <div className="leading-tight">
-                    <p className="text-[11px] font-medium text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {value.length === 0
                         ? "Nenhuma seleção"
                         : `${value.length} ${value.length === 1 ? "seleção" : "seleções"}`}
                     </p>
                     {value.length > 1 && (
-                      <p className="text-[10px] text-muted-foreground/70">
+                      <p className="text-xs text-muted-foreground">
                         A numeração define a ordem de envio
                       </p>
                     )}
@@ -221,7 +222,7 @@ export function RecipientSelector({
                     type="button"
                     size="sm"
                     onClick={() => handleOpenChange(false)}
-                    className="h-7 rounded-md px-3 text-[11px] font-semibold"
+                    className="h-9 rounded-lg px-3 text-sm font-semibold"
                   >
                     Concluir
                   </Button>

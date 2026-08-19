@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { ScheduleService } from '@/server/services/ScheduleService';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 import { ValidationError } from '@/lib/api-errors';
 
 interface RouteParams {
@@ -18,6 +19,6 @@ export const POST = apiHandler(async (req: NextRequest, { params }: RouteParams)
     throw new ValidationError('ID do lote (batchId) é obrigatório na rota.');
   }
 
-  const result = await ScheduleService.cancelScheduleBatch(batchId);
+  const result = await ScheduleService.cancelScheduleBatch(batchId, getCurrentWorkspaceId());
   return NextResponse.json(result);
 }, { routeName: '/api/schedule/[batchId]/cancel (POST)', requireAuth: true });

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import whatsappService from '@/lib/whatsapp';
 import { apiHandler } from '@/lib/api-handler';
 import { normalizePhone } from '@/services/contacts/normalizePhone';
 import { ValidationError } from '@/lib/api-errors';
 import { z } from 'zod';
+import { getWhatsAppApplicationService } from '@/server/services/service-factory';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +30,7 @@ export const GET = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('O número de telefone deve conter entre 10 e 15 dígitos numéricos.');
   }
 
-  const avatarUrl = await whatsappService.getProfilePicUrl(normalized);
+  const avatarUrl = await getWhatsAppApplicationService().getAvatar(normalized);
 
   return NextResponse.json({ url: avatarUrl });
 }, { routeName: '/api/contacts/avatar (GET)', requireAuth: true });

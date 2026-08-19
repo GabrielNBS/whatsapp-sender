@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
 import { apiHandler } from '@/lib/api-handler';
 import { updateSettingsSchema } from '@/server/validators/settings';
 import { ValidationError } from '@/lib/api-errors';
-import { DEFAULT_CONFIG_ID } from '@/constants/domain';
-import { getCurrentWorkspaceId, getWorkspaceScopedId } from '@/server/workspace';
+import { getCurrentWorkspaceId } from '@/server/workspace';
+import { settingsService } from '@/server/services/service-factory';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,11 +12,7 @@ export const dynamic = 'force-dynamic';
  * Retorna as configurações gerais da aplicação.
  */
 export const GET = apiHandler(async () => {
-  const workspaceId = getCurrentWorkspaceId();
-  const settings = await prisma.settings.findUnique({
-    where: { workspaceId }
-  });
-  return NextResponse.json(settings || { defaultLink: '', defaultCTA: '' });
+  return NextResponse.json(await settingsService.get(getCurrentWorkspaceId()));
 }, { routeName: '/api/settings (GET)', requireAuth: true });
 
 /**
@@ -33,14 +28,6 @@ export const PUT = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Configurações inválidas.', validation.error.flatten().fieldErrors);
   }
 
-  const { defaultLink, defaultCTA } = validation.data;
-
-  const settings = await prisma.settings.upsert({
-    where: { workspaceId },
-    update: { defaultLink, defaultCTA },
-    create: { id: getWorkspaceScopedId(workspaceId, DEFAULT_CONFIG_ID), workspaceId, defaultLink, defaultCTA }
-  });
-
-  return NextResponse.json(settings);
+  return NextResponse.json(await settingsService.update(validation.data, workspaceId));
 }, { routeName: '/api/settings (PUT)', requireAuth: true });
 

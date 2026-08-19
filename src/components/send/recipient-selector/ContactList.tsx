@@ -1,4 +1,4 @@
-import { Contact } from '@/lib/store';
+import type { Contact } from '@/lib/types';
 import { formatPhoneNumber } from '@/lib/utils';
 import { AvatarDisplay } from '@/components/ui/avatar-display';
 import { CommandGroup, CommandItem } from '@/components/ui/command';
@@ -32,12 +32,12 @@ export function ContactList({ contacts, getSelectionOrder, onSelect }: ContactLi
               <AvatarDisplay name={contact.name} phone={contact.number} className="w-8 h-8 rounded-lg opacity-90 shadow-none border border-border/20" />
               <div className="flex flex-col leading-tight">
                 <span className="font-medium text-sm">{contact.name}</span>
-                <span className="text-[10px] text-muted-foreground font-normal">
+                <span className="text-xs font-normal text-muted-foreground">
                   {formatPhoneNumber(contact.number)}
                 </span>
               </div>
             </div>
-            <div className={`flex size-5 items-center justify-center rounded-full border text-[10px] font-bold transition-colors ${isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border/70 bg-background'}`}>
+            <div className={`flex size-5 items-center justify-center rounded-full border text-xs font-bold ${isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'}`}>
               {selectionOrder}
             </div>
           </CommandItem>

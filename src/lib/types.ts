@@ -21,7 +21,32 @@ export interface Contact {
   name: string;
   number: string;
   groupIds: string[];
+  consentStatus?: ContactConsentStatus;
+  consentAt?: string | null;
+  optedOutAt?: string | null;
 }
+
+export interface SendingStatus {
+  isSending: boolean;
+  progress: number;
+  currentContactIndex: number;
+  totalContacts: number;
+  statusMessage: string | null;
+  failedContacts: { name: string; number: string }[];
+  stoppedByUser: boolean;
+  isPaused: boolean;
+  sentCount: number;
+  failedCount: number;
+}
+
+export interface ScheduledCampaignOverlay {
+  batchId: string;
+  batchName: string;
+  scheduledFor: string;
+  contactCount: number;
+}
+
+export type ContactConsentStatus = 'UNKNOWN' | 'OPTED_IN' | 'OPTED_OUT';
 
 export interface Template {
   id: string;

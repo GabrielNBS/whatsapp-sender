@@ -15,6 +15,7 @@ import { SettingsSheetContent } from "@/components/dashboard/sheets/settings-she
 import { OverviewSheetContent } from "@/components/dashboard/sheets/overview-sheet-content";
 
 import { MonitoringSheetContent } from "@/components/dashboard/sheets/monitoring-sheet-content";
+import { ConsentAuditSheetContent } from "@/components/dashboard/sheets/consent-audit-sheet-content";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
 
@@ -27,10 +28,10 @@ export function GlobalSheet() {
       <SheetContent 
         side={isDesktop ? "right" : "bottom"} 
         className={cn(
-          "min-w-0 max-w-full overflow-y-auto bg-background shadow-2xl transition-all duration-500",
+          "min-w-0 max-w-full overflow-y-auto bg-background shadow-xl",
           !isDesktop
-            ? "h-[min(92dvh,56rem)] w-full rounded-t-2xl border-t border-border p-4 sm:p-6"
-            : "w-[min(90vw,64rem)] max-w-none border-l border-border p-6 sm:max-w-none xl:p-8"
+            ? "h-[min(92dvh,56rem)] w-full rounded-t-2xl border-t border-border p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6"
+            : "w-[min(90vw,64rem)] max-w-none border-l border-border p-6 sm:max-w-none"
         )}
       >
         <div className="sr-only">
@@ -43,6 +44,7 @@ export function GlobalSheet() {
         {activeSheet === 'settings' && <SettingsSheetContent />}
         {activeSheet === 'overview' && <OverviewSheetContent />}
         {activeSheet === 'monitoring' && <MonitoringSheetContent />}
+        {activeSheet === 'consent-audit' && <ConsentAuditSheetContent />}
       </SheetContent>
     </Sheet>
   );

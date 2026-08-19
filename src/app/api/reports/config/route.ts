@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { ReportConfigService } from '@/server/services/ReportConfigService';
 import { reportConfigSchema } from '@/server/validators/reports';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 import { ValidationError } from '@/lib/api-errors';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic';
  * Retorna as configurações de relatórios.
  */
 export const GET = apiHandler(async () => {
-  const config = await ReportConfigService.getConfig();
+  const config = await ReportConfigService.getConfig(getCurrentWorkspaceId());
   return NextResponse.json(config);
 }, { routeName: '/api/reports/config (GET)', requireAuth: true });
 
@@ -28,7 +29,7 @@ export const PATCH = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Parâmetros de configuração de relatórios inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const config = await ReportConfigService.updateConfig(validation.data);
+  const config = await ReportConfigService.updateConfig(validation.data, getCurrentWorkspaceId());
   return NextResponse.json(config);
 }, { routeName: '/api/reports/config (PATCH)', requireAuth: true });
 

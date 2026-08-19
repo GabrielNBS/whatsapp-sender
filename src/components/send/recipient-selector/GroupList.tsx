@@ -1,5 +1,5 @@
 import { Users } from 'lucide-react';
-import { Group } from '@/lib/store';
+import type { Group } from '@/lib/types';
 import { CommandGroup, CommandItem } from '@/components/ui/command';
 
 interface GroupListProps {
@@ -35,12 +35,12 @@ export function GroupList({ groups, getSelectionOrder, getContactCount, onSelect
               </div>
               <div className="flex flex-col leading-tight">
                 <span className="font-medium text-sm">{group.name}</span>
-                <span className="text-[10px] text-muted-foreground font-normal">
+                <span className="text-xs font-normal text-muted-foreground">
                   {contactCount} {contactCount === 1 ? 'contato' : 'contatos'}
                 </span>
               </div>
             </div>
-            <div className={`flex size-5 items-center justify-center rounded-full border text-[10px] font-bold transition-colors ${isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border/70 bg-background'}`}>
+            <div className={`flex size-5 items-center justify-center rounded-full border text-xs font-bold ${isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-background'}`}>
               {selectionOrder}
             </div>
           </CommandItem>

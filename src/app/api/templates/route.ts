@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { TemplateService } from '@/server/services/TemplateService';
 import { createTemplateSchema } from '@/server/validators/templates';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 import { ValidationError } from '@/lib/api-errors';
 
 export const dynamic = 'force-dynamic';
@@ -12,8 +13,8 @@ export const dynamic = 'force-dynamic';
  */
 export const GET = apiHandler(async (req: NextRequest) => {
   const templates = req.nextUrl.searchParams.get('view') === 'summary'
-    ? await TemplateService.listTemplateSummaries()
-    : await TemplateService.listTemplates();
+    ? await TemplateService.listTemplateSummaries(getCurrentWorkspaceId())
+    : await TemplateService.listTemplates(getCurrentWorkspaceId());
   return NextResponse.json(templates, {
     headers: {
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -36,6 +37,6 @@ export const POST = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Dados de modelo inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const template = await TemplateService.createTemplate(validation.data);
+  const template = await TemplateService.createTemplate(validation.data, getCurrentWorkspaceId());
   return NextResponse.json(template);
 }, { routeName: '/api/templates (POST)', requireAuth: true });

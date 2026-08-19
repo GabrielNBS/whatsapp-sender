@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
-import { useAppStore, Contact } from '@/lib/store';
+import type { Contact } from '@/lib/types';
+import { useContactStore } from '@/stores/contact-store';
 import { useShallow } from 'zustand/react/shallow';
 import { parseContactsCsv } from '@/services/contacts/parseContactsCsv';
 import { dedupeContacts } from '@/services/contacts/dedupeContacts';
 import { DEFAULT_GROUP_ID } from '@/constants/contacts';
 import { nanoid } from 'nanoid';
-import { toast } from 'sonner';
+import type { FeedbackPort } from '@/presentation/feedback';
 import { importContacts } from '@/services/contacts/contactsApi';
 import { MAX_CSV_FILE_SIZE } from '@/constants/domain';
 
@@ -15,8 +16,8 @@ export function isImportTargetType(value: unknown): value is ImportTargetType {
   return typeof value === 'string' && ['default', 'existing', 'new'].includes(value);
 }
 
-export function useContactImport() {
-  const { contacts, groups, upsertContacts, upsertGroup } = useAppStore(useShallow((state) => ({
+export function useContactImport(feedback: FeedbackPort) {
+  const { contacts, groups, upsertContacts, upsertGroup } = useContactStore(useShallow((state) => ({
     contacts: state.contacts,
     groups: state.groups,
     upsertContacts: state.upsertContacts,
@@ -32,7 +33,7 @@ export function useContactImport() {
 
   const handleFileUpload = useCallback(async (file: File) => {
     if (file.size > MAX_CSV_FILE_SIZE) {
-      toast.error('O arquivo CSV excede o limite de 5 MB.');
+      feedback.error('O arquivo CSV excede o limite de 5 MB.');
       return;
     }
     setIsParsing(true);
@@ -41,29 +42,29 @@ export function useContactImport() {
       
       if (result.errors.length > 0) {
         // Mostra os primeiros 3 erros de validação
-        result.errors.slice(0, 3).forEach(err => toast.error(err));
+        result.errors.slice(0, 3).forEach(err => feedback.error(err));
         if (result.errors.length > 3) {
-          toast.error(`E mais ${result.errors.length - 3} outros erros de validação.`);
+          feedback.error(`E mais ${result.errors.length - 3} outros erros de validação.`);
         }
       }
 
       if (result.contacts.length === 0) {
-        toast.error('Nenhum contato válido encontrado para importar.');
+        feedback.error('Nenhum contato válido encontrado para importar.');
         return;
       }
 
       setImportedContacts(result.contacts);
       setIsImportModalOpen(true);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Falha ao processar arquivo CSV.');
+      feedback.error(err instanceof Error ? err.message : 'Falha ao processar arquivo CSV.');
     } finally {
       setIsParsing(false);
     }
-  }, []);
+  }, [feedback]);
 
   const handleConfirmImport = useCallback(async () => {
     if (importedContacts.length === 0) {
-      toast.error('Não há contatos para importar.');
+      feedback.error('Não há contatos para importar.');
       return;
     }
 
@@ -71,21 +72,21 @@ export function useContactImport() {
 
     if (importTargetType === 'existing') {
       if (!importTargetGroupId) {
-        toast.error('Selecione um grupo de destino.');
+        feedback.error('Selecione um grupo de destino.');
         return;
       }
       targetGroupId = importTargetGroupId;
     } else if (importTargetType === 'new') {
       const trimmedGroupName = importNewGroupName.trim();
       if (!trimmedGroupName) {
-        toast.error('Digite o nome do novo grupo.');
+        feedback.error('Digite o nome do novo grupo.');
         return;
       }
       
       // Verifica duplicidade do grupo
       const groupExists = groups.some(g => g.name.toLowerCase() === trimmedGroupName.toLowerCase());
       if (groupExists) {
-        toast.error('Já existe um grupo com este nome.');
+        feedback.error('Já existe um grupo com este nome.');
         return;
       }
 
@@ -107,7 +108,7 @@ export function useContactImport() {
     const { uniqueContacts, duplicateCount } = dedupeContacts(contactsWithGroups, contacts);
 
     if (uniqueContacts.length === 0) {
-      toast.warning('Todos os contatos da lista já existem na base.');
+      feedback.warning('Todos os contatos da lista já existem na base.');
       setIsImportModalOpen(false);
       return;
     }
@@ -120,14 +121,14 @@ export function useContactImport() {
       if (result.group) upsertGroup(result.group);
       upsertContacts(result.contacts);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Falha ao importar contatos.');
+      feedback.error(error instanceof Error ? error.message : 'Falha ao importar contatos.');
       return;
     }
     
     if (duplicateCount > 0) {
-      toast.success(`${uniqueContacts.length} contatos importados. ${duplicateCount} duplicados foram ignorados.`);
+      feedback.success(`${uniqueContacts.length} contatos importados. ${duplicateCount} duplicados foram ignorados.`);
     } else {
-      toast.success(`${uniqueContacts.length} contatos importados com sucesso.`);
+      feedback.success(`${uniqueContacts.length} contatos importados com sucesso.`);
     }
 
     // Cleanup
@@ -136,7 +137,7 @@ export function useContactImport() {
     setImportTargetType('default');
     setImportTargetGroupId('');
     setImportNewGroupName('');
-  }, [importedContacts, importTargetType, importTargetGroupId, importNewGroupName, groups, contacts, upsertContacts, upsertGroup]);
+  }, [contacts, feedback, groups, importNewGroupName, importedContacts, importTargetGroupId, importTargetType, upsertContacts, upsertGroup]);
 
   const handleCloseImport = useCallback(() => {
     setIsImportModalOpen(false);

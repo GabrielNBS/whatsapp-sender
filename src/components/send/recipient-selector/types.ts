@@ -1,4 +1,4 @@
-import { Group, Contact } from '@/lib/store';
+import type { Group, Contact } from '@/lib/types';
 
 /**
  * Recipient configuration type

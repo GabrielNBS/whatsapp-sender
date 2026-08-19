@@ -229,6 +229,7 @@ class QueueService {
             status: "PENDING",
             contactName: recipient.name,
             contactPhone: recipient.number,
+            contactId: recipient.id.startsWith('temp-recip-') ? null : recipient.id,
             templateId: resolvedTemplateId,
             batchId: campaignId,
             batchName: campaignName,

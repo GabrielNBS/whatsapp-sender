@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useAppStore, Contact, Group } from '@/lib/store';
+import type { Contact, Group } from '@/lib/types';
+import { useContactStore } from '@/stores/contact-store';
 import { useShallow } from 'zustand/react/shallow';
-import { toast } from 'sonner';
+import type { FeedbackPort } from '@/presentation/feedback';
 import { GroupService } from '@/lib/GroupService';
 import { updateContactGroups as persistContactGroups } from '@/services/contacts/contactsApi';
 
@@ -51,8 +52,8 @@ interface UseGroupManagementReturn {
  * Encapsulates all state and logic for managing contacts within groups,
  * separating concerns from the UI component.
  */
-export function useGroupManagement(group: Group | null): UseGroupManagementReturn {
-  const { contacts, groups, upsertContacts } = useAppStore(useShallow((state) => ({
+export function useGroupManagement(group: Group | null, feedback: FeedbackPort): UseGroupManagementReturn {
+  const { contacts, groups, upsertContacts } = useContactStore(useShallow((state) => ({
     contacts: state.contacts,
     groups: state.groups,
     upsertContacts: state.upsertContacts,
@@ -93,7 +94,7 @@ export function useGroupManagement(group: Group | null): UseGroupManagementRetur
     // Validate operation
     const validation = GroupService.validateRemoveFromGroup(contact, group.id);
     if (!validation.valid) {
-      toast.error(validation.message);
+      feedback.error(validation.message || 'Operação inválida.');
       return;
     }
     
@@ -102,15 +103,15 @@ export function useGroupManagement(group: Group | null): UseGroupManagementRetur
       const newGroupIds = GroupService.calculateGroupIdsAfterRemove(contact, group.id);
       const result = await persistContactGroups(contact.id, newGroupIds);
       upsertContacts([result.contact]);
-      toast.success(`${contact.name} removido do grupo`);
+      feedback.success(`${contact.name} removido do grupo`);
       setConfirmRemove(null);
     } catch (error) {
       console.error('Erro ao remover contato:', error);
-      toast.error('Erro ao remover contato do grupo');
+      feedback.error('Erro ao remover contato do grupo');
     } finally {
       setIsLoading(false);
     }
-  }, [group, upsertContacts]);
+  }, [feedback, group, upsertContacts]);
 
   const handleMoveToGroup = useCallback(async (contact: Contact) => {
     if (!actionState.targetGroupId || !group) return;
@@ -123,7 +124,7 @@ export function useGroupManagement(group: Group | null): UseGroupManagementRetur
       groups
     );
     if (!validation.valid) {
-      toast.error(validation.message);
+      feedback.error(validation.message || 'Operação inválida.');
       return;
     }
     
@@ -138,15 +139,15 @@ export function useGroupManagement(group: Group | null): UseGroupManagementRetur
       
       const result = await persistContactGroups(contact.id, newGroupIds);
       upsertContacts([result.contact]);
-      toast.success(`${contact.name} movido para ${targetGroup?.name || 'outro grupo'}`);
+      feedback.success(`${contact.name} movido para ${targetGroup?.name || 'outro grupo'}`);
       setActionState(INITIAL_ACTION_STATE);
     } catch (error) {
       console.error('Erro ao mover contato:', error);
-      toast.error('Erro ao mover contato');
+      feedback.error('Erro ao mover contato');
     } finally {
       setIsLoading(false);
     }
-  }, [actionState.targetGroupId, group, groups, otherGroups, upsertContacts]);
+  }, [actionState.targetGroupId, feedback, group, groups, otherGroups, upsertContacts]);
 
   const startMoveAction = useCallback((contactId: string) => {
     setActionState({ type: 'move', contactId, targetGroupId: '' });

@@ -144,7 +144,7 @@ function CampaignRow({
         {/* Right: progress bar + arrow */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-24 hidden md:block">
-            <div className="flex items-center justify-between text-[10px] mb-0.5">
+            <div className="mb-1 flex items-center justify-between text-xs">
               <span className="text-muted-foreground">{rate}%</span>
             </div>
             <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
@@ -326,7 +326,7 @@ function CampaignDetail({
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                     {mediaObj.filename && (
                       <div className="absolute bottom-0 inset-x-0 bg-linear-to-t from-black/60 to-transparent px-3 py-2">
-                        <p className="text-[11px] text-white font-medium truncate flex items-center gap-1">
+                        <p className="flex items-center gap-1 truncate text-xs font-medium text-white">
                           <ImageIcon className="w-3 h-3" />
                           {mediaObj.filename}
                         </p>
@@ -341,7 +341,7 @@ function CampaignDetail({
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground w-fit">
                   <ImageIcon className="w-4 h-4" />
                   <span>{mediaObj.filename || 'Arquivo anexado'}</span>
-                  <span className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground/70">
+                  <span className="text-xs font-semibold text-muted-foreground">
                     {mediaObj.mimetype?.split('/')[1] || 'arquivo'}
                   </span>
                 </div>
@@ -380,7 +380,7 @@ function CampaignDetail({
                   <p className="text-xs font-medium text-foreground truncate">
                     {detail.contactName}
                   </p>
-                  <p className="text-[10px] text-muted-foreground font-mono">
+                  <p className="font-mono text-xs text-muted-foreground">
                     {detail.contactPhone}
                   </p>
                 </div>
@@ -414,7 +414,7 @@ function MetricTile({
     <div className={cn('rounded-lg p-3 flex flex-col items-center justify-center border border-border', bg)}>
       <Icon className={cn('w-5 h-5 mb-1', color)} />
       <span className={cn('text-2xl font-bold', color)}>{value}</span>
-      <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
+      <span className="mt-0.5 text-xs font-semibold text-muted-foreground">
         {label}
       </span>
     </div>
@@ -491,7 +491,7 @@ export function HistorySheetContent() {
               {label}
               {key === 'failed' && (
                 <span className={cn(
-                  'ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold',
+                  'ml-0.5 rounded-full px-1.5 py-0.5 text-xs font-semibold',
                   activeFilter === key
                     ? 'bg-primary-foreground/20 text-primary-foreground'
                     : 'bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400'

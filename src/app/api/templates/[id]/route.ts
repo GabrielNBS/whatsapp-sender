@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { TemplateService } from '@/server/services/TemplateService';
 import { updateTemplateSchema } from '@/server/validators/templates';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 import { ValidationError, NotFoundError } from '@/lib/api-errors';
 
 interface RouteParams {
@@ -14,7 +15,7 @@ interface RouteParams {
  */
 export const GET = apiHandler(async (_req: NextRequest, { params }: RouteParams) => {
   const { id } = await params;
-  const template = await TemplateService.getTemplateById(id);
+  const template = await TemplateService.getTemplateById(id, getCurrentWorkspaceId());
   if (!template) {
     throw new NotFoundError('O modelo solicitado não foi encontrado.');
   }
@@ -39,7 +40,7 @@ export const PUT = apiHandler(async (req: NextRequest, { params }: RouteParams) 
     throw new ValidationError('Dados de modelo inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const template = await TemplateService.updateTemplate(id, validation.data);
+  const template = await TemplateService.updateTemplate(id, validation.data, getCurrentWorkspaceId());
   return NextResponse.json(template);
 }, { routeName: '/api/templates/[id] (PUT)', requireAuth: true });
 
@@ -54,11 +55,11 @@ export const DELETE = apiHandler(async (req: NextRequest, { params }: RouteParam
   }
 
   // Verifica existência antes de deletar para retornar 404 (API-007)
-  const existing = await TemplateService.getTemplateById(id);
+  const existing = await TemplateService.getTemplateById(id, getCurrentWorkspaceId());
   if (!existing) {
     throw new NotFoundError('O modelo solicitado não foi encontrado.');
   }
 
-  await TemplateService.deleteTemplate(id);
+  await TemplateService.deleteTemplate(id, getCurrentWorkspaceId());
   return NextResponse.json({ success: true });
 }, { routeName: '/api/templates/[id] (DELETE)', requireAuth: true });

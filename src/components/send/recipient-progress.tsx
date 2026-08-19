@@ -30,7 +30,7 @@ export function RecipientProgress({
     >
       <div className="mb-2 flex items-center justify-between gap-3 px-1">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/70">
+          <p className="text-xs font-semibold text-muted-foreground">
             Ordem de envio
           </p>
           <p className="text-xs font-medium text-foreground">
@@ -38,7 +38,7 @@ export function RecipientProgress({
           </p>
         </div>
         {activeBatchIndex >= 0 && (
-          <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+          <span className="rounded-lg border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
             Etapa {activeBatchIndex + 1} de {batches.length}
           </span>
         )}
@@ -76,7 +76,7 @@ export function RecipientProgress({
             >
               <div
                 className={cn(
-                  'flex size-7 shrink-0 items-center justify-center rounded-full border text-[10px] font-black',
+                  'flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold',
                   isActive && 'border-primary bg-primary text-primary-foreground',
                   isCompleted && !isEmpty && 'border-success bg-success text-success-foreground',
                   !isActive && (!isCompleted || isEmpty) && 'border-border bg-background text-muted-foreground',
@@ -91,14 +91,14 @@ export function RecipientProgress({
                   : <UserRound className="size-3.5 shrink-0 text-muted-foreground" />}
                 <div className="min-w-0">
                   <p className="truncate text-xs font-semibold text-foreground">{batch.name}</p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {completedInBatch}/{recipientCount} {recipientCount === 1 ? 'contato' : 'contatos'}
                   </p>
                 </div>
               </div>
 
               <div className={cn(
-                'flex shrink-0 items-center gap-1 text-[10px] font-bold',
+                'flex shrink-0 items-center gap-1 text-xs font-semibold',
                 isActive && 'text-primary',
                 isCompleted && !isEmpty && 'text-success',
                 !isActive && (!isCompleted || isEmpty) && 'text-muted-foreground',

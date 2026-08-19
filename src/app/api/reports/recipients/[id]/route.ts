@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { ReportRecipientService } from '@/server/services/ReportRecipientService';
 import { updateRecipientSchema } from '@/server/validators/reports';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 import { ValidationError } from '@/lib/api-errors';
 
 interface RouteParams {
@@ -26,7 +27,7 @@ export const PATCH = apiHandler(async (req: NextRequest, { params }: RouteParams
     throw new ValidationError('Dados de atualização inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const recipient = await ReportRecipientService.updateRecipient(id, validation.data);
+  const recipient = await ReportRecipientService.updateRecipient(id, validation.data, getCurrentWorkspaceId());
 
   return NextResponse.json(recipient);
 }, { routeName: '/api/reports/recipients/[id] (PATCH)', requireAuth: true });
@@ -41,6 +42,6 @@ export const DELETE = apiHandler(async (req: NextRequest, { params }: RouteParam
     throw new ValidationError('ID do destinatário é obrigatório na rota.');
   }
 
-  await ReportRecipientService.deleteRecipient(id);
+  await ReportRecipientService.deleteRecipient(id, getCurrentWorkspaceId());
   return NextResponse.json({ success: true });
 }, { routeName: '/api/reports/recipients/[id] (DELETE)', requireAuth: true });

@@ -4,7 +4,8 @@ import { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Group } from '@/lib/store';
+import type { Group } from '@/lib/types';
+import { sonnerFeedback } from '@/presentation/feedback';
 import { useGroupManagement } from '@/hooks/use-group-management';
 import { ContactRow, RemoveConfirmDialog } from './group-management';
 
@@ -31,7 +32,7 @@ export function GroupManagementDialog({ group, isOpen, onClose }: GroupManagemen
     setConfirmRemove,
     setTargetGroupId,
     resetState,
-  } = useGroupManagement(group);
+  } = useGroupManagement(group, sonnerFeedback);
 
   // Reset state when dialog closes
   useEffect(() => {

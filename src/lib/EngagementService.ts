@@ -1,13 +1,4 @@
-import { 
-  formatDistanceToNow, 
-  isToday, 
-  isYesterday, 
-  format,
-  differenceInDays,
-  isValid
-} from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { CheckCheck, Clock, Mail, MailOpen, User } from "lucide-react";
+import { isToday, differenceInDays, isValid } from "date-fns";
 import { logger } from "./logger";
 
 /**
@@ -33,17 +24,6 @@ export enum EngagementStatus {
 }
 
 /**
- * Badge configuration for each status
- */
-export interface BadgeConfig {
-  label: string;
-  variant: "default" | "secondary" | "destructive" | "outline";
-  className: string;
-  icon: typeof Mail;
-  ariaLabel: string;
-}
-
-/**
  * Constants for engagement calculations
  */
 export const ENGAGEMENT_CONSTANTS = {
@@ -52,54 +32,6 @@ export const ENGAGEMENT_CONSTANTS = {
   DAYS_RECENT: 7,
   DAYS_MONTH: 30,
 } as const;
-
-/**
- * Status configuration mapping
- */
-export const STATUS_CONFIG: Record<EngagementStatus, BadgeConfig> = {
-  [EngagementStatus.NEW]: {
-    label: "Novo",
-    variant: "outline",
-    className: "bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700",
-    icon: User,
-    ariaLabel: "Contato novo, nunca contatado",
-  },
-  [EngagementStatus.SENT]: {
-    label: "Aguardando",
-    variant: "secondary",
-    className: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-400 dark:border-amber-800",
-    icon: Clock,
-    ariaLabel: "Mensagem enviada, aguardando leitura",
-  },
-  [EngagementStatus.READ_TODAY]: {
-    label: "Leu hoje",
-    variant: "default",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800",
-    icon: CheckCheck,
-    ariaLabel: "Contato leu mensagem hoje",
-  },
-  [EngagementStatus.READ_RECENT]: {
-    label: "Leu recente",
-    variant: "secondary",
-    className: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-400 dark:border-blue-800",
-    icon: MailOpen,
-    ariaLabel: "Contato leu mensagem nos últimos 7 dias",
-  },
-  [EngagementStatus.READ_OLD]: {
-    label: "Inativo",
-    variant: "outline",
-    className: "bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900 dark:text-slate-500 dark:border-slate-700",
-    icon: Mail,
-    ariaLabel: "Contato inativo, última leitura há mais de 30 dias",
-  },
-  [EngagementStatus.ENGAGED]: {
-    label: "Engajado",
-    variant: "default",
-    className: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950 dark:text-violet-400 dark:border-violet-800",
-    icon: CheckCheck,
-    ariaLabel: "Contato altamente engajado, lê regularmente",
-  },
-};
 
 /**
  * EngagementService - Centralized engagement calculation logic
@@ -178,53 +110,6 @@ export const EngagementService = {
     return EngagementStatus.READ_RECENT;
   },
 
-  /**
-   * Get badge configuration for a status
-   */
-  getBadgeConfig(status: EngagementStatus): BadgeConfig {
-    return STATUS_CONFIG[status];
-  },
-
-  /**
-   * Format date as relative string (e.g., "Hoje às 14:30", "Ontem", "Há 3 dias")
-   */
-  formatRelativeDate(date: Date | string | null | undefined): string {
-    const parsed = this.parseDate(date);
-    
-    if (!parsed) return "—";
-    
-    if (isToday(parsed)) {
-      return `Hoje às ${format(parsed, "HH:mm")}`;
-    }
-    
-    if (isYesterday(parsed)) {
-      return `Ontem às ${format(parsed, "HH:mm")}`;
-    }
-    
-    const daysDiff = differenceInDays(new Date(), parsed);
-    
-    if (daysDiff < 7) {
-      return formatDistanceToNow(parsed, { 
-        addSuffix: true, 
-        locale: ptBR 
-      });
-    }
-    
-    return format(parsed, "dd MMM", { locale: ptBR });
-  },
-
-  /**
-   * Get formatted dates for display
-   */
-  getFormattedDates(stats: EngagementStats | undefined): {
-    lastSent: string;
-    lastRead: string;
-  } {
-    return {
-      lastSent: this.formatRelativeDate(stats?.lastSentAt),
-      lastRead: this.formatRelativeDate(stats?.lastReadAt),
-    };
-  },
 };
 
 export default EngagementService;

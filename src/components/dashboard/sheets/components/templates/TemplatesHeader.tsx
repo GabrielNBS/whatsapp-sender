@@ -9,12 +9,12 @@ interface TemplatesHeaderProps {
 
 export function TemplatesHeader({ onCreateClick, totalCount }: TemplatesHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-100 dark:border-zinc-800 pb-4 shrink-0">
+    <div className="flex shrink-0 flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="space-y-1">
         <SplitText
-          text="Modelos de Mensagem"
+          text="Modelos de mensagem"
           as="h1"
-          className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
+          className="text-2xl font-bold tracking-tight text-foreground"
         />
         <p className="text-xs text-muted-foreground dark:text-zinc-500">
           Gerencie modelos padronizados com suporte a mídias e placeholders. Total: {totalCount}
@@ -22,7 +22,7 @@ export function TemplatesHeader({ onCreateClick, totalCount }: TemplatesHeaderPr
       </div>
       <Button
         onClick={onCreateClick}
-        className="h-10 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition-all duration-200 flex items-center gap-2 shadow-xs shrink-0 cursor-pointer"
+        className="h-10 shrink-0 gap-2 rounded-lg px-5 text-sm font-semibold shadow-sm"
       >
         <Plus className="h-4 w-4" strokeWidth={2.5} />
         Criar modelo

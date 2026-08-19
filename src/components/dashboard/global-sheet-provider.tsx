@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-export type SheetType = 'templates' | 'contacts' | 'history' | 'overview' | 'settings' | 'monitoring' | null;
+export type SheetType = 'templates' | 'contacts' | 'history' | 'overview' | 'settings' | 'monitoring' | 'consent-audit' | null;
 
 interface GlobalSheetContextType {
   activeSheet: SheetType;

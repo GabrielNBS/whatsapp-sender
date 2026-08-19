@@ -67,7 +67,7 @@ export const TemplateCard = memo(function TemplateCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-350 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-lg"
+              className="h-10 w-10 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
               onClick={() => onCopy(template.content)}
               aria-label={`Copiar texto do modelo: ${template.title}`}
             >
@@ -77,7 +77,7 @@ export const TemplateCard = memo(function TemplateCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-350 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-lg"
+              className="h-10 w-10 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
               onClick={() => onDuplicate(template)}
               aria-label={`Duplicar modelo: ${template.title}`}
             >
@@ -92,7 +92,7 @@ export const TemplateCard = memo(function TemplateCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-zinc-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg"
+              className="h-10 w-10 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary"
               onClick={() => onEdit(template)}
               aria-label={`Editar modelo: ${template.title}`}
             >
@@ -102,7 +102,7 @@ export const TemplateCard = memo(function TemplateCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg"
+              className="h-10 w-10 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               onClick={() => onDelete(template.id)}
               disabled={isDeleting}
               aria-label={`Excluir modelo: ${template.title}`}

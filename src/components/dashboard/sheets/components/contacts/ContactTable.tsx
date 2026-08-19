@@ -7,12 +7,14 @@ import { ContactPagination } from './ContactPagination';
 import { ContactRow } from './ContactRow';
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useContactAnalytics } from '@/hooks/useContactAnalytics';
+import type { ContactConsentStatus } from '@/lib/types';
 
 interface ContactTableProps {
   contacts: Contact[];
   groups: Group[];
   onEditClick: (contact: Contact) => void;
   onDeleteClick: (contact: Contact) => void;
+  onConsentChange: (contactId: string, consentStatus: ContactConsentStatus) => Promise<boolean>;
 }
 
 export function ContactTable({
@@ -20,6 +22,7 @@ export function ContactTable({
   groups,
   onEditClick,
   onDeleteClick,
+  onConsentChange,
 }: ContactTableProps) {
   const { searchTerm, setSearchTerm, filteredContacts } = useContactSearch(contacts);
   
@@ -68,6 +71,7 @@ export function ContactTable({
               <TableHead className="font-semibold text-zinc-600 dark:text-zinc-400">Nome</TableHead>
               <TableHead className="font-semibold text-zinc-600 dark:text-zinc-400">Número</TableHead>
               <TableHead className="font-semibold text-zinc-600 dark:text-zinc-400">Grupos</TableHead>
+              <TableHead className="font-semibold text-zinc-600 dark:text-zinc-400 text-center">Consentimento</TableHead>
               <TableHead className="font-semibold text-zinc-600 dark:text-zinc-400 text-center">Engajamento</TableHead>
               <TableHead className="text-center w-[120px] font-semibold text-zinc-600 dark:text-zinc-400">Ações</TableHead>
             </TableRow>
@@ -75,7 +79,7 @@ export function ContactTable({
           <TableBody className="bg-white dark:bg-zinc-950">
             {paginatedContacts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground dark:text-zinc-500">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground dark:text-zinc-500">
                   Nenhum contato corresponde à pesquisa.
                 </TableCell>
               </TableRow>
@@ -88,6 +92,7 @@ export function ContactTable({
                   analyticsStats={analytics[contact.number]}
                   onEditClick={onEditClick}
                   onDeleteClick={onDeleteClick}
+                  onConsentChange={onConsentChange}
                 />
               ))
             )}

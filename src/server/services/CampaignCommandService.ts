@@ -2,18 +2,17 @@ import { getCampaignService } from "@/lib/CampaignService";
 import { getQueueService } from "@/lib/QueueService";
 import { getReportService } from "@/lib/ReportService";
 import { getWhatsAppInstance } from "@/lib/whatsapp";
-import { StartCampaignInput, CampaignCompleteInput } from "../validators/campaigns";
+import type { CompleteCampaignCommand, StartCampaignCommand } from '@/domain/contracts';
 import { ConflictError, NotFoundError } from "@/lib/api-errors";
 import { prisma } from "@/lib/db";
 import { normalizePhone } from "@/services/contacts/normalizePhone";
 import { beginIdempotentOperation } from "@/lib/idempotency";
-import { getCurrentWorkspaceId } from "@/server/workspace";
+import { getContactConsentService } from "@/server/services/ContactConsentService";
 
-type CampaignMedia = NonNullable<StartCampaignInput["media"]>;
+type CampaignMedia = NonNullable<StartCampaignCommand["media"]>;
 
 export const CampaignCommandService = {
-  async startCampaign(data: StartCampaignInput) {
-    const workspaceId = getCurrentWorkspaceId();
+  async startCampaign(data: StartCampaignCommand, workspaceId: string) {
     const queueService = getQueueService(workspaceId);
     const campaignService = getCampaignService(workspaceId);
     const reservation = await beginIdempotentOperation(workspaceId, data.idempotencyKey);
@@ -37,6 +36,15 @@ export const CampaignCommandService = {
         campaignMedia = template.media ? JSON.parse(template.media as string) as CampaignMedia : null;
       }
 
+      await getContactConsentService().assertRecipientsCanBeMessaged(data.recipients, workspaceId);
+
+      const normalizedNumbers = data.recipients.map((recipient) => normalizePhone(recipient.number));
+      const knownContacts = await prisma.contact.findMany({
+        where: { workspaceId, phone: { in: normalizedNumbers } },
+        select: { id: true, phone: true },
+      });
+      const contactIdsByPhone = new Map(knownContacts.map((contact) => [contact.phone, contact.id]));
+
       const campaign = await campaignService.createCampaign({
         name: data.name,
         totalContacts: data.recipients.length,
@@ -44,7 +52,7 @@ export const CampaignCommandService = {
 
       try {
         const contactsForQueue = data.recipients.map((recipient, index) => ({
-          id: `temp-recip-${index}-${Date.now()}`,
+          id: contactIdsByPhone.get(normalizePhone(recipient.number)) || `temp-recip-${index}-${Date.now()}`,
           name: recipient.name,
           number: normalizePhone(recipient.number),
           groupIds: [],
@@ -74,25 +82,24 @@ export const CampaignCommandService = {
     }
   },
 
-  async stopCampaign() {
-    await getQueueService(getCurrentWorkspaceId()).stopCampaign();
+  async stopCampaign(workspaceId: string) {
+    await getQueueService(workspaceId).stopCampaign();
     return true;
   },
 
-  async getStatus(logOffset: number = 0, includeFailures = false) {
-    return getQueueService(getCurrentWorkspaceId()).getStatus(logOffset, includeFailures);
+  async getStatus(workspaceId: string, logOffset: number = 0, includeFailures = false) {
+    return getQueueService(workspaceId).getStatus(logOffset, includeFailures);
   },
 
-  async getHistory(limit: number = 50) {
-    return getCampaignService(getCurrentWorkspaceId()).getCampaignHistory(limit);
+  async getHistory(workspaceId: string, limit: number = 50) {
+    return getCampaignService(workspaceId).getCampaignHistory(limit);
   },
 
-  async getHistoryItem(id: string) {
-    return getCampaignService(getCurrentWorkspaceId()).getCampaignHistoryItem(id);
+  async getHistoryItem(id: string, workspaceId: string) {
+    return getCampaignService(workspaceId).getCampaignHistoryItem(id);
   },
 
-  async completeCampaign(id: string, data: CampaignCompleteInput) {
-    const workspaceId = getCurrentWorkspaceId();
+  async completeCampaign(id: string, data: CompleteCampaignCommand, workspaceId: string) {
     const campaignService = getCampaignService(workspaceId);
     const reportService = getReportService(workspaceId);
     const campaign = await campaignService.completeCampaign(id, {

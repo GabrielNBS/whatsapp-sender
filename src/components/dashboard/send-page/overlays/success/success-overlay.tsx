@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 import GradientText from '@/components/ui/gradient-text';
-import type { SendingStatus } from '@/lib/store';
+import type { SendingStatus } from '@/lib/types';
 
 export interface SuccessOverlayProps {
   sendingStatus: SendingStatus;
@@ -60,7 +60,7 @@ export function SuccessOverlay({
           Transmissão <GradientText className="font-black" colors={['#10b981', '#34d399', '#059669']}>concluída!</GradientText>
         </h3>
         <div className="flex justify-center">
-          <p className="text-[9px] lg:text-[9px] 2xl:text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 2xl:px-5 2xl:py-2 rounded-full border backdrop-blur-md text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 border-emerald-500/10">
+          <p className="rounded-lg border border-success/20 bg-success/5 px-4 py-2 text-xs font-semibold text-success">
             Todas as mensagens foram processadas.
           </p>
         </div>
@@ -69,7 +69,7 @@ export function SuccessOverlay({
       {/* Metrics Cards */}
       <div className="w-full grid grid-cols-2 gap-3 lg:gap-3 2xl:gap-4 mb-4 lg:mb-4 2xl:mb-8">
         <div className="bg-card/40 backdrop-blur-md border border-border/40 p-4 lg:p-4 2xl:p-6 rounded-2xl text-left shadow-xs transition-all hover:bg-card/60 group">
-          <p className="text-[9px] lg:text-[9px] 2xl:text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2 lg:mb-2 2xl:mb-3 opacity-50 group-hover:opacity-100 transition-opacity">Taxa de Sucesso</p>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">Taxa de sucesso</p>
           <div className="flex items-baseline gap-1">
             <GradientText
               className="text-2xl lg:text-2xl 2xl:text-4xl font-bold tracking-tighter leading-none"
@@ -80,7 +80,7 @@ export function SuccessOverlay({
           </div>
         </div>
         <div className="bg-card/40 backdrop-blur-md border border-border/40 p-4 lg:p-4 2xl:p-6 rounded-2xl text-left shadow-xs transition-all hover:bg-card/60 group">
-          <p className="text-[9px] lg:text-[9px] 2xl:text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-2 lg:mb-2 2xl:mb-3 opacity-50 group-hover:opacity-100 transition-opacity">Total Alcançado</p>
+          <p className="mb-2 text-xs font-medium text-muted-foreground">Total alcançado</p>
           <p className="text-2xl lg:text-2xl 2xl:text-4xl font-bold text-foreground tracking-tighter leading-none">
             {sendingStatus.totalContacts}
           </p>
@@ -91,7 +91,7 @@ export function SuccessOverlay({
         whileHover="hover"
         whileTap={{ scale: 0.98 }}
         onClick={handleNewTransmission}
-        className="px-6 h-12 lg:h-12 2xl:h-14 rounded-2xl font-black text-[10px] lg:text-[10px] 2xl:text-xs bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center justify-center gap-3 group tracking-[0.2em] uppercase"
+        className="flex h-12 items-center justify-center gap-3 rounded-xl bg-primary px-6 text-sm font-semibold text-primary-foreground shadow-sm"
       >
         <span>NOVA TRANSMISSÃO</span>
         <motion.div

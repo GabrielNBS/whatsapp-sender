@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { useAppStore } from "@/lib/store";
+import { usePreferencesStore } from '@/stores/preferences-store';
 import { Code2 } from "lucide-react";
 import { settingsApi } from '@/services/settings/settingsApi';
 
@@ -19,7 +19,7 @@ export function GeneralSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [linkError, setLinkError] = useState("");
-  const { devMode, setDevMode } = useAppStore();
+  const { devMode, setDevMode } = usePreferencesStore();
 
   useEffect(() => {
     fetchSettings();
@@ -93,7 +93,7 @@ export function GeneralSettings() {
           <Settings className="w-5 h-5 text-muted-foreground" />
           Geral
         </h3>
-        <Button onClick={handleSave} disabled={isSaving} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+        <Button onClick={handleSave} disabled={isSaving} size="sm">
           {isSaving ? (
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
           ) : (
@@ -107,30 +107,31 @@ export function GeneralSettings() {
         <div className="space-y-4">
             <div className="space-y-2">
             <Label htmlFor="default-link" className="flex items-center gap-2">
-                <LinkIcon className="w-4 h-4 text-blue-500" />
-                Link Padrão
+                <LinkIcon className="w-4 h-4 text-primary" />
+                Link padrão
             </Label>
             <Input
                 id="default-link"
                 placeholder="Ex: https://meusite.com/promo"
                 value={defaultLink}
                 onChange={handleLinkChange}
-                className={linkError ? "border-red-500 focus-visible:ring-red-500" : ""}
+                aria-describedby={linkError ? "default-link-error" : "default-link-help"}
+                aria-invalid={Boolean(linkError)}
             />
             {linkError ? (
-                <p className="text-xs text-red-500 flex items-center gap-1">
+                <p id="default-link-error" className="flex items-center gap-1 text-xs text-destructive" role="alert">
                     <AlertCircle className="w-3 h-3" />
                     {linkError}
                 </p>
             ) : (
-                <p className="text-xs text-muted-foreground">
+                <p id="default-link-help" className="text-xs text-muted-foreground">
                     Link que será inserido automaticamente nos modelos.
                 </p>
             )}
             </div>
 
             <div className="space-y-2">
-            <Label htmlFor="default-cta">Mensagem de CTA Padrão</Label>
+            <Label htmlFor="default-cta">Mensagem de CTA padrão</Label>
             <Textarea
                 id="default-cta"
                 placeholder="Ex: Clique no link abaixo para aproveitar:"
@@ -146,17 +147,17 @@ export function GeneralSettings() {
 
         {/* Preview Section */}
         <div className="space-y-2">
-            <Label className="flex items-center gap-2 text-muted-foreground">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <Eye className="w-4 h-4" />
-                Visualização do Rodapé
-            </Label>
+                Visualização do rodapé
+            </div>
             <Card className="p-4 bg-muted/30 border-dashed min-h-[160px] flex items-center justify-center text-sm">
                 {(defaultCTA || defaultLink) ? (
                     <div className="w-full space-y-2">
-                         <p className="text-gray-400 text-xs italic text-center mb-4">...conteúdo da sua mensagem...</p>
-                         <div className="bg-white p-3 rounded-lg border shadow-sm space-y-1">
-                             {defaultCTA && <p className="text-gray-800 whitespace-pre-wrap">{defaultCTA}</p>}
-                             {defaultLink && <p className="text-blue-600 underline break-all">{defaultLink}</p>}
+                         <p className="mb-4 text-center text-xs italic text-muted-foreground">...conteúdo da sua mensagem...</p>
+                         <div className="space-y-1 rounded-lg border bg-background p-3 shadow-sm">
+                             {defaultCTA && <p className="whitespace-pre-wrap text-foreground">{defaultCTA}</p>}
+                             {defaultLink && <p className="break-all text-primary underline">{defaultLink}</p>}
                          </div>
                     </div>
                 ) : (
@@ -175,11 +176,12 @@ export function GeneralSettings() {
               <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                       <Code2 className="w-4 h-4 text-primary" />
-                      <Label className="text-sm font-bold uppercase tracking-wider">Modo Desenvolvedor</Label>
+                      <Label htmlFor="developer-mode">Modo desenvolvedor</Label>
                   </div>
                   <p className="text-xs text-muted-foreground">Habilita o menu flutuante de simulação de estados (Debug UI).</p>
               </div>
-              <Switch 
+              <Switch
+                  id="developer-mode"
                   checked={devMode}
                   onCheckedChange={setDevMode}
               />

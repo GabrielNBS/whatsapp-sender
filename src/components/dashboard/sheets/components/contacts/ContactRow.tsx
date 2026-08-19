@@ -6,6 +6,8 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { ContactEngagement } from '@/components/contacts/contact-engagement';
 import { formatPhoneNumber } from '@/lib/utils';
 import { AnalyticsRecord } from '@/hooks/useContactAnalytics';
+import type { ContactConsentStatus } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface ContactRowProps {
   contact: Contact;
@@ -13,6 +15,7 @@ interface ContactRowProps {
   analyticsStats?: AnalyticsRecord;
   onEditClick: (contact: Contact) => void;
   onDeleteClick: (contact: Contact) => void;
+  onConsentChange: (contactId: string, consentStatus: ContactConsentStatus) => Promise<boolean>;
 }
 
 export function ContactRow({
@@ -21,7 +24,9 @@ export function ContactRow({
   analyticsStats,
   onEditClick,
   onDeleteClick,
+  onConsentChange,
 }: ContactRowProps) {
+  const consentStatus = contact.consentStatus || 'UNKNOWN';
   return (
     <TableRow className="hover:bg-zinc-50/50 dark:hover:bg-zinc-900/50">
       <TableCell className="font-medium text-zinc-700 dark:text-zinc-300">
@@ -47,6 +52,21 @@ export function ContactRow({
         </div>
       </TableCell>
       <TableCell>
+        <Select
+          value={consentStatus}
+          onValueChange={(value) => void onConsentChange(contact.id, value as ContactConsentStatus)}
+        >
+          <SelectTrigger aria-label={`Consentimento de ${contact.name}`} className="w-[150px] text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="UNKNOWN">Não definido</SelectItem>
+            <SelectItem value="OPTED_IN">Consentido</SelectItem>
+            <SelectItem value="OPTED_OUT">Opt-out / Bloqueado</SelectItem>
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell>
         <ContactEngagement stats={analyticsStats} />
       </TableCell>
       <TableCell className="text-center">
@@ -54,7 +74,7 @@ export function ContactRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
+            className="h-10 w-10 text-muted-foreground hover:bg-primary/10 hover:text-primary"
             onClick={() => onEditClick(contact)}
             aria-label={`Editar grupo de ${contact.name}`}
           >
@@ -63,7 +83,7 @@ export function ContactRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-zinc-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30"
+            className="h-10 w-10 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             onClick={() => onDeleteClick(contact)}
             aria-label={`Excluir contato ${contact.name}`}
           >

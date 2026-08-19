@@ -79,8 +79,31 @@ npm audit
 
 `npm run check` executa lint, verificacao de tipos, testes e build de producao.
 
+## Arquitetura
+
+A aplicacao separa transporte, casos de uso, infraestrutura e apresentacao para que as regras possam evoluir sem depender do Next.js ou dos componentes React:
+
+- `src/app/api`: adaptadores HTTP. Validam a requisicao, resolvem o workspace e delegam aos servicos de aplicacao.
+- `src/domain`: contratos e regras independentes de HTTP e de componentes visuais.
+- `src/server/services` e `src/server/ports`: casos de uso e interfaces para recursos externos.
+- `src/server/composition`: composicao das implementacoes concretas e suas dependencias.
+- `src/infrastructure`: integracoes concretas, incluindo o gateway do WhatsApp Web.
+- `src/services`: clientes HTTP e operacoes do frontend, todos baseados no cliente compartilhado.
+- `src/stores`: estado de interface separado por responsabilidade. Contatos e campanhas permanecem no servidor como fonte de verdade; os stores mantêm somente snapshots de sessao e preferencias locais versionadas.
+- `src/presentation`: adaptadores visuais, como notificacoes e confirmacoes, injetados nos hooks por interfaces.
+
+Os testes de fronteira em `tests/architecture-boundaries.test.ts` impedem dependencias diretas das rotas com Prisma/WhatsApp, dos hooks com a biblioteca de notificacao e dos servicos de frontend com `fetch` fora do cliente HTTP central.
+
 ## Limites atuais
 
 - A aplicacao opera propositalmente em um unico workspace local, pois esta instancia e de uso pessoal. O resolvedor esta centralizado para uma futura migracao multi-tenant.
 - Todas as APIs exigem a chave pessoal; para requisicoes autenticadas por cookie, operacoes que alteram dados tambem exigem mesma origem.
 - Uma instancia do servico deve controlar uma unica sessao do WhatsApp. Escala horizontal exigira coordenacao externa da fila e das sessoes.
+- Opt-outs recebidos pelo WhatsApp sao capturados enquanto o processo esta ativo. Ainda nao existe uma varredura do historico recebido durante o periodo em que o app esteve fechado.
+- Agendamentos vencidos sao retomados quando o processo volta, mas permanecem pausados quando estao vencidos ha mais de 15 minutos, como medida de seguranca.
+
+## Implementacoes futuras
+
+- Ao reconectar o WhatsApp, consultar mensagens recentes recebidas enquanto o app estava fechado e aplicar automaticamente as regras de opt-out.
+- Persistir um cursor ou identificador de mensagem processado para evitar duplicidades na sincronizacao e manter a auditoria idempotente.
+- Exibir no historico/auditoria quando uma alteracao foi capturada durante a sincronizacao de reconexao, incluindo falhas e tentativas de reprocessamento.

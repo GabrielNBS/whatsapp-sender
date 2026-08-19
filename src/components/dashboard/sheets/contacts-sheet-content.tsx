@@ -5,7 +5,8 @@ import { AnimatedContent } from '@/components/ui/animated-content';
 
 import { useState } from 'react';
 import { toast } from "sonner";
-import { useAppStore, Contact, Group } from '@/lib/store';
+import type { Contact, Group } from '@/lib/types';
+import { useContactStore } from '@/stores/contact-store';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Trash2, AlertTriangle } from 'lucide-react';
@@ -24,22 +25,24 @@ import { GroupsTab } from './components/contacts/GroupsTab';
 import { EditContactGroupIdDialog } from './components/contacts/EditContactGroupIdDialog';
 import { ConfirmDeleteContactDialog } from './components/contacts/ConfirmDeleteContactDialog';
 import { clearContacts } from '@/services/contacts/contactsApi';
+import { sonnerFeedback } from '@/presentation/feedback';
 
 export function ContactsSheetContent() {
-  const clearContactsFromState = useAppStore((state) => state.clearContactsFromState);
+  const clearContactsFromState = useContactStore((state) => state.clearContactsFromState);
   
   const {
     contacts,
     groups,
     addContact,
     updateContactGroups,
+    updateContactConsent,
     deleteContact,
-  } = useContacts();
+  } = useContacts(sonnerFeedback);
 
   const {
     addGroup,
     deleteGroup,
-  } = useGroups();
+  } = useGroups(sonnerFeedback);
 
   const {
     isImportModalOpen,
@@ -53,7 +56,7 @@ export function ContactsSheetContent() {
     setImportNewGroupName,
     handleFileUpload,
     handleConfirmImport,
-  } = useContactImport();
+  } = useContactImport(sonnerFeedback);
 
   // Estados locais da UI
   const [activeTab, setActiveTab] = useState('contacts');
@@ -154,6 +157,7 @@ export function ContactsSheetContent() {
               groups={groups}
               onEditClick={setEditingContact}
               onDeleteClick={setDeletingContact}
+              onConsentChange={updateContactConsent}
             />
           </TabsContent>
 
@@ -207,7 +211,7 @@ export function ContactsSheetContent() {
 
       {/* Confirmação Limpar Tudo */}
       <AlertDialog open={isClearConfirmOpen} onOpenChange={setIsClearConfirmOpen}>
-        <AlertDialogContent className="rounded-2xl max-w-[400px] border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-2xl">
+        <AlertDialogContent className="max-w-[400px] rounded-xl border-border bg-card shadow-lg">
           <div className="flex flex-col items-center text-center pt-4">
             <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
               <AlertTriangle className="w-7 h-7 text-destructive" />

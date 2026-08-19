@@ -1,6 +1,7 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
+import { useContactStore, selectContactsByGroup } from '@/stores/contact-store';
+import { useTransmissionStore } from '@/stores/transmission-store';
 import { useScheduler } from "@/hooks/use-scheduler";
 import { useGlobalSheet } from "./global-sheet-provider";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useRouter } from "next/navigation";
 import { getCampaignProgress } from '@/lib/campaign-progress';
+import { sonnerFeedback } from '@/presentation/feedback';
 import {
     Popover,
     PopoverContent,
@@ -25,17 +27,17 @@ import {
 } from "@/components/ui/popover";
 
 export function NotificationBell() {
-    const { isSending, totalContacts, sentCount, failedCount } = useAppStore((s) => s.sendingStatus);
-    const groups = useAppStore((s) => s.groups);
-    const getContactsByGroup = useAppStore((s) => s.getContactsByGroup);
-    const { activeSchedules } = useScheduler();
+    const { isSending, totalContacts, sentCount, failedCount } = useTransmissionStore((s) => s.sendingStatus);
+    const groups = useContactStore((s) => s.groups);
+    const contacts = useContactStore((s) => s.contacts);
+    const { activeSchedules } = useScheduler(sonnerFeedback);
     const { openSheet } = useGlobalSheet();
     const isHydrated = useHydrated();
     const router = useRouter();
 
     if (!isHydrated) return null;
 
-    const emptyGroups = groups.filter(g => getContactsByGroup(g.id).length === 0);
+    const emptyGroups = groups.filter(g => selectContactsByGroup(contacts, g.id).length === 0);
     const emptyGroupsCount = emptyGroups.length;
     
     const isActive = isSending && totalContacts > 0;
@@ -53,11 +55,11 @@ export function NotificationBell() {
                     variant="ghost"
                     aria-label={`Abrir notificações${totalNotifications > 0 ? ` (${totalNotifications})` : ''}`}
                     title="Notificações"
-                    className="h-12 w-12 rounded-full bg-card/80 backdrop-blur-md border border-border shadow-xl hover:shadow-primary/20 hover:bg-card transition-all group relative overflow-visible"
+                    className="group relative size-10 overflow-visible rounded-lg border border-transparent bg-transparent shadow-none hover:border-border hover:bg-accent"
                 >
                     <Bell className={cn(
-                        "w-6 h-6 transition-colors",
-                        isActive ? "text-primary" : hasAlerts ? "text-amber-500" : "text-muted-foreground group-hover:text-primary"
+                        "size-5 transition-colors",
+                        isActive ? "text-success" : hasAlerts ? "text-warning" : "text-muted-foreground group-hover:text-foreground"
                     )} />
 
                     {/* Badges System */}
@@ -67,7 +69,7 @@ export function NotificationBell() {
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0, opacity: 0 }}
-                                className="absolute -top-1 -right-1 flex h-4 min-w-[24px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-black text-white shadow-lg shadow-primary/30"
+                                className="absolute -right-1 -top-1 flex min-h-5 min-w-6 items-center justify-center rounded-full bg-success px-1.5 text-xs font-semibold text-success-foreground"
                             >
                                 LIVE
                             </motion.span>
@@ -76,7 +78,7 @@ export function NotificationBell() {
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0, opacity: 0 }}
-                                className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 border-2 border-card text-[10px] font-bold text-white shadow-lg"
+                                className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full border-2 border-card bg-warning text-xs font-semibold text-warning-foreground"
                             >
                                 !
                             </motion.span>
@@ -85,7 +87,7 @@ export function NotificationBell() {
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0, opacity: 0 }}
-                                className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 border border-border text-[10px] font-bold text-white shadow-lg"
+                                className="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full border-2 border-card bg-primary text-xs font-semibold text-primary-foreground"
                             >
                                 {pendingCount}
                             </motion.span>
@@ -113,7 +115,7 @@ export function NotificationBell() {
             <PopoverContent 
                 align="end" 
                 sideOffset={12} 
-                className="w-80 p-0 overflow-hidden bg-card/95 backdrop-blur-xl border border-border shadow-2xl rounded-2xl"
+                className="w-80 overflow-hidden rounded-xl border border-border bg-popover p-0 shadow-lg"
             >
                 <div className="p-4 border-b border-border bg-muted/30">
                     <div className="flex items-center justify-between">
@@ -122,7 +124,7 @@ export function NotificationBell() {
                             Central de Alertas
                         </h3>
                         {totalNotifications > 0 && (
-                            <span className="text-[10px] bg-primary/10 text-primary font-black px-1.5 py-0.5 rounded-full uppercase">
+                            <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary">
                                 {totalNotifications} {totalNotifications === 1 ? 'notificação' : 'notificações'}
                             </span>
                         )}
@@ -151,7 +153,7 @@ export function NotificationBell() {
                                         </div>
                                         <div className="flex-1 space-y-1">
                                             <div className="flex items-center justify-between">
-                                                <p className="text-xs font-bold uppercase tracking-wider text-primary">Transmissão Ativa</p>
+                                                <p className="text-xs font-semibold text-primary">Transmissão ativa</p>
                                                 <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                                             </div>
                                             <p className="text-xs font-bold text-foreground">Disparando Mensagens...</p>
@@ -162,7 +164,7 @@ export function NotificationBell() {
                                                     animate={{ width: `${campaignProgress.percent}%` }}
                                                 />
                                             </div>
-                                            <p className="text-[10px] text-muted-foreground">{campaignProgress.processed} de {totalContacts} enviados</p>
+                                            <p className="text-xs text-muted-foreground">{campaignProgress.processed} de {totalContacts} enviados</p>
                                         </div>
                                     </div>
                                 </button>
@@ -179,11 +181,11 @@ export function NotificationBell() {
                                         </div>
                                         <div className="flex-1 space-y-2">
                                             <div>
-                                                <p className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-500">Atenção</p>
+                                                <p className="text-xs font-semibold text-warning">Atenção</p>
                                                 <p className="text-xs font-bold text-foreground mt-0.5">
                                                     {emptyGroupsCount} {emptyGroupsCount === 1 ? 'grupo está vazio' : 'grupos estão vazios'}
                                                 </p>
-                                                <p className="text-[10px] text-muted-foreground leading-relaxed mt-1">
+                                                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                                                     Grupos sem contatos não aparecem na lista de seleção do wizard.
                                                 </p>
                                             </div>
@@ -191,7 +193,7 @@ export function NotificationBell() {
                                                 size="sm" 
                                                 variant="outline" 
                                                 onClick={() => openSheet('contacts')}
-                                                className="w-full h-8 text-[10px] font-bold border-amber-200 dark:border-amber-900/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 text-amber-900 dark:text-amber-400 gap-2 rounded-lg"
+                                                className="h-10 w-full gap-2 rounded-lg border-warning/30 text-xs font-semibold text-warning hover:bg-warning/10"
                                             >
                                                 <Users className="w-3 h-3" />
                                                 Ajustar Grupos
@@ -215,13 +217,13 @@ export function NotificationBell() {
                                         </div>
                                         <div className="flex-1 space-y-1">
                                             <div className="flex items-center justify-between">
-                                                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Agendamentos</p>
+                                                <p className="text-xs font-semibold text-muted-foreground">Agendamentos</p>
                                                 <ChevronRight className="w-3 h-3 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                                             </div>
                                             <p className="text-xs font-bold text-foreground">
                                                 {pendingCount} {pendingCount === 1 ? 'campanha pendente' : 'campanhas pendentes'}
                                             </p>
-                                            <p className="text-[10px] text-muted-foreground italic">Clique para monitorar horários.</p>
+                                            <p className="text-xs italic text-muted-foreground">Clique para monitorar horários.</p>
                                         </div>
                                     </div>
                                 </button>

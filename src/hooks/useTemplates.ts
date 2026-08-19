@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Template } from '@/types/templates';
 import { templatesApi } from '@/services/templates/templatesApi';
-import { toast } from 'sonner';
+import type { FeedbackPort } from '@/presentation/feedback';
+import { useTemplateRevisionStore } from '@/stores/template-revision-store';
 
-export function useTemplates() {
+export function useTemplates(feedback: FeedbackPort) {
+  const markTemplatesChanged = useTemplateRevisionStore((state) => state.markChanged);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,14 +49,13 @@ export function useTemplates() {
       
       // Só remove do estado local após o sucesso do DELETE (API-004)
       setTemplates((prev) => prev.filter((t) => t.id !== id));
-      toast.success('Modelo excluído com sucesso');
+      feedback.success('Modelo excluído com sucesso');
       
-      // Emite o evento global para outras partes do sistema
-      window.dispatchEvent(new Event('templates-updated'));
+      markTemplatesChanged();
       return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao excluir modelo';
-      toast.error(msg);
+      feedback.error(msg);
       if (process.env.NODE_ENV === 'development') {
         console.error('Erro ao excluir template:', err);
       }
@@ -62,14 +63,13 @@ export function useTemplates() {
     } finally {
       setDeletingIds((prev) => ({ ...prev, [id]: false }));
     }
-  }, []);
+  }, [feedback, markTemplatesChanged]);
 
   // Notificação centralizada após salvar um template (ASYNC-001)
   const handleSaveSuccess = useCallback(async () => {
     await fetchTemplates();
-    // Emite o evento global para sincronizar outras telas/hooks
-    window.dispatchEvent(new Event('templates-updated'));
-  }, [fetchTemplates]);
+    markTemplatesChanged();
+  }, [fetchTemplates, markTemplatesChanged]);
 
   useEffect(() => {
     fetchTemplates();

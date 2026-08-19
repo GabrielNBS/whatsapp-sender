@@ -31,7 +31,7 @@ export function WizardNavigation({
         disabled={isFirstStep || isSending}
         asChild
         className={cn(
-          "h-11 gap-2 rounded-2xl px-3 text-[9px] font-bold uppercase tracking-[0.12rem] text-muted-foreground transition-all hover:text-primary sm:h-12 sm:gap-3 sm:px-6 sm:text-[10px] sm:tracking-[0.2rem]",
+          "h-11 gap-2 rounded-xl px-4 text-sm font-semibold text-muted-foreground hover:text-primary sm:px-6",
           isFirstStep && "invisible pointer-events-none"
         )}
       >
@@ -49,8 +49,8 @@ export function WizardNavigation({
         disabled={isNextDisabled || isSending}
         asChild
         className={cn(
-          "h-11 gap-2 rounded-2xl px-4 text-[9px] font-bold uppercase tracking-[0.12rem] shadow-xl shadow-primary/10 transition-all sm:h-12 sm:gap-3 sm:px-8 sm:text-[10px] sm:tracking-[0.2rem]",
-          isLastStep ? "bg-emerald-500 hover:bg-emerald-600 text-white" : "bg-primary text-primary-foreground"
+          "h-11 gap-2 rounded-xl px-5 text-sm font-semibold shadow-sm sm:px-8",
+          isLastStep ? "bg-success text-success-foreground hover:bg-success/90" : "bg-primary text-primary-foreground"
         )}
       >
         <motion.button

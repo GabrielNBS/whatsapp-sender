@@ -63,6 +63,7 @@ export function MessageEditor({
   templateSlot,
 }: MessageEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const insertAtCursor = (text: string) => {
     if (disabled || !textareaRef.current) return;
@@ -113,11 +114,11 @@ export function MessageEditor({
 
   return (
     <div className={cn(
-      "bg-card rounded-2xl shadow-sm border border-border flex flex-col h-full overflow-hidden transition-all duration-300",
+      "flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-opacity",
       disabled && "opacity-60 pointer-events-none"
     )}>
       {/* Toolbar - Pill-shaped buttons as per reference */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border/50 bg-background px-3 py-3 md:px-5 md:py-4">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/30 px-3 py-3 md:px-4">
         
         {templateSlot && (
           <div className="mr-auto max-w-full pr-2">
@@ -125,13 +126,13 @@ export function MessageEditor({
           </div>
         )}
         
-        <div className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-full border border-border/50 bg-muted/30 p-1">
+        <div className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border bg-background p-1">
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 rounded-full px-3 text-[11px] font-bold gap-1.5 hover:bg-background hover:shadow-sm"
+                className="rounded-md px-3 text-sm font-semibold hover:bg-accent"
                 disabled={disabled}
               >
                 <Smile className="w-3.5 h-3.5" />
@@ -141,7 +142,7 @@ export function MessageEditor({
             <PopoverContent 
               side="top" 
               align="start" 
-              className="w-[calc(100vw-2rem)] sm:w-72 p-0 shadow-xl border-border overflow-hidden rounded-xl"
+              className="w-[calc(100vw-2rem)] overflow-hidden rounded-xl border-border p-0 shadow-lg sm:w-72"
             >
               <Tabs defaultValue="faces" className="w-full">
                 <TabsList className="w-full h-10 grid grid-cols-4 bg-muted/40 rounded-none border-b border-border/50 p-0">
@@ -169,7 +170,7 @@ export function MessageEditor({
                           onClick={() => insertEmoji(emoji)}
                           aria-label={emoji}
                           type="button"
-                          className="w-8 h-8 flex items-center justify-center text-lg hover:bg-primary/10 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+                          className="flex size-10 items-center justify-center rounded-lg text-lg transition-colors hover:bg-accent focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none"
                         >
                           {emoji}
                         </button>
@@ -184,18 +185,18 @@ export function MessageEditor({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 rounded-full px-3 text-[11px] font-bold gap-1.5 hover:bg-background hover:shadow-sm"
+            className="rounded-md px-3 text-sm font-semibold hover:bg-accent"
             onClick={() => insertVariable('variavel')}
             disabled={disabled}
           >
             <Variable className="w-3.5 h-3.5" />
-            Variabeles
+            Variáveis
           </Button>
 
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 rounded-full px-3 text-[11px] font-bold gap-1.5 hover:bg-background hover:shadow-sm"
+            className="rounded-md px-3 text-sm font-semibold hover:bg-accent"
             onClick={() => insertVariable('nome')}
             disabled={disabled}
           >
@@ -206,7 +207,7 @@ export function MessageEditor({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 rounded-full px-3 text-[11px] font-bold gap-1.5 hover:bg-background hover:shadow-sm"
+            className="rounded-md px-3 text-sm font-semibold hover:bg-accent"
             onClick={() => insertVariable('data')}
             disabled={disabled}
           >
@@ -218,11 +219,13 @@ export function MessageEditor({
 
       {/* Editor Area */}
       <div className="flex-1 relative group min-h-0">
+        <label className="sr-only" htmlFor="campaign-message">Mensagem da campanha</label>
         <Textarea
+          id="campaign-message"
           ref={textareaRef}
           value={message}
           onChange={(e) => onMessageChange(e.target.value)}
-          className="w-full h-full border-0 resize-none p-6 text-base focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/50 leading-relaxed font-roboto"
+          className="h-full w-full resize-none rounded-none border-0 bg-transparent p-5 text-base leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:p-6"
           placeholder="Escreva sua mensagem aqui..."
           disabled={disabled}
         />
@@ -245,14 +248,15 @@ export function MessageEditor({
               <p className="text-xs font-bold text-foreground truncate">
                 {selectedFile.filename}
               </p>
-              <p className="text-[10px] text-muted-foreground">Imagem anexada</p>
+              <p className="text-xs text-muted-foreground">Imagem anexada</p>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 ml-2 rounded-full"
+              className="ml-2 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
               onClick={() => onFileChange(null)}
               disabled={disabled}
+              aria-label={`Remover imagem ${selectedFile.filename}`}
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -260,7 +264,7 @@ export function MessageEditor({
         ) : (
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <input
-              id="image-upload"
+              ref={fileInputRef}
               type="file"
               accept="image/*"
               className="hidden"
@@ -270,14 +274,14 @@ export function MessageEditor({
             <Button
               variant="outline"
               size="sm"
-              className="rounded-full px-4 h-9 bg-background border-dashed text-muted-foreground hover:text-primary hover:border-primary/50 text-xs font-bold"
-              onClick={() => document.getElementById("image-upload")?.click()}
+              className="rounded-lg border-dashed bg-background px-4 text-sm font-semibold text-muted-foreground hover:border-primary/50 hover:text-primary"
+              onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
             >
               <ImageIcon className="w-4 h-4 mr-2" />
               Adicionar Imagem
             </Button>
-            <span className="text-[10px] text-muted-foreground font-medium italic">
+            <span className="text-xs text-muted-foreground">
               PNG ou JPG até 5MB
             </span>
           </div>

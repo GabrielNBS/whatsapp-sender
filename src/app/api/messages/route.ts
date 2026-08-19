@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { MessageSendService } from '@/server/services/MessageSendService';
 import { sendMessageSchema } from '@/server/validators/messages';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 import { ValidationError } from '@/lib/api-errors';
 
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,7 @@ export const POST = apiHandler(async (req: NextRequest) => {
     req.headers.get('x-real-ip') || 
     '127.0.0.1';
 
-  const result = await MessageSendService.sendMessage(validation.data, clientIp);
+  const result = await MessageSendService.sendMessage(validation.data, clientIp, getCurrentWorkspaceId());
 
   return NextResponse.json(result);
 }, { routeName: '/api/messages (POST)', requireAuth: true });

@@ -1,14 +1,15 @@
-import { useAppStore } from "@/lib/store";
+import { useTransmissionStore } from '@/stores/transmission-store';
 import { Contact } from "@/lib/types";
 import { nanoid } from "nanoid";
 import { useAppLogger } from "@/hooks/use-app-logger";
 import { requestJson } from "@/services/http/client";
+import type { ConfirmationPort, FeedbackPort } from '@/presentation/feedback';
 
-export function useSender() {
-  const setSendingStatus = useAppStore((state) => state.setSendingStatus);
-  const startSending = useAppStore((state) => state.startSending);
-  const pauseSending = useAppStore((state) => state.pauseSending);
-  const resetSending = useAppStore((state) => state.resetSending);
+export function useSender(feedback: FeedbackPort, confirmAction: ConfirmationPort) {
+  const setSendingStatus = useTransmissionStore((state) => state.setSendingStatus);
+  const startSending = useTransmissionStore((state) => state.startSending);
+  const pauseSending = useTransmissionStore((state) => state.pauseSending);
+  const resetSending = useTransmissionStore((state) => state.resetSending);
   const addLog = useAppLogger();
 
   const handleStop = async () => {
@@ -35,7 +36,7 @@ export function useSender() {
     try {
       const status = await requestJson<{ isSending: boolean; isPaused: boolean; statusMessage?: string | null }>('/api/campaigns/status');
       if (status.isSending || status.isPaused) {
-          const cancelCurrent = window.confirm(
+          const cancelCurrent = await confirmAction(
             status.isSending
               ? 'Ja existe uma transmissao em andamento. Clique OK para cancelar a atual e iniciar a nova. Clique Cancelar para continuar a atual.'
               : 'Existe uma transmissao pausada. Clique OK para cancelar a pausada e iniciar uma nova. Clique Cancelar para manter a pausada.'
@@ -76,10 +77,7 @@ export function useSender() {
       const errMessage = error instanceof Error ? error.message : "Erro desconhecido";
       addLog(`Falha ao iniciar: ${errMessage}`, "error");
       
-      // Importante: Mostrar o erro para o usuário via toast
-      import("sonner").then(({ toast }) => {
-        toast.error(`Erro ao iniciar envio: ${errMessage}`);
-      });
+      feedback.error(`Erro ao iniciar envio: ${errMessage}`);
       
       resetSending();
       return false;

@@ -85,9 +85,10 @@ export function resolveRecipientBatches(
         ? contacts
         : getContactsByGroup(config.id)
       : contacts.filter((contact) => contact.id === config.id);
+    const sendableRecipients = batchRecipients.filter((contact) => contact.consentStatus !== 'OPTED_OUT');
     const startIndex = orderedRecipients.length;
 
-    for (const contact of batchRecipients) {
+    for (const contact of sendableRecipients) {
       if (selectedContactIds.has(contact.id)) continue;
       selectedContactIds.add(contact.id);
       orderedRecipients.push(contact);

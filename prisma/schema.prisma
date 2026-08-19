@@ -26,6 +26,7 @@ model Workspace {
   settings    Settings[]
   usageEvents UsageEvent[]
   idempotencyRecords IdempotencyRecord[]
+  consentAudits ContactConsentAudit[]
   subscription Subscription?
 }
 
@@ -116,15 +117,41 @@ model Contact {
   name      String
   phone     String
   tags      String?
+  consentStatus String   @default("UNKNOWN") // UNKNOWN, OPTED_IN, OPTED_OUT
+  consentAt DateTime?
+  optedOutAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   scheduledMessages ScheduledMessage[]
   groupMemberships ContactGroupMembership[]
+  consentAudits ContactConsentAudit[]
 
   @@unique([workspaceId, phone])
   @@index([workspaceId])
+}
+
+model ContactConsentAudit {
+  id             String   @id @default(cuid())
+  workspaceId    String   @default("local")
+  contactId      String?
+  contactName    String
+  phone          String
+  previousStatus String
+  newStatus      String
+  source         String   // MANUAL, WHATSAPP, SYSTEM, IMPORT
+  reason         String?
+  matchedKeyword String?
+  messageId      String?
+  createdAt      DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([workspaceId, phone, createdAt])
+  @@index([contactId, createdAt])
 }
 
 model ContactGroup {

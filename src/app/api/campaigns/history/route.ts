@@ -3,6 +3,7 @@ import { apiHandler } from '@/lib/api-handler';
 import { CampaignCommandService } from '@/server/services/CampaignCommandService';
 import { campaignQuerySchema } from '@/server/validators/campaigns';
 import { ValidationError } from '@/lib/api-errors';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +21,6 @@ export const GET = apiHandler(async (req: NextRequest) => {
   }
 
   const limit = validation.data.limit || 50;
-  const history = await CampaignCommandService.getHistory(limit);
+  const history = await CampaignCommandService.getHistory(getCurrentWorkspaceId(), limit);
   return NextResponse.json(history);
 }, { routeName: '/api/campaigns/history (GET)', requireAuth: true });

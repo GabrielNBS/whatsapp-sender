@@ -51,7 +51,7 @@ export function TemplateMediaPreview({
         <span className="text-xs text-red-500 font-medium">Mídia inválida ou corrompida</span>
       </div>
 
-      <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2.5 py-1 rounded-md flex items-center gap-1 shadow">
+      <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md bg-black/70 px-2.5 py-1 text-xs text-white shadow-sm">
         <ImageIcon className="w-3 h-3 text-zinc-300" />
         <span className="truncate max-w-[150px] font-medium">
           {media.filename || 'Arquivo de mídia'}

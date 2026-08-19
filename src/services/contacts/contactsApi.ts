@@ -1,24 +1,9 @@
-import type { Contact, Group } from '@/lib/store';
+import type { Contact, ContactConsentStatus, Group } from '@/lib/types';
+import { requestJson } from '@/services/http/client';
 
 export interface ContactsSnapshot {
   groups: Group[];
   contacts: Contact[];
-}
-
-async function readSnapshot(response: Response): Promise<ContactsSnapshot> {
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(payload?.error || 'Não foi possível persistir a alteração de contatos.');
-  }
-  return response.json() as Promise<ContactsSnapshot>;
-}
-
-async function readJson<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null) as { error?: string; message?: string } | null;
-    throw new Error(payload?.message || payload?.error || 'Não foi possível persistir a alteração de contatos.');
-  }
-  return response.json() as Promise<T>;
 }
 
 export interface ContactMutationResult {
@@ -48,49 +33,64 @@ export interface ImportContactsResult {
 }
 
 export function loadContacts(): Promise<ContactsSnapshot> {
-  return fetch('/api/contacts').then(readSnapshot);
+  return requestJson<ContactsSnapshot>('/api/contacts');
 }
 
 export function createContact(contact: Contact): Promise<ContactMutationResult> {
-  return fetch('/api/contacts', {
+  return requestJson<ContactMutationResult>('/api/contacts', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(contact),
-  }).then(readJson<ContactMutationResult>);
+  });
 }
 
 export function updateContactGroups(contactId: string, groupIds: string[]): Promise<ContactMutationResult> {
-  return fetch(`/api/contacts?id=${encodeURIComponent(contactId)}`, {
+  return requestJson<ContactMutationResult>(`/api/contacts?id=${encodeURIComponent(contactId)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ groupIds }),
-  }).then(readJson<ContactMutationResult>);
+  });
+}
+
+export function updateContactConsent(
+  contactId: string,
+  consentStatus: ContactConsentStatus,
+): Promise<ContactMutationResult> {
+  return requestJson<ContactMutationResult>(`/api/contacts?id=${encodeURIComponent(contactId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ consentStatus }),
+  });
 }
 
 export function deleteContact(contactId: string): Promise<DeleteContactResult> {
-  return fetch(`/api/contacts?id=${encodeURIComponent(contactId)}`, { method: 'DELETE' }).then(readJson<DeleteContactResult>);
+  return requestJson<DeleteContactResult>(`/api/contacts?id=${encodeURIComponent(contactId)}`, {
+    method: 'DELETE',
+  });
 }
 
 export function clearContacts(): Promise<ClearContactsResult> {
-  return fetch('/api/contacts', { method: 'DELETE' }).then(readJson<ClearContactsResult>);
+  return requestJson<ClearContactsResult>('/api/contacts', { method: 'DELETE' });
 }
 
 export function createGroup(group: Group): Promise<GroupMutationResult> {
-  return fetch('/api/contact-groups', {
+  return requestJson<GroupMutationResult>('/api/contact-groups', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(group),
-  }).then(readJson<GroupMutationResult>);
+  });
 }
 
 export function deleteGroup(groupId: string): Promise<DeleteGroupResult> {
-  return fetch(`/api/contact-groups?id=${encodeURIComponent(groupId)}`, { method: 'DELETE' }).then(readJson<DeleteGroupResult>);
+  return requestJson<DeleteGroupResult>(`/api/contact-groups?id=${encodeURIComponent(groupId)}`, {
+    method: 'DELETE',
+  });
 }
 
 export function importContacts(group: Group | undefined, contacts: Contact[]): Promise<ImportContactsResult> {
-  return fetch('/api/contacts/import', {
+  return requestJson<ImportContactsResult>('/api/contacts/import', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ group, contacts }),
-  }).then(readJson<ImportContactsResult>);
+  });
 }

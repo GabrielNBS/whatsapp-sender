@@ -52,7 +52,7 @@ export const SearchTrigger = React.forwardRef<HTMLDivElement, SearchTriggerProps
             <Search className="w-3.5 h-3.5" />
           </div>
           <div className="flex flex-col items-start truncate leading-tight">
-            <span className="text-[10px] font-medium text-muted-foreground/60 mb-0.5">
+            <span className="mb-0.5 text-xs font-medium text-muted-foreground">
               Destinatários
             </span>
             <div className="flex items-center gap-2 truncate">

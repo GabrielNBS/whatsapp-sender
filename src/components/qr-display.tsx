@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useRouter } from 'next/navigation';
 import { qrApi } from '@/services/connection/qrApi';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { CheckCircle2, Zap } from 'lucide-react';
 
 import { QrIllustration } from './qr-illustration';
@@ -47,6 +47,13 @@ export function QrDisplay() {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [placeholderProgress, setPlaceholderProgress] = useState(0);
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
+  const statusLabel: Record<string, string> = {
+    INITIALIZING: 'Preparando conexão',
+    CONNECTED: 'WhatsApp conectado',
+    DISCONNECTED: 'WhatsApp desconectado',
+    QR_READY: 'Código QR pronto',
+  };
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -73,34 +80,34 @@ export function QrDisplay() {
   }, [router]);
 
   useEffect(() => {
-    if (qr || connectionError) return;
+    if (qr || connectionError || reduceMotion) return;
 
     const intervalId = window.setInterval(() => {
       setPlaceholderProgress((current) => current >= 100 ? 0 : current + 5);
     }, 55);
 
     return () => clearInterval(intervalId);
-  }, [connectionError, qr]);
+  }, [connectionError, qr, reduceMotion]);
 
   if (isAuthenticated) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-md mx-auto relative z-50"
       >
-        <Card className="backdrop-blur-md bg-white/90 dark:bg-card/90 border-border/50 shadow-2xl overflow-hidden relative">
+        <Card className="relative overflow-hidden border-success/30 bg-card shadow-lg">
           <div className="absolute inset-0 bg-linear-to-br from-success/20 to-transparent pointer-events-none" />
           <CardContent className="pt-10 pb-10 flex flex-col items-center justify-center space-y-4">
             <motion.div
-              initial={{ scale: 0 }}
+              initial={reduceMotion ? false : { scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: 'spring', bounce: 0.5 }}
             >
               <CheckCircle2 className="w-20 h-20 text-success" />
             </motion.div>
-            <h2 className="text-2xl font-bold font-headline text-center text-success-foreground">
-              Autenticado com Sucesso!
+            <h2 className="text-center text-2xl font-bold text-foreground">
+              Autenticado com sucesso
             </h2>
             <p className="text-muted-foreground text-center">
               Redirecionando para o seu dashboard...
@@ -113,13 +120,13 @@ export function QrDisplay() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="w-full max-w-3xl mx-auto flex flex-col items-center justify-center min-h-[80vh] gap-8 relative z-10 py-10"
     >
       {/* Header */}
       <motion.div 
-        initial={{ opacity: 0, y: -20 }}
+        initial={reduceMotion ? false : { opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="w-full text-center px-4"
@@ -132,17 +139,17 @@ export function QrDisplay() {
 
       {/* SVG Container */}
       <motion.div 
-        initial={{ scale: 0.9, opacity: 0 }}
+        initial={reduceMotion ? false : { scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="relative mx-auto aspect-square w-full max-w-[34rem] drop-shadow-2xl"
+        className="relative mx-auto aspect-square w-full max-w-[34rem] drop-shadow-lg"
       >
         <QrIllustration>
           <AnimatePresence mode="wait">
             {qr ? (
               <motion.div
                 key="qr-ready"
-                initial={{ opacity: 0, scale: 0.8 }}
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.2 }}
                 transition={{ type: 'spring', damping: 20 }}
@@ -153,7 +160,7 @@ export function QrDisplay() {
             ) : (
               <motion.div
                 key="qr-loading"
-                initial={{ opacity: 0 }}
+                initial={reduceMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 aria-label="Preparando codigo QR"
@@ -166,15 +173,15 @@ export function QrDisplay() {
                       key={module.id}
                       className={module.isDark
                         ? module.fillOrder <= placeholderProgress
-                          ? 'bg-success/80 transition-colors duration-150 rounded-[1px]'
-                          : 'bg-success/20 transition-colors duration-150 rounded-[1px]'
+                          ? 'bg-success/80 rounded-[1px]'
+                          : 'bg-success/20 rounded-[1px]'
                         : 'bg-transparent'}
                     />
                   ))}
                 </div>
                 <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[1px]">
                   <div className="bg-white/90 dark:bg-zinc-900/90 p-1.5 rounded-full shadow-md border border-border/50">
-                    <Zap className="w-3.5 h-3.5 text-warning animate-pulse" />
+                    <Zap className={reduceMotion ? 'h-3.5 w-3.5 text-warning' : 'h-3.5 w-3.5 animate-pulse text-warning'} />
                   </div>
                 </div>
               </motion.div>
@@ -185,7 +192,7 @@ export function QrDisplay() {
 
       {/* Footer Status */}
       <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+        initial={reduceMotion ? false : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
         className="flex flex-col items-center gap-4 w-full max-w-md px-4"
@@ -197,13 +204,13 @@ export function QrDisplay() {
           </Alert>
         )}
         
-        <div className="bg-card/80 dark:bg-card/50 px-6 py-3 rounded-full border border-border/50 shadow-sm flex items-center gap-3">
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-5 py-3 shadow-sm" role="status" aria-live="polite">
           <span className="relative flex h-3 w-3">
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${status === 'CONNECTED' ? 'bg-success' : 'bg-warning'}`}></span>
+            {!reduceMotion ? <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${status === 'CONNECTED' ? 'bg-success' : 'bg-warning'}`} /> : null}
             <span className={`relative inline-flex rounded-full h-3 w-3 ${status === 'CONNECTED' ? 'bg-success' : 'bg-warning'}`}></span>
           </span>
-          <p className="text-sm text-foreground uppercase tracking-widest font-mono font-medium">
-            {status}
+          <p className="text-sm font-medium text-foreground">
+            {statusLabel[status] ?? 'Verificando conexão'}
           </p>
         </div>
       </motion.div>

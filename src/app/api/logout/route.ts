@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import whatsappService from '@/lib/whatsapp';
 import { apiHandler } from '@/lib/api-handler';
+import { getWhatsAppApplicationService } from '@/server/services/service-factory';
 
 export const POST = apiHandler(async () => {
-  await whatsappService.logout();
+  await getWhatsAppApplicationService().logout();
   return NextResponse.json({ success: true, message: 'Logged out' });
 }, { routeName: '/api/logout' });

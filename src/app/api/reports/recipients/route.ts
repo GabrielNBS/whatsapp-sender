@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { ReportRecipientService } from '@/server/services/ReportRecipientService';
 import { createRecipientSchema } from '@/server/validators/reports';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 import { ValidationError } from '@/lib/api-errors';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic';
  * Lista todos os gestores cadastrados para receber relatórios.
  */
 export const GET = apiHandler(async () => {
-  const recipients = await ReportRecipientService.listRecipients();
+  const recipients = await ReportRecipientService.listRecipients(getCurrentWorkspaceId());
   return NextResponse.json(recipients);
 }, { routeName: '/api/reports/recipients (GET)', requireAuth: true });
 
@@ -28,6 +29,6 @@ export const POST = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Dados de destinatário inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const recipient = await ReportRecipientService.addRecipient(validation.data);
+  const recipient = await ReportRecipientService.addRecipient(validation.data, getCurrentWorkspaceId());
   return NextResponse.json(recipient, { status: 201 });
 }, { routeName: '/api/reports/recipients (POST)', requireAuth: true });

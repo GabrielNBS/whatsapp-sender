@@ -3,6 +3,7 @@ import { apiHandler } from '@/lib/api-handler';
 import { CampaignCommandService } from '@/server/services/CampaignCommandService';
 import { campaignCompleteSchema } from '@/server/validators/campaigns';
 import { ValidationError } from '@/lib/api-errors';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -26,7 +27,7 @@ export const POST = apiHandler(async (req: NextRequest, { params }: RouteParams)
     throw new ValidationError('Métricas de conclusão de campanha inválidas.', validation.error.flatten().fieldErrors);
   }
 
-  const result = await CampaignCommandService.completeCampaign(id, validation.data);
+  const result = await CampaignCommandService.completeCampaign(id, validation.data, getCurrentWorkspaceId());
 
   return NextResponse.json(result);
 }, { routeName: '/api/campaigns/[id]/complete (POST)', requireAuth: true });

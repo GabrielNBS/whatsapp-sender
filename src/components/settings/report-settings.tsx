@@ -13,9 +13,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { formatReportPhone, useReportSettings } from '@/hooks/use-report-settings';
+import { sonnerFeedback } from '@/presentation/feedback';
 
 export function ReportSettings() {
   const {
@@ -35,7 +37,7 @@ export function ReportSettings() {
     setNewPhone,
     toggleRecipient: handleToggleActive,
     updateConfig: handleUpdateConfig,
-  } = useReportSettings();
+  } = useReportSettings(sonnerFeedback);
 
   if (isLoading) {
     return (
@@ -85,10 +87,11 @@ export function ReportSettings() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Relatório Imediato</p>
+              <Label htmlFor="immediate-report">Relatório imediato</Label>
               <p className="text-xs text-muted-foreground">Enviar ao finalizar campanha</p>
             </div>
             <Switch
+              id="immediate-report"
               checked={config?.sendImmediate ?? true}
               onCheckedChange={(checked) => handleUpdateConfig({ sendImmediate: checked })}
               disabled={isSaving}
@@ -97,10 +100,11 @@ export function ReportSettings() {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Relatório de Engajamento</p>
+              <Label htmlFor="engagement-report">Relatório de engajamento</Label>
               <p className="text-xs text-muted-foreground">Enviar após período de análise</p>
             </div>
             <Switch
+              id="engagement-report"
               checked={config?.sendEngagement ?? true}
               onCheckedChange={(checked) => handleUpdateConfig({ sendEngagement: checked })}
               disabled={isSaving}
@@ -110,12 +114,13 @@ export function ReportSettings() {
           {config?.sendEngagement && (
             <div className="flex items-center gap-3 pt-2">
               <Clock className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">Enviar após</span>
+              <Label htmlFor="engagement-delay">Enviar após</Label>
               <Input
+                id="engagement-delay"
                 type="number"
                 value={config?.engagementDelayMins ?? 240}
                 onChange={(e) => handleUpdateConfig({ engagementDelayMins: parseInt(e.target.value) || 240 })}
-                className="w-20 h-8"
+                className="w-24"
                 min={30}
                 max={1440}
               />
@@ -133,28 +138,28 @@ export function ReportSettings() {
         </h3>
 
         {/* Add New Form */}
-        <div className="flex gap-2">
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
           <div className="flex-1">
             <Input
+              aria-label="Nome do gestor"
               placeholder="Nome do gestor"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              className="h-9"
             />
           </div>
           <div className="flex-1">
           <Input
+              aria-label="Telefone do gestor"
               placeholder="+55 (11) 99999-9999"
               value={newPhone}
               onChange={(event) => setNewPhone(event.target.value)}
-              className="h-9"
             />
           </div>
           <Button
             onClick={handleAddRecipient}
             disabled={isAdding}
             size="sm"
-            className="h-9"
+            aria-label="Adicionar gestor"
           >
             {isAdding ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -201,7 +206,8 @@ export function ReportSettings() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleToggleActive(recipient.id, recipient.isActive)}
-                    className="p-1.5 rounded hover:bg-muted transition-colors"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-muted"
+                    aria-label={recipient.isActive ? `Desativar ${recipient.name}` : `Ativar ${recipient.name}`}
                     title={recipient.isActive ? 'Desativar' : 'Ativar'}
                   >
                     {recipient.isActive ? (
@@ -212,7 +218,8 @@ export function ReportSettings() {
                   </button>
                   <button
                     onClick={() => handleDeleteRecipient(recipient.id)}
-                    className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-lg hover:bg-destructive/10"
+                    aria-label={`Remover ${recipient.name}`}
                     title="Remover"
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />

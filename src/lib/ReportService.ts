@@ -1,6 +1,6 @@
 import { PrismaClient, Campaign, ReportRecipient, ReportConfig } from "@prisma/client";
 import { IMessageSender } from "./types";
-import { getCurrentWorkspaceId, getWorkspaceScopedId } from "@/server/workspace";
+import { getWorkspaceScopedId } from "@/server/workspace";
 import { logger, maskName, maskPhone } from "./logger";
 
 export interface IReportService {
@@ -246,7 +246,7 @@ import { prisma } from "./db";
 
 const reportServiceInstances = new Map<string, ReportService>();
 
-export function getReportService(workspaceId = getCurrentWorkspaceId()): ReportService {
+export function getReportService(workspaceId: string): ReportService {
   let instance = reportServiceInstances.get(workspaceId);
   if (!instance) {
     instance = new ReportService(prisma, workspaceId);

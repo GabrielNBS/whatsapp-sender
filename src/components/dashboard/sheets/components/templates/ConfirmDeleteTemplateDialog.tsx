@@ -16,7 +16,7 @@ export function ConfirmDeleteTemplateDialog({
 }: ConfirmDeleteTemplateDialogProps) {
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <AlertDialogContent className="rounded-2xl max-w-[400px] border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur-xl shadow-2xl">
+      <AlertDialogContent className="max-w-[400px] rounded-xl border-border bg-card shadow-lg">
         <div className="flex flex-col items-center text-center pt-4">
           <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
             <AlertTriangle className="w-7 h-7 text-destructive" />

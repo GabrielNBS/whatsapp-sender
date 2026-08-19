@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
+import { useTransmissionStore } from '@/stores/transmission-store';
 import { Button } from "@/components/ui/button";
 import { 
     Activity, 
@@ -12,20 +12,22 @@ import {
     Clock
 } from "lucide-react";
 import { useState } from "react";
+import { useDebugSimulationStore } from '@/stores/debug-simulation-store';
 
-type SendingStatusPatch = Partial<ReturnType<typeof useAppStore.getState>["sendingStatus"]>;
+type SendingStatusPatch = Partial<ReturnType<typeof useTransmissionStore.getState>["sendingStatus"]>;
 
 export function DebugTransmissionMenu() {
-    const { setSendingStatus } = useAppStore();
+    const { setSendingStatus } = useTransmissionStore();
+    const applySimulation = useDebugSimulationStore((state) => state.apply);
     const [isVisible, setIsVisible] = useState(true);
 
     const goToStep = (step: number) => {
-        window.dispatchEvent(new CustomEvent('go-to-step', { detail: step }));
+        applySimulation({ step });
     };
 
-    const setStatus = (status: SendingStatusPatch, step: number = 3) => {
+    const setStatus = (status: SendingStatusPatch, step: number = 3, forceScreen: string | null = null) => {
         setSendingStatus(status);
-        goToStep(step);
+        applySimulation({ step, forceScreen, scheduledOverlay: null });
     };
 
     if (!isVisible) {
@@ -59,8 +61,6 @@ export function DebugTransmissionMenu() {
                     className="justify-start text-[10px] font-bold uppercase tracking-wider gap-2 h-9"
                     onClick={() => {
                         setStatus({ isSending: false, failedContacts: [] }, 0);
-                        window.dispatchEvent(new CustomEvent('debug-scheduled-overlay', { detail: null }));
-                        window.dispatchEvent(new CustomEvent('debug-force-screen', { detail: null }));
                     }}
                 >
                     <LayoutDashboard className="w-3 h-3" />
@@ -89,8 +89,6 @@ export function DebugTransmissionMenu() {
                         size="sm" 
                         className="w-full justify-start text-[10px] font-bold uppercase tracking-wider gap-2 bg-primary/5 border-primary/20 text-primary h-9"
                         onClick={() => {
-                            window.dispatchEvent(new CustomEvent('debug-scheduled-overlay', { detail: null }));
-                            window.dispatchEvent(new CustomEvent('debug-force-screen', { detail: 'sending' }));
                             setStatus({
                                 isSending: true,
                                 progress: 45,
@@ -99,7 +97,7 @@ export function DebugTransmissionMenu() {
                                 failedCount: 0,
                                 statusMessage: "Enviando mensagens...",
                                 isPaused: false
-                            }, 3);
+                            }, 3, 'sending');
                         }}
                     >
                         <Activity className="w-3 h-3" />
@@ -111,15 +109,16 @@ export function DebugTransmissionMenu() {
                         size="sm" 
                         className="w-full justify-start text-[10px] font-bold uppercase tracking-wider gap-2 bg-blue-500/5 border-blue-500/20 text-blue-600 h-9"
                         onClick={() => {
-                            window.dispatchEvent(new CustomEvent('debug-force-screen', { detail: 'scheduled' }));
-                            window.dispatchEvent(new CustomEvent('debug-scheduled-overlay', {
-                                detail: {
+                            applySimulation({
+                                step: 3,
+                                forceScreen: 'scheduled',
+                                scheduledOverlay: {
+                                    batchId: 'debug-scheduled',
                                     batchName: "Campanha de Promoção",
                                     scheduledFor: new Date(Date.now() + 86400000).toISOString(),
                                     contactCount: 145,
-                                    force: true
-                                }
-                            }));
+                                },
+                            });
                         }}
                     >
                         <Clock className="w-3 h-3" />
@@ -131,8 +130,6 @@ export function DebugTransmissionMenu() {
                         size="sm" 
                         className="w-full justify-start text-[10px] font-bold uppercase tracking-wider gap-2 bg-amber-500/5 border-amber-500/20 text-amber-600 h-9"
                         onClick={() => {
-                            window.dispatchEvent(new CustomEvent('debug-scheduled-overlay', { detail: null }));
-                            window.dispatchEvent(new CustomEvent('debug-force-screen', { detail: 'sending' }));
                             setStatus({
                                 isSending: true,
                                 isPaused: true,
@@ -141,7 +138,7 @@ export function DebugTransmissionMenu() {
                                 sentCount: 30,
                                 failedCount: 0,
                                 statusMessage: "Campanha pausada"
-                            }, 3);
+                            }, 3, 'sending');
                         }}
                     >
                         <Pause className="w-3 h-3" />
@@ -157,8 +154,6 @@ export function DebugTransmissionMenu() {
                         size="sm" 
                         className="justify-start text-[10px] font-bold uppercase tracking-wider gap-2 bg-emerald-500/5 border-emerald-500/20 text-emerald-600 h-9"
                         onClick={() => {
-                            window.dispatchEvent(new CustomEvent('debug-scheduled-overlay', { detail: null }));
-                            window.dispatchEvent(new CustomEvent('debug-force-screen', { detail: null }));
                             setStatus({
                                 isSending: false,
                                 progress: 100,
@@ -180,8 +175,6 @@ export function DebugTransmissionMenu() {
                         size="sm" 
                         className="justify-start text-[10px] font-bold uppercase tracking-wider gap-2 bg-destructive/5 border-destructive/20 text-destructive h-9"
                         onClick={() => {
-                            window.dispatchEvent(new CustomEvent('debug-scheduled-overlay', { detail: null }));
-                            window.dispatchEvent(new CustomEvent('debug-force-screen', { detail: null }));
                             setStatus({
                                 isSending: false,
                                 progress: 100,

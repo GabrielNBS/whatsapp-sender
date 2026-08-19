@@ -7,6 +7,7 @@ import { MessageEditor } from '@/components/send/message-editor';
 import { Button } from '@/components/ui/button';
 import GradientText from '@/components/ui/gradient-text';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -62,21 +63,21 @@ export function CampaignMessageStep({
       <div className="premium-scrollbar min-h-0 flex-1 overflow-y-auto px-1">
         <div className="flex min-h-120 flex-col gap-4 pt-2 sm:gap-6 lg:flex-row lg:gap-8 xl:gap-10">
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div className="mb-6 space-y-1 lg:mb-10 [@media(max-height:1079px)]:hidden">
+            <div className="mb-6 space-y-2 lg:mb-8 [@media(max-height:1079px)]:hidden">
               <GradientText
                 colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]}
                 animationSpeed={6}
-                className="mb-4 text-[10px] font-black uppercase tracking-[0.2rem] opacity-60"
+                className="text-xs font-semibold"
               >
-                Passo 02
+                Passo 2 de 2
               </GradientText>
-              <h2 className="mb-2 text-3xl font-light leading-[1.05] tracking-tighter sm:text-4xl lg:text-[3.25rem]">
+              <h2 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
                 Crie sua{' '}
-                <GradientText colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]} className="inline font-black text-foreground">
+                <GradientText colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]} className="inline font-bold text-foreground">
                   mensagem
                 </GradientText>
               </h2>
-              <p className="text-base font-medium leading-relaxed text-muted-foreground/80">Selecione um modelo ou escreva manualmente.</p>
+              <p className="text-base leading-relaxed text-muted-foreground">Selecione um modelo ou escreva manualmente.</p>
             </div>
 
             <div className="min-h-64 flex-1 sm:min-h-72">
@@ -89,10 +90,7 @@ export function CampaignMessageStep({
                 templateSlot={
                   <div className="flex items-center gap-1">
                     <Select onValueChange={handleTemplateSelect} disabled={isSending}>
-                      <SelectTrigger
-                        animatedBorder
-                        className="h-8 w-40 gap-2 rounded-full border-transparent bg-neutral-950 px-3 text-[11px] font-bold text-white shadow-sm transition-all hover:bg-neutral-900"
-                      >
+                      <SelectTrigger className="h-9 w-40 gap-2 rounded-lg bg-background text-sm font-semibold">
                         <span className="pointer-events-none text-sm">🪄</span>
                         <SelectValue placeholder="Usar Modelo" />
                       </SelectTrigger>
@@ -112,7 +110,7 @@ export function CampaignMessageStep({
                       variant="ghost"
                       size="sm"
                       onClick={openTemplates}
-                      className="h-8 rounded-full px-2 text-[11px] font-bold text-muted-foreground transition-all hover:bg-muted hover:text-primary"
+                      className="h-9 rounded-lg px-3 text-sm text-muted-foreground hover:text-primary"
                     >
                       <Plus className="mr-1 h-3 w-3" /> Criar
                     </Button>
@@ -129,19 +127,19 @@ export function CampaignMessageStep({
                   </div>
                   <div>
                     <p className="text-sm font-bold">{recipients.length} {recipients.length === 1 ? 'contato' : 'contatos'} alvo</p>
-                    <p className="text-[10px] font-black uppercase text-muted-foreground">Público Selecionado</p>
+                    <p className="text-xs text-muted-foreground">Público selecionado</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 rounded-full border border-border/50 bg-background px-4 py-2">
-                  <span className="text-xs font-bold text-muted-foreground">Agendar?</span>
-                  <Switch checked={isScheduleMode} onCheckedChange={setIsScheduleMode} disabled={isSending} />
+                <div className="flex min-h-11 items-center gap-3 rounded-lg border border-border bg-background px-3">
+                  <Label htmlFor="schedule-campaign" className="cursor-pointer text-sm text-muted-foreground">Agendar envio</Label>
+                  <Switch id="schedule-campaign" checked={isScheduleMode} onCheckedChange={setIsScheduleMode} disabled={isSending} />
                 </div>
               </div>
 
               {isScheduleMode ? (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="border-t border-border/50 pt-4">
-                  <p className="mb-1.5 ml-1 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Data e Horário</p>
-                  <Input type="datetime-local" className="rounded-xl" value={scheduleDate} onChange={(event) => setScheduleDate(event.target.value)} disabled={isSending} />
+                  <Label htmlFor="schedule-date" className="mb-2">Data e horário</Label>
+                  <Input id="schedule-date" type="datetime-local" value={scheduleDate} onChange={(event) => setScheduleDate(event.target.value)} disabled={isSending} />
                 </motion.div>
               ) : null}
             </div>
@@ -170,8 +168,8 @@ export function CampaignMessageStep({
 
           <div className="hidden w-[min(30vw,340px)] shrink-0 flex-col lg:flex [@media(max-height:1079px)]:!hidden">
             <div className="mb-4 flex items-center gap-2 px-1">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/80">Preview em Tempo Real</span>
+              <span className="h-2 w-2 rounded-full bg-success" />
+              <span className="text-xs font-medium text-muted-foreground">Prévia em tempo real</span>
             </div>
             <div className="flex min-h-0 flex-1 items-start justify-center">
               <WhatsAppMockup content={message} media={selectedFile} />
@@ -186,7 +184,7 @@ export function CampaignMessageStep({
           disabled={submitDisabled}
           asChild
           className={cn(
-            'h-14 gap-3 rounded-2xl bg-primary px-12 text-xs font-black uppercase tracking-[0.2rem] text-primary-foreground shadow-xl shadow-primary/20 transition-all',
+            'h-12 gap-3 rounded-xl bg-primary px-8 text-sm font-semibold text-primary-foreground shadow-sm',
             submitDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
           )}
         >

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAppStore } from "@/lib/store";
+import { useState, useEffect, useRef } from "react";
+import { useTransmissionStore } from '@/stores/transmission-store';
 import { useScheduler } from "@/hooks/use-scheduler";
 import { useSender } from "@/hooks/use-sender";
 import { useGlobalSheet } from "../global-sheet-provider";
@@ -29,21 +29,23 @@ import {
 import { ScheduleBatchSummary } from "@/lib/types";
 import { getCampaignProgress } from '@/lib/campaign-progress';
 import { formatScheduleDateTime } from '@/lib/date-formatters';
+import { browserConfirmation, sonnerFeedback } from '@/presentation/feedback';
 
 export function MonitoringSheetContent() {
-    const sendingStatus = useAppStore((state) => state.sendingStatus);
-    const { activeSchedules, handleCancelSchedule } = useScheduler();
-    const { handleStop } = useSender();
+    const sendingStatus = useTransmissionStore((state) => state.sendingStatus);
+    const { activeSchedules, handleCancelSchedule } = useScheduler(sonnerFeedback);
+    const { handleStop } = useSender(sonnerFeedback, browserConfirmation);
     const { sheetData } = useGlobalSheet();
     const [scheduleToDelete, setScheduleToDelete] = useState<ScheduleBatchSummary | null>(null);
     const [showStopConfirmation, setShowStopConfirmation] = useState(false);
+    const batchElements = useRef(new Map<string, HTMLDivElement>());
 
     const focusedBatchId = sheetData?.focusedBatchId as string | undefined;
 
     useEffect(() => {
         if (focusedBatchId && activeSchedules.length > 0) {
             const timer = setTimeout(() => {
-                const element = document.getElementById(`batch-${focusedBatchId}`);
+                const element = batchElements.current.get(focusedBatchId);
                 if (element) {
                     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
@@ -65,7 +67,7 @@ export function MonitoringSheetContent() {
                     </div>
                     <div>
                         <SplitText 
-                            text="Central de Monitoramento" 
+                            text="Central de monitoramento"
                             as="h2" 
                             className="text-xl font-bold tracking-tight"
                         />
@@ -80,14 +82,14 @@ export function MonitoringSheetContent() {
                 {/* 1. Ative Campaign Section */}
                 <section className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                            <Activity className="w-3 h-3 text-primary animate-pulse" />
-                            Transmissão Ativa
+                        <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                            <Activity className="h-4 w-4 text-primary" />
+                            Transmissão ativa
                         </h3>
                         {isActive && (
-                            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-[10px] font-bold text-primary uppercase animate-pulse">
+                            <span className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
                                 <span className="w-1 h-1 rounded-full bg-primary" />
-                                Live Now
+                                Ao vivo
                             </span>
                         )}
                     </div>
@@ -96,7 +98,7 @@ export function MonitoringSheetContent() {
                         <motion.div 
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-card border border-primary/20 rounded-2xl p-5 shadow-lg shadow-primary/5 space-y-4"
+                            className="space-y-4 rounded-xl border border-primary/20 bg-card p-5 shadow-sm"
                         >
                             <div className="flex justify-between items-start">
                                 <div>
@@ -107,7 +109,7 @@ export function MonitoringSheetContent() {
                                 </div>
                                 <div className="text-right">
                                     <p className="text-2xl font-bold tracking-tight text-primary tabular-nums">{percent}%</p>
-                                    <p className="text-[9px] font-bold text-muted-foreground uppercase">Concluído</p>
+                                    <p className="text-xs font-medium text-muted-foreground">Concluído</p>
                                 </div>
                             </div>
 
@@ -120,7 +122,7 @@ export function MonitoringSheetContent() {
                                         transition={{ type: "spring", stiffness: 50, damping: 20 }}
                                     />
                                 </div>
-                                <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground px-1">
+                                <div className="flex items-center justify-between px-1 text-xs font-medium text-muted-foreground">
                                     <span className="tabular-nums">{processed} enviados</span>
                                     <span className="tabular-nums">{sendingStatus.totalContacts} total</span>
                                 </div>
@@ -132,25 +134,25 @@ export function MonitoringSheetContent() {
                                     <div className="w-2 h-8 rounded-full bg-success/20" />
                                     <div>
                                         <p className="text-lg font-bold tracking-tight text-success tabular-nums">{sendingStatus.sentCount}</p>
-                                        <p className="text-[9px] font-bold text-success/70 uppercase">Sucesso</p>
+                                        <p className="text-xs font-medium text-success">Sucesso</p>
                                     </div>
                                 </div>
                                 <div className="bg-destructive/5 border border-destructive/10 rounded-xl p-3 flex items-center gap-3">
                                     <div className="w-2 h-8 rounded-full bg-destructive/20" />
                                     <div>
                                         <p className="text-lg font-bold tracking-tight text-destructive tabular-nums">{sendingStatus.failedCount}</p>
-                                        <p className="text-[9px] font-bold text-destructive/70 uppercase">Falhas</p>
+                                        <p className="text-xs font-medium text-destructive">Falhas</p>
                                     </div>
                                 </div>
                             </div>
                             
                             <Button 
                                 variant="destructive" 
-                                className="w-full h-10 mt-2 font-bold uppercase tracking-wider text-[10px] rounded-xl"
+                                className="mt-2 h-10 w-full rounded-lg text-sm font-semibold"
                                 onClick={() => setShowStopConfirmation(true)}
                             >
                                 <Trash2 className="w-3.5 h-3.5 mr-2" />
-                                Interromper Envio
+                                Interromper envio
                             </Button>
                         </motion.div>
                     ) : (
@@ -159,7 +161,7 @@ export function MonitoringSheetContent() {
                                 <Activity className="w-6 h-6 outline-hidden" />
                             </div>
                             <p className="text-sm font-bold text-muted-foreground">Nenhuma transmissão ativa</p>
-                            <p className="text-[11px] text-muted-foreground/60 mt-1 max-w-[200px]">
+                            <p className="mt-1 max-w-[240px] text-xs text-muted-foreground">
                                 Quando você iniciar um envio, o progresso aparecerá aqui em tempo real.
                             </p>
                         </div>
@@ -168,9 +170,9 @@ export function MonitoringSheetContent() {
 
                 {/* 2. Upcoming Schedules Section */}
                 <section className="space-y-4">
-                    <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                        <Calendar className="w-3 h-3 text-primary" />
-                        Próximos Agendamentos ({activeSchedules.length})
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        <Calendar className="h-4 w-4 text-primary" />
+                        Próximos agendamentos ({activeSchedules.length})
                     </h3>
 
                     <div className="space-y-3">
@@ -179,7 +181,10 @@ export function MonitoringSheetContent() {
                                 activeSchedules.map((schedule, idx) => (
                                     <motion.div 
                                         key={schedule.batchId}
-                                        id={`batch-${schedule.batchId}`}
+                                        ref={(element) => {
+                                            if (element) batchElements.current.set(schedule.batchId, element);
+                                            else batchElements.current.delete(schedule.batchId);
+                                        }}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ 
                                             opacity: 1, 
@@ -224,14 +229,14 @@ export function MonitoringSheetContent() {
                                                         {schedule.batchName || "Campanha Sem Nome"}
                                                     </p>
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md transition-colors ${
+                                                        <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
                                                             focusedBatchId === schedule.batchId 
                                                                 ? 'bg-primary/10 text-primary' 
                                                                 : 'bg-muted text-muted-foreground'
                                                         }`}>
                                                             {schedule.count + (schedule.paused || 0)} leads
                                                         </span>
-                                                        <span className="text-[10px] font-bold text-muted-foreground/70">
+                                                        <span className="text-xs font-medium text-muted-foreground">
                                                             {formatScheduleDateTime(schedule.scheduledFor)}
                                                         </span>
                                                     </div>
@@ -242,7 +247,8 @@ export function MonitoringSheetContent() {
                                                 variant="ghost" 
                                                 size="icon"
                                                 onClick={() => setScheduleToDelete(schedule)}
-                                                className="opacity-0 group-hover:opacity-100 transition-all text-destructive hover:bg-destructive/10 h-9 w-9 rounded-xl shrink-0"
+                                                className="h-10 w-10 shrink-0 rounded-lg text-destructive hover:bg-destructive/10"
+                                                aria-label={`Cancelar ${schedule.batchName || 'campanha agendada'}`}
                                             >
                                                 <Trash2 className="w-4.5 h-4.5" />
                                             </Button>
@@ -261,7 +267,7 @@ export function MonitoringSheetContent() {
 
             {/* Confirmation Modal */}
             <AlertDialog open={!!scheduleToDelete} onOpenChange={(open) => !open && setScheduleToDelete(null)}>
-                <AlertDialogContent className="rounded-2xl max-w-[400px] border-border bg-card/95 backdrop-blur-xl shadow-2xl">
+                <AlertDialogContent className="max-w-[400px] rounded-xl border-border bg-card shadow-lg">
                     <div className="flex flex-col items-center text-center pt-4">
                         <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
                             <AlertTriangle className="w-7 h-7 text-destructive" />
@@ -288,7 +294,7 @@ export function MonitoringSheetContent() {
                             }}
                             className="bg-destructive text-secondary hover:bg-destructive/90 w-full sm:w-auto min-w-[160px] rounded-xl font-bold shadow-lg shadow-destructive/20 transition-all"
                         >
-                            Confirmar Exclusão
+                            Confirmar exclusão
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -296,13 +302,13 @@ export function MonitoringSheetContent() {
 
             {/* Stop Active Campaign Confirmation */}
             <AlertDialog open={showStopConfirmation} onOpenChange={setShowStopConfirmation}>
-                <AlertDialogContent className="rounded-2xl max-w-[400px] border-border/50 bg-card/95 backdrop-blur-xl shadow-2xl">
+                <AlertDialogContent className="max-w-[400px] rounded-xl border-border bg-card shadow-lg">
                     <div className="flex flex-col items-center text-center pt-4">
                         <div className="w-14 h-14 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
                             <AlertTriangle className="w-7 h-7 text-destructive" />
                         </div>
                         <AlertDialogHeader className="space-y-3">
-                            <AlertDialogTitle className="text-xl font-black tracking-tight text-center">Interromper Envio?</AlertDialogTitle>
+                            <AlertDialogTitle className="text-center text-xl font-bold tracking-tight">Interromper envio?</AlertDialogTitle>
                             <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed px-2">
                                 Tem certeza que deseja parar o processo agora?
                                 Alguns contatos da sua lista podem não receber a mensagem. O progresso ficará pausado.
@@ -311,7 +317,7 @@ export function MonitoringSheetContent() {
                     </div>
                     <AlertDialogFooter className="mt-6 flex flex-col sm:flex-row gap-3 justify-center! sm:justify-center! w-full px-2">
                         <AlertDialogCancel className="w-full sm:w-auto min-w-[120px] rounded-xl font-semibold border-border/50">
-                            Continuar Enviando
+                            Continuar enviando
                         </AlertDialogCancel>
                         <AlertDialogAction
                             onClick={() => {
@@ -320,7 +326,7 @@ export function MonitoringSheetContent() {
                             }}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90 w-full sm:w-auto min-w-[160px] rounded-xl font-bold"
                         >
-                            Sim, Parar Agora
+                            Sim, parar agora
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
@@ -328,7 +334,7 @@ export function MonitoringSheetContent() {
 
             {/* Footer / Quick Actions */}
             <div className="p-4 border-t border-border bg-card/30">
-                <p className="text-[9px] text-center text-muted-foreground font-bold uppercase tracking-widest">
+                <p className="text-center text-xs text-muted-foreground">
                     O sistema processa agendamentos a cada 60 segundos
                 </p>
             </div>

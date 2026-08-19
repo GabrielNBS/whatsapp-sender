@@ -1,15 +1,15 @@
 import { prisma } from '@/lib/db';
-import { CreateRecipientInput, UpdateRecipientInput } from '../validators/reports';
+import type { CreateReportRecipientCommand, UpdateReportRecipientCommand } from '@/domain/contracts';
 import { normalizePhone } from '@/services/contacts/normalizePhone';
 import { ConflictError, NotFoundError } from '@/lib/api-errors';
 import { DEFAULT_CONFIG_ID } from '@/constants/domain';
-import { getCurrentWorkspaceId, getWorkspaceScopedId } from '@/server/workspace';
+import { getWorkspaceScopedId } from '@/server/workspace';
 
 export const ReportRecipientService = {
   /**
    * Lista todos os destinatários de relatórios.
    */
-  async listRecipients(workspaceId = getCurrentWorkspaceId()) {
+  async listRecipients(workspaceId: string) {
     return prisma.reportRecipient.findMany({
       where: { workspaceId },
     });
@@ -19,7 +19,7 @@ export const ReportRecipientService = {
    * Adiciona um novo destinatário à lista de relatórios.
    * Valida duplicidade e normaliza o número de telefone (API-006 / API-009).
    */
-  async addRecipient(data: CreateRecipientInput, workspaceId = getCurrentWorkspaceId()) {
+  async addRecipient(data: CreateReportRecipientCommand, workspaceId: string) {
     const phone = normalizePhone(data.phone);
 
     // Valida duplicidade por telefone no banco (API-009)
@@ -47,7 +47,7 @@ export const ReportRecipientService = {
   /**
    * Remove um destinatário da lista pelo ID (API-009 / API-015).
    */
-  async deleteRecipient(id: string, workspaceId = getCurrentWorkspaceId()) {
+  async deleteRecipient(id: string, workspaceId: string) {
     try {
       return await prisma.reportRecipient.delete({
         where: { id, workspaceId },
@@ -58,7 +58,7 @@ export const ReportRecipientService = {
     }
   },
 
-  async updateRecipient(id: string, data: UpdateRecipientInput, workspaceId = getCurrentWorkspaceId()) {
+  async updateRecipient(id: string, data: UpdateReportRecipientCommand, workspaceId: string) {
     const phone = data.phone === undefined ? undefined : normalizePhone(data.phone);
     if (phone !== undefined) {
       const duplicate = await prisma.reportRecipient.findFirst({

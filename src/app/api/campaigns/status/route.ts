@@ -3,6 +3,7 @@ import { apiHandler } from '@/lib/api-handler';
 import { CampaignCommandService } from '@/server/services/CampaignCommandService';
 import { campaignQuerySchema } from '@/server/validators/campaigns';
 import { ValidationError } from '@/lib/api-errors';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,7 @@ export const GET = apiHandler(async (req: NextRequest) => {
   }
 
   const status = await CampaignCommandService.getStatus(
+    getCurrentWorkspaceId(),
     validation.data.logOffset || 0,
     validation.data.includeFailures,
   );

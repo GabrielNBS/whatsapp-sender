@@ -1,5 +1,4 @@
 import { prisma } from "./db";
-import { getCurrentWorkspaceId } from "@/server/workspace";
 
 export interface RealtimeMetrics {
   connection: {
@@ -48,7 +47,7 @@ export interface IMetricsService {
 }
 
 export class MetricsService implements IMetricsService {
-  constructor(private workspaceId = getCurrentWorkspaceId()) {}
+  constructor(private workspaceId: string) {}
   async getRealtimeMetrics(): Promise<RealtimeMetrics> {
     const whatsappMetrics = await this.getWhatsAppMetrics();
     const todayStats = await this.getTodayStats();
@@ -266,11 +265,13 @@ export class MetricsService implements IMetricsService {
   }
 }
 
-let metricsServiceInstance: MetricsService | null = null;
+const metricsServiceInstances = new Map<string, MetricsService>();
 
-export function getMetricsService(): MetricsService {
-  if (!metricsServiceInstance) {
-    metricsServiceInstance = new MetricsService();
+export function getMetricsService(workspaceId: string): MetricsService {
+  let instance = metricsServiceInstances.get(workspaceId);
+  if (!instance) {
+    instance = new MetricsService(workspaceId);
+    metricsServiceInstances.set(workspaceId, instance);
   }
-  return metricsServiceInstance;
+  return instance;
 }

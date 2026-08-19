@@ -4,7 +4,7 @@ import { SplitText } from '@/components/ui/split-text';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useAppStore } from '@/lib/store';
+import { useContactStore } from '@/stores/contact-store';
 import { useShallow } from 'zustand/react/shallow';
 import { 
   MessageSquare, 
@@ -25,7 +25,7 @@ import { EngagementTrendsChart } from '@/components/analytics/engagement-trends'
 import { useGlobalSheet } from '@/components/dashboard/global-sheet-provider';
 
 export function OverviewSheetContent() {
-  const { contacts, groups } = useAppStore(useShallow((state) => ({
+  const { contacts, groups } = useContactStore(useShallow((state) => ({
     contacts: state.contacts,
     groups: state.groups,
   })));

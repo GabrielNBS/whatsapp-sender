@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/db';
 import { apiHandler } from '@/lib/api-handler';
 import { ValidationError } from '@/lib/api-errors';
-import { checkRateLimit } from '@/lib/rate-limit';
-import { API_RATE_LIMITS } from '@/constants/api';
 import { z } from 'zod';
 import { getCurrentWorkspaceId } from '@/server/workspace';
+import { analyticsQueryService } from '@/server/services/service-factory';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,13 +28,6 @@ export const GET = apiHandler(async (req: NextRequest) => {
     req.headers.get('x-real-ip') ||
     '127.0.0.1';
 
-  // Rate limiting para polling frequente de analytics (API-011)
-  checkRateLimit(
-    `analytics-poll-${clientIp}`,
-    API_RATE_LIMITS.POLLING_LIMIT || 120,
-    API_RATE_LIMITS.POLLING_WINDOW_MS || 60000
-  );
-
   const queryParams = {
     from: searchParams.get('from'),
     to: searchParams.get('to'),
@@ -51,37 +41,11 @@ export const GET = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Parâmetros de busca de analytics inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const { from, to, limit, offset, phones } = validation.data;
-
-  // Monta filtros
-  const where: Prisma.ContactAnalyticsWhereInput = { workspaceId: getCurrentWorkspaceId() };
-  if (phones.length > 0) {
-    where.phone = { in: phones };
-  }
-  if (from || to) {
-    where.OR = [];
-    if (from) {
-      const fromDate = new Date(from);
-      where.OR.push(
-        { lastSentAt: { gte: fromDate } },
-        { lastReadAt: { gte: fromDate } }
-      );
-    }
-    if (to) {
-      const toDate = new Date(to);
-      where.OR.push(
-        { lastSentAt: { lte: toDate } },
-        { lastReadAt: { lte: toDate } }
-      );
-    }
-  }
-
-  const analytics = await prisma.contactAnalytics.findMany({
-    where,
-    take: limit,
-    skip: offset,
-    orderBy: { updatedAt: 'desc' }
-  });
+  const analytics = await analyticsQueryService.list(
+    validation.data,
+    clientIp,
+    getCurrentWorkspaceId(),
+  );
 
   const response = NextResponse.json(analytics);
 

@@ -1,18 +1,18 @@
 import { prisma } from '@/lib/db';
-import { CreateScheduleInput } from '../validators/schedule';
+import type { CreateScheduleCommand } from '@/domain/contracts';
 import { normalizePhone } from '@/services/contacts/normalizePhone';
 import { ACTIVE_BATCH_STATUSES, RECENT_BATCH_WINDOW_MS } from '@/constants/domain';
 import { nanoid } from 'nanoid';
 import { NotFoundError } from '@/lib/api-errors';
 import { SchedulerService } from './SchedulerService';
 import { ScheduledBatch, ScheduledMessageStatus, ScheduleBatchSummary } from '@/lib/types';
-import { getCurrentWorkspaceId } from '@/server/workspace';
+import { getContactConsentService } from '@/server/services/ContactConsentService';
 
 export const ScheduleService = {
   /**
    * Obtém os lotes ativos ou recentemente finalizados agrupados por batchId.
    */
-  async listActiveSchedules(workspaceId = getCurrentWorkspaceId()) {
+  async listActiveSchedules(workspaceId: string) {
     const pendingBatches = await prisma.scheduledMessage.groupBy({
       by: ['batchId'],
       where: {
@@ -75,7 +75,7 @@ export const ScheduleService = {
     );
   },
 
-  async getScheduleBatchDetails(batchId: string, workspaceId = getCurrentWorkspaceId()): Promise<ScheduledBatch> {
+  async getScheduleBatchDetails(batchId: string, workspaceId: string): Promise<ScheduledBatch> {
     const messages = await prisma.scheduledMessage.findMany({
       where: { workspaceId, batchId },
       include: { template: { select: { content: true } } },
@@ -117,9 +117,17 @@ export const ScheduleService = {
   /**
    * Cria um novo agendamento em lote.
    */
-  async createSchedule(data: CreateScheduleInput, workspaceId = getCurrentWorkspaceId()) {
+  async createSchedule(data: CreateScheduleCommand, workspaceId: string) {
     const scheduledDate = new Date(data.scheduledFor);
     const batchId = nanoid();
+
+    await getContactConsentService().assertRecipientsCanBeMessaged(data.recipients, workspaceId);
+    const normalizedNumbers = data.recipients.map((recipient) => normalizePhone(recipient.number ?? recipient.phone ?? ''));
+    const knownContacts = await prisma.contact.findMany({
+      where: { workspaceId, phone: { in: normalizedNumbers } },
+      select: { id: true, phone: true },
+    });
+    const contactIdsByPhone = new Map(knownContacts.map((contact) => [contact.phone, contact.id]));
 
     await prisma.$transaction(async (tx) => {
       let templateId = data.templateId || undefined;
@@ -163,6 +171,7 @@ export const ScheduleService = {
           status: 'PENDING',
           contactName: recipient.name,
           contactPhone: normalizePhone(recipient.number ?? recipient.phone ?? ''),
+          contactId: contactIdsByPhone.get(normalizePhone(recipient.number ?? recipient.phone ?? '')) ?? null,
           templateId: templateId!,
           batchId,
           batchName: data.batchName,
@@ -183,7 +192,7 @@ export const ScheduleService = {
   /**
    * Cancela as mensagens pendentes/pausadas de um lote (CANCELED) sem apagá-las.
    */
-  async cancelScheduleBatch(batchId: string, workspaceId = getCurrentWorkspaceId()) {
+  async cancelScheduleBatch(batchId: string, workspaceId: string) {
     const result = await prisma.scheduledMessage.updateMany({
       where: {
         batchId: batchId,
@@ -206,7 +215,7 @@ export const ScheduleService = {
   /**
    * Reagenda as mensagens pendentes/pausadas de um lote.
    */
-  async rescheduleBatch(batchId: string, newDateStr: string, workspaceId = getCurrentWorkspaceId()) {
+  async rescheduleBatch(batchId: string, newDateStr: string, workspaceId: string) {
     const rescheduledDate = new Date(newDateStr);
 
     const result = await prisma.scheduledMessage.updateMany({

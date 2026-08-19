@@ -67,7 +67,7 @@ export function AddContactDialog({
                 maxLength={16}
                 className="bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800"
               />
-              <p className="text-[10px] text-muted-foreground dark:text-zinc-500 pl-1">
+              <p className="pl-1 text-xs text-muted-foreground">
                 Formato: (DDD) 9 0000-0000
               </p>
             </div>

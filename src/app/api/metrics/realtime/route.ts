@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { MetricsQueryService } from '@/server/services/MetricsQueryService';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,7 @@ export const GET = apiHandler(async (req: NextRequest) => {
     req.headers.get('x-real-ip') || 
     '127.0.0.1';
 
-  const metrics = await MetricsQueryService.getRealtimeMetrics(clientIp);
+  const metrics = await MetricsQueryService.getRealtimeMetrics(clientIp, getCurrentWorkspaceId());
   
   const response = NextResponse.json(metrics);
   

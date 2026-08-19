@@ -28,27 +28,27 @@ export function CampaignIntroStep({
   const currentWord = ROTATING_WORDS[currentWordIndex];
 
   return (
-    <div className="premium-scrollbar mx-auto flex min-h-0 max-w-lg flex-1 flex-col items-center justify-center space-y-4 overflow-y-auto px-3 py-4 text-center lg:py-8">
-      <div className="relative mb-6 flex h-24 w-24 items-center justify-center sm:h-28 sm:w-28 lg:mb-10">
-        {Array.from({ length: 5 }, (_, index) => (
+    <div className="premium-scrollbar mx-auto flex min-h-0 max-w-2xl flex-1 flex-col items-center justify-center space-y-5 overflow-y-auto px-4 py-6 text-center">
+      <div className="relative mb-4 flex h-24 w-24 items-center justify-center sm:h-28 sm:w-28">
+        {Array.from({ length: 2 }, (_, index) => (
           <motion.div
             key={index}
-            className="absolute inset-0 rounded-full border border-emerald-500/20 bg-emerald-500/5"
+            className="absolute inset-0 rounded-full border border-success/20 bg-success/5"
             animate={{ scale: [1, 2.2], opacity: [0, 0.3, 0] }}
             transition={{ duration: 5, repeat: Infinity, delay: index, ease: 'linear' }}
           />
         ))}
-        <div className="absolute inset-0 animate-pulse rounded-full bg-emerald-500/10 blur-2xl" />
+        <div className="absolute inset-0 rounded-full bg-success/10 blur-2xl" />
 
         <AnimatedMessage className="relative z-10 h-64 w-64 rounded-full" />
       </div>
 
       <div className="space-y-4 lg:space-y-6">
-        <h2 className="flex flex-col items-center text-4xl font-light leading-[0.9] tracking-tighter sm:text-5xl lg:text-[3.25rem]">
+        <h1 className="flex flex-col items-center text-3xl font-medium leading-tight tracking-tight sm:text-4xl">
           <GradientText
             colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]}
             animationSpeed={4}
-            className="mb-2 text-2xl font-medium tracking-tight opacity-80"
+            className="mb-1 text-xl font-semibold tracking-tight sm:text-2xl"
           >
             Escale seu
           </GradientText>
@@ -62,7 +62,7 @@ export function CampaignIntroStep({
                     animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                     exit={{ opacity: 0, y: -20, filter: 'blur(4px)' }}
                     transition={{ duration: 0.4, delay: index * 0.02, ease: [0.4, 0, 0.2, 1] }}
-                    className="inline-block px-px py-2 font-black text-primary"
+                    className="inline-block px-px py-1 font-bold text-primary"
                   >
                     {char === ' ' ? '\u00A0' : char}
                   </motion.span>
@@ -70,8 +70,8 @@ export function CampaignIntroStep({
               </motion.span>
             </AnimatePresence>
           </span>
-        </h2>
-        <p className="mx-auto max-w-95 text-base font-medium leading-relaxed text-muted-foreground/70">
+        </h1>
+        <p className="mx-auto max-w-md text-base leading-relaxed text-muted-foreground">
           Campanhas <span className="font-bold text-foreground">personalizadas</span> e disparos{' '}
           <span className="font-bold text-foreground">precisos</span> e <span className="font-bold text-foreground">programados</span>.
           Alcance seu público de forma profissional.
@@ -83,7 +83,7 @@ export function CampaignIntroStep({
         aria-label="Iniciar campanha"
         whileHover="hover"
         whileTap={{ scale: 0.98 }}
-        className="mt-4 flex cursor-pointer items-center gap-3 rounded-2xl bg-primary px-8 py-3.5 text-xs font-black uppercase tracking-widest text-primary-foreground shadow-xl shadow-primary/20 transition-all hover:shadow-primary/30 sm:px-10 sm:py-4.5 sm:text-sm lg:mt-10"
+        className="mt-4 flex min-h-11 cursor-pointer items-center gap-3 rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 sm:px-10"
       >
         Iniciar Campanha
         <motion.span variants={{ hover: { x: 5 } }} transition={{ type: 'spring', stiffness: 400, damping: 10 }}>
@@ -101,16 +101,16 @@ export function CampaignIntroStep({
             <button onClick={() => openMonitoring()} className="group flex w-full items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3 transition-all hover:bg-primary/10 sm:max-w-[300px]">
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <Activity className="h-5 w-5 animate-pulse" />
+                  <Activity className="h-5 w-5" />
                 </div>
                 <div className="overflow-hidden leading-tight">
-                  <p className="truncate text-[9px] font-black uppercase tracking-widest text-primary">Live Now</p>
+                  <p className="truncate text-xs font-semibold text-success">Ao vivo</p>
                   <p className="truncate text-xs font-bold text-foreground">{sendingStatus.statusMessage || 'Enviando...'}</p>
                   <div className="mt-0.5 flex items-center gap-2">
                     <div className="h-1 w-16 overflow-hidden rounded-full bg-muted">
                       <motion.div className="h-full bg-primary" animate={{ width: `${campaignProgress.percent}%` }} />
                     </div>
-                    <span className="text-[9px] font-bold tabular-nums text-muted-foreground">{campaignProgress.percent}%</span>
+                    <span className="text-xs font-semibold tabular-nums text-muted-foreground">{campaignProgress.percent}%</span>
                   </div>
                 </div>
               </div>
@@ -125,9 +125,9 @@ export function CampaignIntroStep({
                   <Calendar className="h-5 w-5" />
                 </div>
                 <div className="overflow-hidden leading-tight">
-                  <p className="truncate text-[9px] font-black uppercase tracking-widest text-muted-foreground">Agendamentos</p>
+                  <p className="truncate text-xs font-semibold text-muted-foreground">Agendamentos</p>
                   <p className="text-xs font-bold text-foreground">{activeSchedules.length} {activeSchedules.length === 1 ? 'pendente' : 'pendentes'}</p>
-                  <p className="mt-0.5 whitespace-nowrap text-[9px] font-medium text-muted-foreground">Próximo: {formatScheduleTime(activeSchedules[0].scheduledFor)}</p>
+                  <p className="mt-0.5 whitespace-nowrap text-xs text-muted-foreground">Próximo: {formatScheduleTime(activeSchedules[0].scheduledFor)}</p>
                 </div>
               </div>
               <ChevronRight className="ml-1 h-3 w-3 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />

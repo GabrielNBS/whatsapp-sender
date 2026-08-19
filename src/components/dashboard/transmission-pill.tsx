@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
+import { useTransmissionStore } from '@/stores/transmission-store';
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, ChevronUp, ChevronDown, X, Users, CheckCircle, AlertTriangle } from "lucide-react";
 import { useState, useCallback } from "react";
@@ -9,7 +9,7 @@ import { getCampaignProgress } from '@/lib/campaign-progress';
 
 export function TransmissionPill() {
     const { isSending, sentCount, failedCount, totalContacts, statusMessage } =
-        useAppStore((s) => s.sendingStatus);
+        useTransmissionStore((s) => s.sendingStatus);
     const [expanded, setExpanded] = useState(false);
     // Track which campaign was dismissed by its totalContacts; resets for new campaigns
     const [dismissedKey, setDismissedKey] = useState<number | null>(null);
@@ -34,13 +34,15 @@ export function TransmissionPill() {
                 className="fixed bottom-6 right-6 z-50"
             >
                 <div className={cn(
-                    "bg-card/95 backdrop-blur-xl border border-border/50 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300",
+                    "overflow-hidden rounded-xl border border-border bg-card shadow-lg",
                     expanded ? "w-80" : "w-auto"
                 )}>
                     {/* Compact Pill */}
                     <button
                         onClick={() => setExpanded(!expanded)}
-                        className="flex items-center gap-3 px-4 py-3 w-full hover:bg-muted/50 transition-colors"
+                        className="flex min-h-12 w-full items-center gap-3 px-4 py-3 hover:bg-muted/50"
+                        aria-expanded={expanded}
+                        aria-label={expanded ? 'Recolher progresso do envio' : 'Expandir progresso do envio'}
                     >
                         {/* Animated send icon */}
                         <div className="relative">
@@ -98,7 +100,7 @@ export function TransmissionPill() {
                                     {/* Full progress bar */}
                                     <div className="space-y-1.5">
                                         <div className="flex justify-between items-center">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Progresso</p>
+                                            <p className="text-xs font-semibold text-muted-foreground">Progresso</p>
                                             <p className="text-xs text-muted-foreground font-medium">
                                                 {remaining} restantes
                                             </p>
@@ -117,17 +119,17 @@ export function TransmissionPill() {
                                         <div className="bg-muted/50 rounded-xl p-2.5 text-center">
                                             <Users className="w-3.5 h-3.5 mx-auto text-muted-foreground mb-1" />
                                             <p className="text-lg font-bold tabular-nums">{totalContacts}</p>
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">Total</p>
+                                            <p className="text-xs font-medium text-muted-foreground">Total</p>
                                         </div>
                                         <div className="bg-success/5 rounded-xl p-2.5 text-center">
                                             <CheckCircle className="w-3.5 h-3.5 mx-auto text-success mb-1" />
                                             <p className="text-lg font-bold tabular-nums text-success">{sentCount}</p>
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">Enviados</p>
+                                            <p className="text-xs font-medium text-muted-foreground">Enviados</p>
                                         </div>
                                         <div className="bg-destructive/5 rounded-xl p-2.5 text-center">
                                             <AlertTriangle className="w-3.5 h-3.5 mx-auto text-destructive mb-1" />
                                             <p className="text-lg font-bold tabular-nums text-destructive">{failedCount}</p>
-                                            <p className="text-[9px] font-bold text-muted-foreground uppercase">Falhas</p>
+                                            <p className="text-xs font-medium text-muted-foreground">Falhas</p>
                                         </div>
                                     </div>
 
@@ -141,7 +143,7 @@ export function TransmissionPill() {
                                     {/* Dismiss */}
                                     <button
                                         onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
-                                        className="w-full text-[10px] font-bold text-muted-foreground hover:text-foreground uppercase tracking-widest py-1 transition-colors flex items-center justify-center gap-1"
+                                        className="flex min-h-10 w-full items-center justify-center gap-1 rounded-lg py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
                                     >
                                         <X className="w-3 h-3" />
                                         Minimizar

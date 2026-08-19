@@ -5,20 +5,20 @@ import { DashboardShell } from '@/components/dashboard/dashboard-shell';
 import { NavigationProvider } from '@/hooks/use-navigation';
 import { GlobalSheetProvider } from '@/components/dashboard/global-sheet-provider';
 import { GlobalSheet } from '@/components/dashboard/global-sheet';
-import { ActionMenu } from '@/components/dashboard/action-menu';
 import { TransmissionPill } from '@/components/dashboard/transmission-pill';
-import { NotificationBell } from '@/components/dashboard/notification-bell';
 import { useSendPolling } from '@/hooks/use-send-polling';
 import { useSchedulePolling } from '@/hooks/use-schedule-polling';
 import { useContactHydration } from '@/hooks/use-contact-hydration';
-import { useAppStore } from '@/lib/store';
+import { usePreferencesStore } from '@/stores/preferences-store';
 import { DebugTransmissionMenu } from '@/components/dashboard/debug-transmission-menu';
 import { PersonalAuthGate } from '@/components/personal-auth-gate';
+import { DashboardHeader } from '@/components/dashboard/dashboard-header';
+import { sonnerFeedback } from '@/presentation/feedback';
 
 function PollingManager() {
   useContactHydration();
-  useSendPolling();
-  useSchedulePolling();
+  useSendPolling(sonnerFeedback);
+  useSchedulePolling(sonnerFeedback);
   return null;
 }
 
@@ -27,13 +27,14 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const devMode = useAppStore(state => state.devMode);
+  const devMode = usePreferencesStore(state => state.devMode);
 
   return (
     <PersonalAuthGate><NavigationProvider>
       <DashboardShell>
         <GlobalSheetProvider>
-          <div className="flex h-dvh min-h-0 overflow-hidden bg-muted/20 relative">
+          <div className="relative flex h-dvh min-h-0 flex-col overflow-hidden bg-background">
+            <DashboardHeader />
             <main className="min-w-0 flex-1 overflow-auto overscroll-contain">
               <div className="container mx-auto h-full min-h-0 max-w-7xl p-3 sm:p-4 lg:p-6">
                 <DashboardContent>
@@ -41,10 +42,6 @@ export default function DashboardLayout({
                 </DashboardContent>
               </div>
             </main>
-            <div className="fixed right-3 top-3 z-40 flex flex-col gap-2 sm:right-4 sm:top-4 sm:gap-3 lg:right-6 lg:top-6">
-              <NotificationBell />
-              <ActionMenu />
-            </div>
             <GlobalSheet />
             <TransmissionPill />
             <PollingManager />

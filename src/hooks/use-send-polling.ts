@@ -1,8 +1,8 @@
 'use client';
 
 import { useRef, useCallback, useEffect } from 'react';
-import { toast } from 'sonner';
-import { useAppStore } from '@/lib/store';
+import type { FeedbackPort } from '@/presentation/feedback';
+import { useTransmissionStore } from '@/stores/transmission-store';
 import { LogType } from '@/lib/types';
 import { useGlobalSheet } from '@/components/dashboard/global-sheet-provider';
 import { useAppLogger } from '@/hooks/use-app-logger';
@@ -28,11 +28,11 @@ const ACTIVE_POLLING_INTERVAL_MS = 2_000;
 const IDLE_POLLING_INTERVAL_MS = 10_000;
 
 /** Single global poller mounted by the dashboard layout. */
-export function useSendPolling() {
-  const setSendingStatus = useAppStore((state) => state.setSendingStatus);
-  const pauseSending = useAppStore((state) => state.pauseSending);
-  const finishSending = useAppStore((state) => state.finishSending);
-  const isSending = useAppStore((state) => state.sendingStatus.isSending);
+export function useSendPolling(feedback: FeedbackPort) {
+  const setSendingStatus = useTransmissionStore((state) => state.setSendingStatus);
+  const pauseSending = useTransmissionStore((state) => state.pauseSending);
+  const finishSending = useTransmissionStore((state) => state.finishSending);
+  const isSending = useTransmissionStore((state) => state.sendingStatus.isSending);
   const { openSheet } = useGlobalSheet();
   const addLog = useAppLogger();
 
@@ -110,7 +110,7 @@ export function useSendPolling() {
 
         if (status.failedCount > 0) void hydrateFailures();
         if (prevIsSendingRef.current) {
-          toast.success('Transmissão finalizada!', {
+          feedback.success('Transmissão finalizada!', {
             description: `${status.sentCount || 0} mensagens enviadas com sucesso.`,
             action: { label: 'Ver Histórico', onClick: () => openSheet('history') },
           });
@@ -136,7 +136,7 @@ export function useSendPolling() {
       }
 
       if (!prevIsSendingRef.current) {
-        toast.success('Transmissão iniciada!', { description: 'O sistema começou a enviar as mensagens.' });
+        feedback.success('Transmissão iniciada!', { description: 'O sistema começou a enviar as mensagens.' });
         prevIsSendingRef.current = true;
       }
       setSendingStatus({
@@ -156,7 +156,7 @@ export function useSendPolling() {
     } finally {
       inFlightRef.current = false;
     }
-  }, [addLog, cleanupPolling, finishSending, getStatus, hydrateFailures, openSheet, pauseSending, setSendingStatus]);
+  }, [addLog, cleanupPolling, feedback, finishSending, getStatus, hydrateFailures, openSheet, pauseSending, setSendingStatus]);
 
   const startPolling = useCallback(() => {
     if (pollIntervalRef.current) return;

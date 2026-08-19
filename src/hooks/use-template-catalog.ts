@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { templatesApi, TemplateCatalogItem } from '@/services/templates/templatesApi';
+import { useTemplateRevisionStore } from '@/stores/template-revision-store';
 
 export function useTemplateCatalog() {
+  const templateRevision = useTemplateRevisionStore((state) => state.revision);
   const [templates, setTemplates] = useState<TemplateCatalogItem[]>([]);
 
   useEffect(() => {
@@ -19,18 +21,10 @@ export function useTemplateCatalog() {
 
     void fetchTemplates();
 
-    // Ouvir eventos de atualização de templates disparados por outros componentes
-    const handleUpdate = () => {
-      fetchTemplates();
-    };
-
-    window.addEventListener('templates-updated', handleUpdate);
-
     return () => {
       canceled = true;
-      window.removeEventListener('templates-updated', handleUpdate);
     };
-  }, []);
+  }, [templateRevision]);
 
   return {
     templates,

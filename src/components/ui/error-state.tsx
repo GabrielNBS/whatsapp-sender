@@ -36,14 +36,14 @@ export function ErrorState({
 
   return (
     <div className={`flex items-center justify-center w-full p-6 ${minHeight}`}>
-      <Card className="w-full max-w-md border-destructive/20 shadow-lg">
+      <Card className="w-full max-w-md border-destructive/20 shadow-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
-              <AlertTriangle className="w-10 h-10 text-red-600 dark:text-red-400" />
+            <div className="rounded-full bg-destructive/10 p-3">
+              <AlertTriangle className="h-10 w-10 text-destructive" />
             </div>
           </div>
-          <CardTitle className="text-xl text-red-700 dark:text-red-400">
+          <CardTitle className="text-xl text-foreground">
             {title}
           </CardTitle>
           <CardDescription className="text-base mt-2">
@@ -68,7 +68,7 @@ export function ErrorState({
           {(retryAction || resetAction) && (
             <Button onClick={handleRetry} variant="default">
               <RefreshCcw className="w-4 h-4 mr-2" />
-              Tentar Novamente
+                Tentar novamente
             </Button>
           )}
         </CardFooter>

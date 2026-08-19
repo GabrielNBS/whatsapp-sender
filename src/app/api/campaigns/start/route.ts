@@ -3,6 +3,7 @@ import { apiHandler } from '@/lib/api-handler';
 import { CampaignCommandService } from '@/server/services/CampaignCommandService';
 import { startCampaignSchema } from '@/server/validators/campaigns';
 import { ValidationError } from '@/lib/api-errors';
+import { getCurrentWorkspaceId } from '@/server/workspace';
 
 /**
  * POST /api/campaigns/start
@@ -17,7 +18,7 @@ export const POST = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Parâmetros de início de campanha inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  const campaign = await CampaignCommandService.startCampaign(validation.data);
+  const campaign = await CampaignCommandService.startCampaign(validation.data, getCurrentWorkspaceId());
 
   return NextResponse.json({
     success: true,

@@ -1,14 +1,14 @@
 import { prisma } from '@/lib/db';
 import { Prisma } from '@prisma/client';
-import { ReportConfigInput } from '../validators/reports';
+import type { ReportConfigCommand } from '@/domain/contracts';
 import { DEFAULT_CONFIG_ID } from '@/constants/domain';
-import { getCurrentWorkspaceId, getWorkspaceScopedId } from '@/server/workspace';
+import { getWorkspaceScopedId } from '@/server/workspace';
 
 export const ReportConfigService = {
   /**
    * Obtém a configuração de relatórios ativa, criando o registro padrão caso não exista.
    */
-  async getConfig(workspaceId = getCurrentWorkspaceId()) {
+  async getConfig(workspaceId: string) {
     let config = await prisma.reportConfig.findUnique({
       where: { workspaceId },
       include: { recipients: true },
@@ -33,7 +33,7 @@ export const ReportConfigService = {
   /**
    * Atualiza as configurações de relatórios restringindo a alteração aos campos permitidos.
    */
-  async updateConfig(data: ReportConfigInput, workspaceId = getCurrentWorkspaceId()) {
+  async updateConfig(data: ReportConfigCommand, workspaceId: string) {
     // Whitelist explícita de campos (evita mass assignment - API-009)
     const updateData: Prisma.ReportConfigUpdateInput = {};
     if (data.sendImmediate !== undefined) updateData.sendImmediate = data.sendImmediate;

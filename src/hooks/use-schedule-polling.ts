@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
-import { toast } from 'sonner';
+import type { FeedbackPort } from '@/presentation/feedback';
 import { useAppLogger } from '@/hooks/use-app-logger';
 import { refreshScheduleStore } from '@/lib/schedule-store';
 
 const SCHEDULE_POLLING_INTERVAL_MS = 10_000;
 
-export function useSchedulePolling() {
+export function useSchedulePolling(feedback: FeedbackPort) {
   const addLog = useAppLogger();
   const previousPendingIdsRef = useRef(new Set<string>());
   const toastedPausedIdsRef = useRef(new Set<string>());
@@ -35,7 +35,7 @@ export function useSchedulePolling() {
 
         if ((batch.paused ?? 0) > 0 && !toastedPausedIdsRef.current.has(batch.batchId)) {
           toastedPausedIdsRef.current.add(batch.batchId);
-          toast(`Campanha "${batch.batchName}" foi interrompida com ${batch.paused} pendências.`, {
+          feedback.notify(`Campanha "${batch.batchName}" foi interrompida com ${batch.paused} pendências.`, {
             duration: Infinity,
           });
         }
@@ -47,7 +47,7 @@ export function useSchedulePolling() {
     } finally {
       inFlightRef.current = false;
     }
-  }, [addLog]);
+  }, [addLog, feedback]);
 
   useEffect(() => {
     void refresh();

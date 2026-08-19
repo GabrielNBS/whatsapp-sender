@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import whatsappService from '@/lib/whatsapp';
 import { apiHandler } from '@/lib/api-handler';
+import { getWhatsAppApplicationService } from '@/server/services/service-factory';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
  * Retorna o status atual do WhatsApp. Somente leitura.
  */
 export const GET = apiHandler(async () => {
-  const status = whatsappService.getStatus();
+  const status = getWhatsAppApplicationService().getStatus();
 
   const response = NextResponse.json(status);
   

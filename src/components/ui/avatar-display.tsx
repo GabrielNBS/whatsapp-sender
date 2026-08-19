@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
-import { useAppStore } from '@/lib/store';
 import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAvatar } from '@/hooks/use-avatar';
 
 interface AvatarDisplayProps {
   phone?: string;
@@ -11,14 +11,13 @@ interface AvatarDisplayProps {
 }
 
 export function AvatarDisplay({ phone, name, className, showFallbackIcon = false }: AvatarDisplayProps) {
-  const { avatars, fetchAvatar } = useAppStore();
   const [imgError, setImgError] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const elementRef = useRef<HTMLDivElement | HTMLImageElement>(null);
   
   // Normalized phone
   const normalizedPhone = phone?.replace(/\D/g, '') || '';
-  const avatarUrl = normalizedPhone ? avatars[normalizedPhone] : null;
+  const avatarUrl = useAvatar(normalizedPhone, isVisible);
 
   useEffect(() => {
     const element = elementRef.current;
@@ -37,17 +36,6 @@ export function AvatarDisplay({ phone, name, className, showFallbackIcon = false
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-
-  useEffect(() => {
-    if (
-      isVisible && 
-      normalizedPhone && 
-      normalizedPhone.length >= 10 && 
-      avatars[normalizedPhone] === undefined
-    ) {
-      fetchAvatar(normalizedPhone);
-    }
-  }, [isVisible, normalizedPhone, avatars, fetchAvatar]);
 
   const initials = name
     .split(' ')

@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { logger, maskPhone } from "@/lib/logger";
 import { getRequestId } from "./CorrelationId";
-import { getCurrentWorkspaceId } from "@/server/workspace";
 
 export interface IAnalyticsService {
   trackMessageSent(phone: string): Promise<void>;
@@ -10,7 +9,7 @@ export interface IAnalyticsService {
 }
 
 export class AnalyticsService implements IAnalyticsService {
-  constructor(private prisma: PrismaClient, private workspaceId = getCurrentWorkspaceId()) {}
+  constructor(private prisma: PrismaClient, private workspaceId: string) {}
 
   private getLogger(method: string) {
     return logger.child({

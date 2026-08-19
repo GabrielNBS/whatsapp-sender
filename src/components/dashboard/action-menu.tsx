@@ -6,7 +6,7 @@ import {
   PopoverTrigger 
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Users, History, FileText, Settings, LayoutDashboard } from "lucide-react";
+import { Users, History, FileText, Settings, LayoutDashboard, ShieldCheck } from "lucide-react";
 import { useGlobalSheet } from "./global-sheet-provider";
 import { useState } from "react";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -19,7 +19,7 @@ export function ActionMenu() {
   const [open, setOpen] = useState(false);
   const isHydrated = useHydrated();
 
-  const handleAction = (sheet: 'templates' | 'contacts' | 'history' | 'overview' | 'settings') => {
+  const handleAction = (sheet: 'templates' | 'contacts' | 'history' | 'overview' | 'settings' | 'consent-audit') => {
     openSheet(sheet);
     setOpen(false);
   };
@@ -34,13 +34,13 @@ export function ActionMenu() {
           aria-label="Abrir menu de ações"
           title="Ações"
           className={cn(
-              "h-14 w-14 sm:h-12 sm:w-12 rounded-full shadow-2xl hover:shadow-primary/40 transition-all duration-300 bg-neutral-900 text-white border-none group relative overflow-hidden",
-              open && "ring-4 ring-primary/20 scale-95"
+              "size-10 rounded-lg border-none bg-primary text-primary-foreground shadow-none transition-colors hover:bg-primary/90",
+              open && "ring-3 ring-primary/20"
           )}
         >
           <motion.div
               animate={{ rotate: open ? 90 : 0 }}
-              whileHover={{ rotate: 120 }}
+              whileHover={{ rotate: 45 }}
               transition={{ type: "spring", stiffness: 200, damping: 15 }}
               className="flex items-center justify-center w-full h-full"
           >
@@ -51,23 +51,27 @@ export function ActionMenu() {
       <PopoverContent 
         align="end" 
         sideOffset={12} 
-        className="w-56 p-2 rounded-2xl shadow-2xl border-border/50 bg-card/95 backdrop-blur-md"
+        className="w-56 rounded-xl border-border bg-popover p-2 shadow-lg"
       >
         <div className="flex flex-col gap-1">
           <Button variant="ghost" className="justify-start font-medium" onClick={() => handleAction('templates')}>
-            <FileText className="w-4 h-4 mr-2 text-blue-500" />
+            <FileText className="mr-2 size-4 text-primary" />
             Criar template
           </Button>
           <Button variant="ghost" className="justify-start font-medium" onClick={() => handleAction('contacts')}>
-            <Users className="w-4 h-4 mr-2 text-emerald-500" />
+            <Users className="mr-2 size-4 text-primary" />
             Contatos
           </Button>
+          <Button variant="ghost" className="justify-start font-medium" onClick={() => handleAction('consent-audit')}>
+            <ShieldCheck className="mr-2 size-4 text-primary" />
+            Consentimento
+          </Button>
           <Button variant="ghost" className="justify-start font-medium" onClick={() => handleAction('history')}>
-            <History className="w-4 h-4 mr-2 text-indigo-500" />
+            <History className="mr-2 size-4 text-primary" />
             Histórico
           </Button>
           <Button variant="ghost" className="justify-start font-medium" onClick={() => handleAction('overview')}>
-            <LayoutDashboard className="w-4 h-4 mr-2 text-amber-500" />
+            <LayoutDashboard className="mr-2 size-4 text-primary" />
             Visão geral
           </Button>
           <div className="h-px bg-border/50 my-1 mx-2" />

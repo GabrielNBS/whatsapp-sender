@@ -1,14 +1,14 @@
 'use client';
 
 import { useCallback } from 'react';
-import { toast } from 'sonner';
+import type { FeedbackPort } from '@/presentation/feedback';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppLogger } from '@/hooks/use-app-logger';
 import { refreshScheduleStore, useScheduleStore } from '@/lib/schedule-store';
 import { scheduleApi } from '@/services/schedules/scheduleApi';
 import type { ScheduleBatchSummary } from '@/lib/types';
 
-export function useScheduler() {
+export function useScheduler(feedback: FeedbackPort) {
   const { activeSchedules, completedSchedules } = useScheduleStore(useShallow((state) => ({
     activeSchedules: state.activeSchedules,
     completedSchedules: state.completedSchedules,
@@ -37,20 +37,20 @@ export function useScheduler() {
     try {
       if (keep) {
         await scheduleApi.resume(batch.batchId);
-        toast.success('Envio retomado com sucesso!');
+        feedback.success('Envio retomado com sucesso!');
         addLog('Agendamento atrasado atualizado para envio imediato.', 'info');
       } else {
         await scheduleApi.cancel(batch.batchId);
-        toast.info('Envios da campanha cancelados.');
+        feedback.info('Envios da campanha cancelados.');
         addLog('Agendamento atrasado cancelado automaticamente.', 'warning');
       }
       await refreshScheduleStore();
     } catch (error) {
       const message = keep ? 'Erro ao retomar o envio.' : 'Erro ao cancelar agendamento.';
-      toast.error(message);
+      feedback.error(message);
       addLog(error instanceof Error ? error.message : message, 'error');
     }
-  }, [addLog]);
+  }, [addLog, feedback]);
 
   return {
     activeSchedules,

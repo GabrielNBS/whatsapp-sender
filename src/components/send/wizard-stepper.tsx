@@ -17,12 +17,12 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
   return (
     <nav
       aria-label="Progresso do envio"
-      className="mb-4 flex w-full shrink-0 items-center justify-center px-2 sm:mb-6 lg:mb-10 [@media(max-height:700px)]:lg:mb-4"
+      className="mb-4 flex w-full shrink-0 items-center justify-center px-2 sm:mb-6"
     >
       <LayoutGroup id="wizard-stepper">
         <div
           role="list"
-          className="no-scrollbar relative flex max-w-full items-center gap-0.5 overflow-x-auto rounded-full border border-white/20 bg-card/40 p-1 shadow-xl backdrop-blur-xl dark:border-white/10 sm:gap-1"
+          className="no-scrollbar relative flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-border bg-muted/50 p-1"
         >
           {steps.map((step, index) => {
             const isActive =
@@ -36,7 +36,7 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
                   onClick={() => onStepClick?.(step.id)}
                   aria-current={isActive ? "step" : undefined}
                   className={cn(
-                    "group relative flex items-center gap-1.5 rounded-full px-3 py-2.5 outline-none transition-all sm:gap-2.5 sm:px-5",
+                    "group relative flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 outline-none transition-colors sm:px-5",
                     isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                   whileTap={{ scale: 0.98 }}
@@ -44,7 +44,7 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
                   {isActive && (
                     <motion.div
                       layoutId="active-step-pill"
-                      className="absolute inset-0 bg-primary rounded-full shadow-lg shadow-primary/20"
+                      className="absolute inset-0 rounded-lg bg-primary shadow-sm"
                       style={{ zIndex: 0 }}
                       transition={{
                         type: "spring",
@@ -55,15 +55,15 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
                   )}
 
                   <div className="relative z-10 flex items-center gap-1.5 sm:gap-2.5">
-                    <step.icon className={cn("w-3.5 h-3.5", isActive ? "animate-pulse" : "opacity-50 group-hover:opacity-100 transition-opacity")} />
-                    <span className="whitespace-nowrap text-[8px] font-bold uppercase tracking-[0.12rem] sm:text-[9px] sm:tracking-[0.2rem]">
+                    <step.icon className={cn("size-4", !isActive && "opacity-70 group-hover:opacity-100")} />
+                    <span className="whitespace-nowrap text-xs font-semibold sm:text-sm">
                       {step.label}
                     </span>
                   </div>
                 </motion.button>
 
                 {index < steps.length - 1 && (
-                  <div className="mx-1 h-1 w-1 rounded-full bg-muted-foreground/30" aria-hidden="true" />
+                  <div className="mx-0.5 h-px w-3 bg-border sm:w-5" aria-hidden="true" />
                 )}
               </div>
             );

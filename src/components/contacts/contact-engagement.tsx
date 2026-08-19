@@ -12,8 +12,11 @@ import { CheckCheck, Mail, User } from "lucide-react";
 import { 
   EngagementService, 
   EngagementStats,
-  STATUS_CONFIG 
 } from "@/lib/EngagementService";
+import {
+  ENGAGEMENT_BADGE_CONFIG,
+  formatEngagementDates,
+} from '@/components/contacts/engagement-presentation';
 
 interface ContactEngagementProps {
   stats?: EngagementStats;
@@ -22,12 +25,12 @@ interface ContactEngagementProps {
 export function ContactEngagement({ stats }: ContactEngagementProps) {
   // Use service for status calculation
   const status = useMemo(() => EngagementService.getEngagementStatus(stats), [stats]);
-  const config = STATUS_CONFIG[status];
+  const config = ENGAGEMENT_BADGE_CONFIG[status];
   const Icon = config.icon;
   
   // Use service for date formatting
   const formattedDates = useMemo(() => {
-    return EngagementService.getFormattedDates(stats);
+    return formatEngagementDates(stats);
   }, [stats]);
   
   const { sentCount = 0, readCount = 0 } = stats || {};
@@ -107,7 +110,7 @@ export function ContactEngagement({ stats }: ContactEngagementProps) {
                   {/* Último envio */}
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-muted-foreground">Último envio</span>
-                    <span className="text-muted-foreground text-[11px] tabular-nums">
+                    <span className="text-xs tabular-nums text-muted-foreground">
                       {formattedDates.lastSent}
                     </span>
                   </div>
@@ -116,7 +119,7 @@ export function ContactEngagement({ stats }: ContactEngagementProps) {
                   {readCount > 0 && (
                     <div className="flex items-center justify-between gap-4">
                       <span className="text-muted-foreground">Última leitura</span>
-                      <span className="text-muted-foreground text-[11px] tabular-nums">
+                      <span className="text-xs tabular-nums text-muted-foreground">
                         {formattedDates.lastRead}
                       </span>
                     </div>

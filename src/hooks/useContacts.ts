@@ -1,20 +1,21 @@
 import { useCallback } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useContactStore } from '@/stores/contact-store';
 import { useShallow } from 'zustand/react/shallow';
 import { validateContact } from '@/services/contacts/validateContact';
 import { normalizePhone } from '@/services/contacts/normalizePhone';
 import { DEFAULT_GROUP_ID } from '@/constants/contacts';
 import { nanoid } from 'nanoid';
-import { toast } from 'sonner';
+import type { FeedbackPort } from '@/presentation/feedback';
 import * as contactsApi from '@/services/contacts/contactsApi';
+import type { ContactConsentStatus } from '@/lib/types';
 
-export function useContacts() {
+export function useContacts(feedback: FeedbackPort) {
   const {
     contacts, 
     groups, 
     upsertContacts,
     removeContactFromState,
-  } = useAppStore(useShallow((state) => ({
+  } = useContactStore(useShallow((state) => ({
     contacts: state.contacts,
     groups: state.groups,
     upsertContacts: state.upsertContacts,
@@ -25,7 +26,7 @@ export function useContacts() {
     const validation = validateContact(name, number, groupIds, contacts, groups);
     
     if (!validation.isValid) {
-      toast.error(validation.error || 'Erro ao validar contato');
+      feedback.error(validation.error || 'Erro ao validar contato');
       return false;
     }
 
@@ -35,53 +36,66 @@ export function useContacts() {
         groupIds: groupIds.length > 0 ? groupIds : [DEFAULT_GROUP_ID],
       });
       upsertContacts([result.contact]);
-      toast.success('Contato adicionado com sucesso');
+      feedback.success('Contato adicionado com sucesso');
       return true;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Falha ao adicionar contato.');
+      feedback.error(error instanceof Error ? error.message : 'Falha ao adicionar contato.');
       return false;
     }
-  }, [contacts, groups, upsertContacts]);
+  }, [contacts, feedback, groups, upsertContacts]);
 
   const updateContactGroups = useCallback(async (contactId: string, groupIds: string[]): Promise<boolean> => {
     const contact = contacts.find(c => c.id === contactId);
     if (!contact) {
-      toast.error('Contato não encontrado');
+      feedback.error('Contato não encontrado');
       return false;
     }
 
     const validation = validateContact(contact.name, contact.number, groupIds, contacts, groups, contactId);
     if (!validation.isValid) {
-      toast.error(validation.error || 'Erro ao validar contato');
+      feedback.error(validation.error || 'Erro ao validar contato');
       return false;
     }
 
     try {
       const result = await contactsApi.updateContactGroups(contactId, groupIds.length > 0 ? groupIds : [DEFAULT_GROUP_ID]);
       upsertContacts([result.contact]);
-      toast.success('Contato atualizado com sucesso');
+      feedback.success('Contato atualizado com sucesso');
       return true;
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Falha ao atualizar contato.');
+      feedback.error(error instanceof Error ? error.message : 'Falha ao atualizar contato.');
       return false;
     }
-  }, [contacts, groups, upsertContacts]);
+  }, [contacts, feedback, groups, upsertContacts]);
 
   const deleteContact = useCallback(async (id: string) => {
     try {
       const result = await contactsApi.deleteContact(id);
       removeContactFromState(result.deletedContactId);
-      toast.success('Contato excluído com sucesso');
+      feedback.success('Contato excluído com sucesso');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Falha ao excluir contato.');
+      feedback.error(error instanceof Error ? error.message : 'Falha ao excluir contato.');
     }
-  }, [removeContactFromState]);
+  }, [feedback, removeContactFromState]);
+
+  const updateContactConsent = useCallback(async (contactId: string, consentStatus: ContactConsentStatus): Promise<boolean> => {
+    try {
+      const result = await contactsApi.updateContactConsent(contactId, consentStatus);
+      upsertContacts([result.contact]);
+      feedback.success(consentStatus === 'OPTED_OUT' ? 'Opt-out registrado. O contato não receberá novos envios.' : 'Consentimento atualizado.');
+      return true;
+    } catch (error) {
+      feedback.error(error instanceof Error ? error.message : 'Falha ao atualizar consentimento.');
+      return false;
+    }
+  }, [feedback, upsertContacts]);
 
   return {
     contacts,
     groups,
     addContact,
     updateContactGroups,
+    updateContactConsent,
     deleteContact,
   };
 }

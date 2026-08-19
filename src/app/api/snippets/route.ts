@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Prisma } from '@prisma/client';
-import { prisma } from '@/lib/db';
 import { apiHandler } from '@/lib/api-handler';
 import { createSnippetSchema } from '@/server/validators/snippets';
-import { ValidationError, NotFoundError } from '@/lib/api-errors';
+import { ValidationError } from '@/lib/api-errors';
 import { z } from 'zod';
 import { getCurrentWorkspaceId } from '@/server/workspace';
+import { snippetService } from '@/server/services/service-factory';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,12 +13,7 @@ export const dynamic = 'force-dynamic';
  * Lista todos os snippets cadastrados.
  */
 export const GET = apiHandler(async () => {
-  const workspaceId = getCurrentWorkspaceId();
-  const snippets = await prisma.snippet.findMany({
-    where: { workspaceId },
-    orderBy: { trigger: 'asc' }
-  });
-  return NextResponse.json(snippets);
+  return NextResponse.json(await snippetService.list(getCurrentWorkspaceId()));
 }, { routeName: '/api/snippets (GET)', requireAuth: true });
 
 /**
@@ -35,17 +29,7 @@ export const POST = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('Dados do snippet inválidos.', validation.error.flatten().fieldErrors);
   }
 
-  let { trigger } = validation.data;
-  const { content } = validation.data;
-  if (!trigger.startsWith('/')) {
-    trigger = '/' + trigger;
-  }
-
-  const snippet = await prisma.snippet.create({
-    data: { workspaceId, trigger, content }
-  });
-
-  return NextResponse.json(snippet, { status: 201 });
+  return NextResponse.json(await snippetService.create(validation.data, workspaceId), { status: 201 });
 }, { routeName: '/api/snippets (POST)', requireAuth: true });
 
 /**
@@ -62,17 +46,7 @@ export const DELETE = apiHandler(async (req: NextRequest) => {
     throw new ValidationError('ID do snippet inválido.', validation.error.flatten().fieldErrors);
   }
 
-  try {
-    await prisma.snippet.delete({
-      where: { id: validation.data, workspaceId }
-    });
-  } catch (error: unknown) {
-    // P2025 é o código do Prisma para "Record not found"
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      throw new NotFoundError('Snippet não encontrado.');
-    }
-    throw error;
-  }
+  await snippetService.delete(validation.data, workspaceId);
 
   return NextResponse.json({ success: true });
 }, { routeName: '/api/snippets (DELETE)', requireAuth: true });

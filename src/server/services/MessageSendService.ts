@@ -1,19 +1,20 @@
 import whatsappService from "@/lib/whatsapp";
-import { SendMessageInput } from "../validators/messages";
+import type { SendMessageCommand } from '@/domain/contracts';
 import { normalizePhone } from "@/services/contacts/normalizePhone";
 import { ValidationError, ApiError } from "@/lib/api-errors";
 import { beginIdempotentOperation } from "@/lib/idempotency";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { API_RATE_LIMITS } from "@/constants/api";
-import { getCurrentWorkspaceId } from "@/server/workspace";
+import { getContactConsentService } from "@/server/services/ContactConsentService";
 
 export const MessageSendService = {
-  async sendMessage(data: SendMessageInput, clientIp: string) {
-    const workspaceId = getCurrentWorkspaceId();
+  async sendMessage(data: SendMessageCommand, clientIp: string, workspaceId: string) {
     const normalized = normalizePhone(data.phone);
     if (normalized.length < 10 || normalized.length > 15) {
       throw new ValidationError("O numero de telefone deve conter entre 10 e 15 digitos numericos.");
     }
+
+    await getContactConsentService().assertRecipientsCanBeMessaged([{ name: data.phone, number: normalized }], workspaceId);
 
     const reservation = await beginIdempotentOperation(workspaceId, data.idempotencyKey);
     let messageSent = false;

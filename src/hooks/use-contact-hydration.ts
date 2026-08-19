@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useAppStore } from '@/lib/store';
+import { useContactStore } from '@/stores/contact-store';
 import { loadContacts } from '@/services/contacts/contactsApi';
 
 export function useContactHydration() {
-  const replaceContactState = useAppStore((state) => state.replaceContactState);
+  const replaceContactState = useContactStore((state) => state.replaceContactState);
   const hydratedRef = useRef(false);
 
   useEffect(() => {

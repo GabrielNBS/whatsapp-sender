@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import whatsappService from '@/lib/whatsapp';
 import { apiHandler } from '@/lib/api-handler';
+import { getWhatsAppApplicationService } from '@/server/services/service-factory';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,10 +9,7 @@ export const dynamic = 'force-dynamic';
  * Retorna o QR Code e status do WhatsApp. Somente leitura.
  */
 export const GET = apiHandler(async () => {
-  const qr = whatsappService.getQrCode();
-  const status = whatsappService.getStatus();
-
-  const response = NextResponse.json({ qr, status });
+  const response = NextResponse.json(getWhatsAppApplicationService().getConnectionSnapshot());
   
   // Cache-Control explícito no-store (API-012)
   response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');

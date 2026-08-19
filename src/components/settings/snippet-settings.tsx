@@ -65,28 +65,30 @@ export function SnippetSettings() {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Command className="w-5 h-5 text-muted-foreground" />
-          Snippets de Texto
+          Snippets de texto
         </h3>
       </div>
 
       <div className="grid gap-4 md:grid-cols-[1fr_2fr_auto] items-end">
         <div className="space-y-2">
-          <Label>Gatilho (ex: /pix)</Label>
+          <Label htmlFor="snippet-trigger">Gatilho (ex.: /pix)</Label>
           <Input
+            id="snippet-trigger"
             placeholder="/atalho"
             value={trigger}
             onChange={(e) => setTrigger(e.target.value)}
           />
         </div>
         <div className="space-y-2">
-          <Label>Conteúdo do Texto</Label>
+          <Label htmlFor="snippet-content">Conteúdo do texto</Label>
           <Input
+            id="snippet-content"
             placeholder="Texto que será inserido..."
             value={content}
             onChange={(e) => setContent(e.target.value)}
           />
         </div>
-        <Button onClick={handleCreate} disabled={isCreating}>
+        <Button onClick={handleCreate} disabled={isCreating} aria-label="Criar snippet">
           {isCreating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
         </Button>
       </div>
@@ -106,18 +108,19 @@ export function SnippetSettings() {
                 className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border group"
               >
                 <div className="flex items-center gap-4">
-                  <code className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                  <code className="rounded bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
                     {snippet.trigger}
                   </code>
-                  <span className="text-sm text-gray-600 truncate max-w-[300px]">
+                  <span className="max-w-[300px] truncate text-sm text-muted-foreground">
                     {snippet.content}
                   </span>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-10 w-10 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   onClick={() => handleDelete(snippet.id)}
+                  aria-label={`Remover snippet ${snippet.trigger}`}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
