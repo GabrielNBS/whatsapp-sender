@@ -171,6 +171,79 @@
   }
 }
 
+@keyframes logo-fill-up {
+  0%, 8% {
+    clip-path: inset(100% 0 0 0);
+  }
+  68%, 84% {
+    clip-path: inset(0 0 0 0);
+  }
+  100% {
+    clip-path: inset(100% 0 0 0);
+  }
+}
+
+@keyframes logo-fill-wave {
+  0%, 8% {
+    opacity: 0;
+    transform: translateY(2.5rem) scaleX(0.72);
+  }
+  16% {
+    opacity: 0.75;
+  }
+  68% {
+    opacity: 0.45;
+    transform: translateY(-0.1rem) scaleX(1);
+  }
+  76%, 100% {
+    opacity: 0;
+    transform: translateY(-0.25rem) scaleX(0.82);
+  }
+}
+
+.logo-loader {
+  position: relative;
+  width: clamp(12rem, 44vw, 15rem);
+  aspect-ratio: 218 / 40;
+  filter: drop-shadow(0 0.5rem 1.25rem color-mix(in oklch, var(--primary) 12%, transparent));
+}
+
+.logo-loader__base {
+  filter: grayscale(1);
+  opacity: 0.14;
+}
+
+.logo-loader__fill {
+  position: absolute;
+  inset: 0;
+  animation: logo-fill-up 2.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  clip-path: inset(100% 0 0 0);
+}
+
+.logo-loader__wave {
+  position: absolute;
+  right: 1%;
+  bottom: 0;
+  left: 1%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, var(--primary), var(--warning), transparent);
+  box-shadow: 0 0 12px color-mix(in oklch, var(--primary) 55%, transparent);
+  animation: logo-fill-wave 2.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-loader__fill {
+    animation: none;
+    clip-path: inset(0 0 0 0);
+  }
+
+  .logo-loader__wave {
+    display: none;
+  }
+}
+
 /* Animated border for select trigger */
 @keyframes glow-shift {
   0%   {

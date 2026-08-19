@@ -33,12 +33,12 @@ export function CampaignIntroStep({
         {Array.from({ length: 2 }, (_, index) => (
           <motion.div
             key={index}
-            className="absolute inset-0 rounded-full border border-success/20 bg-success/5"
+            className="absolute inset-0 rounded-full border border-primary/20 bg-primary/5"
             animate={{ scale: [1, 2.2], opacity: [0, 0.3, 0] }}
             transition={{ duration: 5, repeat: Infinity, delay: index, ease: 'linear' }}
           />
         ))}
-        <div className="absolute inset-0 rounded-full bg-success/10 blur-2xl" />
+        <div className="absolute inset-0 rounded-full bg-primary/10 blur-2xl" />
 
         <AnimatedMessage className="relative z-10 h-64 w-64 rounded-full" />
       </div>
@@ -46,7 +46,7 @@ export function CampaignIntroStep({
       <div className="space-y-4 lg:space-y-6">
         <h1 className="flex flex-col items-center text-3xl font-medium leading-tight tracking-tight sm:text-4xl">
           <GradientText
-            colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]}
+            colors={['var(--primary)', '#7c3aed', 'var(--primary)', '#a855f7', 'var(--primary)']}
             animationSpeed={4}
             className="mb-1 text-xl font-semibold tracking-tight sm:text-2xl"
           >
@@ -62,7 +62,7 @@ export function CampaignIntroStep({
                     animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                     exit={{ opacity: 0, y: -20, filter: 'blur(4px)' }}
                     transition={{ duration: 0.4, delay: index * 0.02, ease: [0.4, 0, 0.2, 1] }}
-                    className="inline-block px-px py-1 font-bold text-primary"
+                    className="inline-block px-px py-1 font-bold text-accent-foreground"
                   >
                     {char === ' ' ? '\u00A0' : char}
                   </motion.span>
@@ -98,7 +98,7 @@ export function CampaignIntroStep({
           className="mx-auto mt-4 flex w-full max-w-3xl flex-col items-center justify-center gap-3 text-left sm:flex-row"
         >
           {sendingStatus.isSending ? (
-            <button onClick={() => openMonitoring()} className="group flex w-full items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3 transition-all hover:bg-primary/10 sm:max-w-[300px]">
+            <button onClick={() => openMonitoring()} className="group flex w-full items-center justify-between rounded-xl border border-primary/20 bg-primary/5 p-3 transition-all hover:bg-primary/10 sm:max-w-75">
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Activity className="h-5 w-5" />
@@ -119,7 +119,7 @@ export function CampaignIntroStep({
           ) : null}
 
           {activeSchedules.length > 0 ? (
-            <button onClick={() => openMonitoring(activeSchedules[0].batchId)} className="group flex w-full items-center justify-between rounded-xl border border-border bg-card p-3 shadow-xs transition-all hover:bg-muted/50 sm:max-w-[300px]">
+            <button onClick={() => openMonitoring(activeSchedules[0].batchId)} className="group flex w-full items-center justify-between rounded-xl border border-border bg-card p-3 shadow-xs transition-all hover:bg-muted/50 sm:max-w-75">
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:text-primary">
                   <Calendar className="h-5 w-5" />

@@ -1,4 +1,6 @@
-import { motion, LayoutGroup } from "framer-motion";
+'use client';
+
+import { motion, LayoutGroup, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface Step {
@@ -14,6 +16,8 @@ interface WizardStepperProps {
 }
 
 export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepperProps) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <nav
       aria-label="Progresso do envio"
@@ -22,7 +26,7 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
       <LayoutGroup id="wizard-stepper">
         <div
           role="list"
-          className="no-scrollbar relative flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-border bg-muted/50 p-1"
+          className="no-scrollbar relative flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-primary/10 shadow-sm bg-background/50 p-1"
         >
           {steps.map((step, index) => {
             const isActive =
@@ -55,7 +59,44 @@ export function WizardStepper({ currentStep, steps, onStepClick }: WizardStepper
                   )}
 
                   <div className="relative z-10 flex items-center gap-1.5 sm:gap-2.5">
-                    <step.icon className={cn("size-4", !isActive && "opacity-70 group-hover:opacity-100")} />
+                    <motion.span
+                      className="relative flex size-5 items-center justify-center"
+                      initial={false}
+                      animate={
+                        isActive && !reduceMotion
+                          ? {
+                              y: [0, -1.5, 0],
+                              rotate: [0, -4, 4, 0],
+                              scale: [1, 1.12, 1],
+                            }
+                          : { y: 0, rotate: 0, scale: 1 }
+                      }
+                      transition={
+                        isActive && !reduceMotion
+                          ? {
+                              duration: 1.25,
+                              ease: 'easeInOut',
+                              repeat: Infinity,
+                              repeatDelay: 1.1,
+                            }
+                          : { duration: 0.2 }
+                      }
+                    >
+                      {isActive && !reduceMotion ? (
+                        <motion.span
+                          aria-hidden="true"
+                          className="absolute inset-0 rounded-full bg-primary-foreground/20"
+                          animate={{ opacity: [0, 0.55, 0], scale: [0.65, 1.35, 1.5] }}
+                          transition={{ duration: 1.25, ease: 'easeOut', repeat: Infinity, repeatDelay: 1.1 }}
+                        />
+                      ) : null}
+                      <step.icon
+                        className={cn(
+                          "relative z-10 size-4",
+                          !isActive && "opacity-70 group-hover:opacity-100"
+                        )}
+                      />
+                    </motion.span>
                     <span className="whitespace-nowrap text-xs font-semibold sm:text-sm">
                       {step.label}
                     </span>

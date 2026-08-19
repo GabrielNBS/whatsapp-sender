@@ -50,6 +50,9 @@ export const TIMING = {
    * Tempo de espera antes de tentar reconectar após desconexão
    */
   RECONNECT_DELAY_MS: 5_000, // 5 segundos
+
+  /** Limite do backoff para evitar loop agressivo durante indisponibilidade. */
+  RECONNECT_MAX_DELAY_MS: 60_000,
   
   /**
    * Timeout máximo para aguardar o cliente ficar pronto

@@ -51,6 +51,7 @@ export function useDashboardCampaign(feedback: FeedbackPort, confirmAction: Conf
   const initialStep = useSendPageInitialStep();
 
   const [currentStep, setCurrentStep] = useState(initialStep);
+  const [connectionPromptOpen, setConnectionPromptOpen] = useState(false);
   const [scheduledOverlayData, setScheduledOverlayData] = useState<ScheduledCampaignOverlay | null>(null);
   const [isScheduling, setIsScheduling] = useState(false);
   const debugForceScreen = useDebugSimulationStore((state) => state.forceScreen);
@@ -76,6 +77,7 @@ export function useDashboardCampaign(feedback: FeedbackPort, confirmAction: Conf
   const isSending = sendingStatus.isSending;
   const isConnected = connectionStatus === 'connected';
   const campaignProgress = getCampaignProgress(sendingStatus);
+  const connectionPromptVisible = connectionPromptOpen && !isConnected;
 
   const scheduledOverlay = useMemo<ScheduledCampaignOverlay | null>(() => {
     if (scheduledOverlayData) return scheduledOverlayData;
@@ -159,18 +161,23 @@ export function useDashboardCampaign(feedback: FeedbackPort, confirmAction: Conf
   const batchName = singleRecipientConfig?.type === 'contact'
     ? `Envio para ${singleRecipientConfig.name}`
     : `Campanha para ${recipients.length} contatos`;
+  const isNextStepDisabled = currentStep === 1 && recipients.length === 0;
 
   const canNavigateTo = (targetStep: number) => {
     if (targetStep === 3 && (isSending || scheduledOverlay)) return true;
     if (targetStep <= currentStep) return true;
     if (targetStep === 1 && currentStep === 0) return true;
-    if (targetStep === 2) return recipients.length > 0;
+    if (targetStep === 2) return isConnected && recipients.length > 0;
     if (targetStep === 3) return recipients.length > 0 && Boolean(message || selectedFile);
     return false;
   };
 
   const handleNext = () => {
     if (currentStep >= 2) return;
+    if (currentStep === 1 && !isConnected) {
+      setConnectionPromptOpen(true);
+      return;
+    }
     if (canNavigateTo(currentStep + 1)) {
       setCurrentStep((step) => step + 1);
       return;
@@ -243,6 +250,10 @@ export function useDashboardCampaign(feedback: FeedbackPort, confirmAction: Conf
   };
 
   const handleStepperClick = (navStepId: number) => {
+    if (navStepId === 2 && !isConnected) {
+      setConnectionPromptOpen(true);
+      return;
+    }
     if (canNavigateTo(navStepId)) {
       setCurrentStep(navStepId);
       return;
@@ -265,6 +276,7 @@ export function useDashboardCampaign(feedback: FeedbackPort, confirmAction: Conf
     batchName,
     campaignProgress,
     canNavigateTo,
+    connectionPromptOpen: connectionPromptVisible,
     contacts,
     currentStep,
     debugForceScreen,
@@ -277,12 +289,15 @@ export function useDashboardCampaign(feedback: FeedbackPort, confirmAction: Conf
     handleStepperClick,
     handleTemplateSelect,
     hydrated,
-    isConnected,
+    isNextStepDisabled,
     isScheduleMode,
     isScheduling,
     isSending,
     message,
-    openConnectionSettings: () => openSheet('settings', { tab: 'connection' }),
+    openConnectionSettings: () => {
+      setConnectionPromptOpen(false);
+      openSheet('settings', { tab: 'connection' });
+    },
     openMonitoring: (focusedBatchId?: string) => openSheet('monitoring', focusedBatchId ? { focusedBatchId } : undefined),
     openTemplates: () => openSheet('templates'),
     recipientBatches,
@@ -295,6 +310,7 @@ export function useDashboardCampaign(feedback: FeedbackPort, confirmAction: Conf
     selectedFile,
     sendingStatus,
     setCurrentStep,
+    setConnectionPromptOpen,
     setIsScheduleMode,
     setMessage,
     setRecipientConfigs,

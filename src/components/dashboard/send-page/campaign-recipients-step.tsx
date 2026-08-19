@@ -23,7 +23,6 @@ export function CampaignRecipientsStep({
     <div className="premium-scrollbar mx-auto h-full w-full max-w-xl space-y-4 overflow-y-auto px-2 pb-6 pt-2 sm:space-y-6 sm:pb-8 sm:pt-4 lg:px-0">
       <div className="mb-5 space-y-2 sm:mb-8 [@media(max-height:700px)]:mb-4">
         <GradientText
-          colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]}
           animationSpeed={6}
           className="text-xs font-semibold"
         >
@@ -31,7 +30,7 @@ export function CampaignRecipientsStep({
         </GradientText>
         <h2 className="text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
           Para quem vamos{' '}
-          <GradientText colors={["#25D366", "#128C7E", "#25D366", "#34B7F1", "#25D366"]} className="inline font-bold text-foreground" showBorder={false}>
+          <GradientText className="inline font-bold text-foreground" showBorder={false}>
             enviar?
           </GradientText>
         </h2>

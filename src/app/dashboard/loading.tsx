@@ -1,41 +1,10 @@
-import { Skeleton } from '@/components/ui/skeleton';
+import { LogoLoader } from '@/components/logo-loader';
 
 export default function DashboardLoading() {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-9 w-40" />
-        <Skeleton className="h-9 w-28" />
-      </div>
-
-      {/* Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="rounded-xl border bg-card p-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-4 w-4 rounded" />
-            </div>
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-3 w-36" />
-          </div>
-        ))}
-      </div>
-
-      {/* Bottom Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="rounded-xl border bg-card p-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-4" />
-            </div>
-            <Skeleton className="h-8 w-16" />
-            <Skeleton className="h-3 w-20" />
-          </div>
-        ))}
-      </div>
-    </div>
+    <main className="relative flex min-h-[calc(100dvh-4rem)] items-center justify-center overflow-hidden px-6">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,color-mix(in_oklch,var(--primary)_8%,transparent),transparent_45%)]" />
+      <LogoLoader className="relative z-10" label="Carregando seu painel" />
+    </main>
   );
 }

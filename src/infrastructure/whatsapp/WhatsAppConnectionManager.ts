@@ -37,7 +37,11 @@ export class WhatsAppConnectionManager {
   }
 
   markAuthenticationFailure(message: string) {
+    this.authenticated = false;
+    this.ready = false;
     this.status = ConnectionStatus.DISCONNECTED;
+    this.qrCode = null;
+    this.connectedSince = null;
     this.error = message;
   }
 
@@ -112,4 +116,3 @@ export class WhatsAppConnectionManager {
     }
   }
 }
-

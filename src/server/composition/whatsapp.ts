@@ -4,6 +4,7 @@ import { MessageFormatter } from '@/lib/MessageFormatter';
 import { WhatsAppService } from '@/infrastructure/whatsapp/WhatsAppWebJsGateway';
 import { getContactConsentService } from '@/server/services/ContactConsentService';
 import { ConsentIncomingWhatsAppMessageHandler } from '@/server/services/IncomingWhatsAppMessageHandler';
+import { SettingsService } from '@/server/services/SettingsService';
 import { getCurrentWorkspaceId } from '@/server/workspace';
 
 declare global {
@@ -12,10 +13,12 @@ declare global {
 
 function createWhatsAppService() {
   const workspaceId = getCurrentWorkspaceId();
+  const settingsService = new SettingsService(prisma);
   return new WhatsAppService(
     new AnalyticsService(prisma, workspaceId),
     new MessageFormatter(),
     new ConsentIncomingWhatsAppMessageHandler(getContactConsentService(), workspaceId),
+    () => settingsService.getOptOutFooterId(workspaceId),
   );
 }
 

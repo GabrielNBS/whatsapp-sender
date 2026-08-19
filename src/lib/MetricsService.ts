@@ -3,6 +3,7 @@ import { prisma } from "./db";
 export interface RealtimeMetrics {
   connection: {
     status: "connected" | "disconnected" | "initializing";
+    error: string | null;
     uptimeSeconds: number | null;
     connectedSince: Date | null;
   };
@@ -201,6 +202,7 @@ export class MetricsService implements IMetricsService {
   private async getWhatsAppMetrics(): Promise<{
     isAuthenticated: boolean;
     isReady: boolean;
+    error: string | null;
     uptimeSeconds: number | null;
     connectedSince: Date | null;
     polling: {
@@ -226,6 +228,7 @@ export class MetricsService implements IMetricsService {
       return {
         isAuthenticated: status.isAuthenticated,
         isReady: status.isReady,
+        error: status.error,
         uptimeSeconds: uptime.uptimeSeconds,
         connectedSince: uptime.connectedSince,
         polling,
@@ -242,6 +245,7 @@ export class MetricsService implements IMetricsService {
         : whatsappMetrics.isAuthenticated
           ? 'initializing'
           : 'disconnected',
+      error: whatsappMetrics.error,
       uptimeSeconds: whatsappMetrics.uptimeSeconds,
       connectedSince: whatsappMetrics.connectedSince,
     };
@@ -251,6 +255,7 @@ export class MetricsService implements IMetricsService {
     return {
       isAuthenticated: false,
       isReady: false,
+      error: null,
       uptimeSeconds: null,
       connectedSince: null,
       polling: {

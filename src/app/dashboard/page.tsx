@@ -7,7 +7,7 @@ import { CampaignIntroStep } from '@/components/dashboard/send-page/campaign-int
 import { CampaignMessageStep } from '@/components/dashboard/send-page/campaign-message-step';
 import { CampaignRecipientsStep } from '@/components/dashboard/send-page/campaign-recipients-step';
 import { CampaignStatusStep } from '@/components/dashboard/send-page/campaign-status-step';
-import { ConnectionAlert } from '@/components/dashboard/send-page/connection-alert';
+import { ConnectionRequiredPopover } from '@/components/dashboard/send-page/connection-required-popover';
 import { AnimatedContent } from '@/components/ui/animated-content';
 import { SendPageSkeleton } from '@/components/send/send-page-skeleton';
 import { WizardNavigation } from '@/components/send/wizard-navigation';
@@ -37,13 +37,12 @@ export default function SendPage() {
 function SendPageInner() {
     const campaign = useDashboardCampaign(sonnerFeedback, browserConfirmation);
     const {
-        canNavigateTo,
         currentStep,
         handleBack,
         handleNext,
         handleStepperClick,
         hydrated,
-        isConnected,
+        isNextStepDisabled,
         isScheduling,
         isSending,
     } = campaign;
@@ -58,7 +57,7 @@ function SendPageInner() {
             <div className="flex flex-1 min-h-0 min-w-0 gap-3 overflow-hidden sm:gap-4 lg:gap-6">
 
                 <motion.div layout className="flex min-h-0 min-w-0 flex-1 flex-col" transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}>
-                    <div className="relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-xl border border-border bg-card pt-3 shadow-sm sm:pt-4">
+                    <div className="relative flex h-full border border-primary/10 min-h-0  min-w-0 flex-col overflow-hidden rounded-xl bg-card pt-3 shadow-md sm:pt-4">
 
                         {currentStep < 3 && (
                             <WizardStepper
@@ -69,10 +68,6 @@ function SendPageInner() {
                         )}
 
                         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                            {currentStep > 0 && currentStep < 3 && !isConnected ? (
-                                <ConnectionAlert onConnect={campaign.openConnectionSettings} />
-                            ) : null}
-
                             <AnimatedContent activeKey={currentStep} spring="snappy" className="flex min-h-0 flex-1 flex-col">
                                 {currentStep === 0 && (
                                     <CampaignIntroStep
@@ -133,6 +128,12 @@ function SendPageInner() {
                             </AnimatedContent>
                         </div>
 
+                        <ConnectionRequiredPopover
+                            open={campaign.connectionPromptOpen}
+                            onConnect={campaign.openConnectionSettings}
+                            onOpenChange={campaign.setConnectionPromptOpen}
+                        />
+
                         {currentStep === 1 && (
                             <div className="z-10 border-t border-border/50 bg-background/80 p-3 backdrop-blur-sm sm:p-4 sm:pt-2 lg:p-6 lg:pt-2">
                                 <WizardNavigation
@@ -140,7 +141,7 @@ function SendPageInner() {
                                     totalSteps={STEPS.length}
                                     onBack={handleBack}
                                     onNext={handleNext}
-                                    isNextDisabled={!canNavigateTo(currentStep + 1)}
+                                    isNextDisabled={isNextStepDisabled}
                                     isSending={isSending || isScheduling}
                                 />
                             </div>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Settings, Save, Loader2, Link as LinkIcon, AlertCircle, Eye } from "lucide-react";
+import { Settings, Save, Loader2, Link as LinkIcon, AlertCircle, Eye, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,10 +12,23 @@ import { Switch } from "@/components/ui/switch";
 import { usePreferencesStore } from '@/stores/preferences-store';
 import { Code2 } from "lucide-react";
 import { settingsApi } from '@/services/settings/settingsApi';
+import {
+  DEFAULT_OPT_OUT_FOOTER_ID,
+  OPT_OUT_FOOTER_OPTIONS,
+  type OptOutFooterId,
+} from '@/domain/opt-out-footer';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function GeneralSettings() {
   const [defaultLink, setDefaultLink] = useState("");
   const [defaultCTA, setDefaultCTA] = useState("");
+  const [optOutFooterId, setOptOutFooterId] = useState<OptOutFooterId>(DEFAULT_OPT_OUT_FOOTER_ID);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [linkError, setLinkError] = useState("");
@@ -30,6 +43,7 @@ export function GeneralSettings() {
       const data = await settingsApi.get();
       setDefaultLink(data.defaultLink || "");
       setDefaultCTA(data.defaultCTA || "");
+      setOptOutFooterId(data.optOutFooterId || DEFAULT_OPT_OUT_FOOTER_ID);
     } catch (error) {
       console.error("Failed to fetch settings", error);
       toast.error("Erro ao carregar configurações gerais");
@@ -68,7 +82,7 @@ export function GeneralSettings() {
 
     setIsSaving(true);
     try {
-      await settingsApi.update({ defaultLink, defaultCTA });
+      await settingsApi.update({ defaultLink, defaultCTA, optOutFooterId });
       toast.success("Configurações salvas com sucesso");
     } catch (error) {
       console.error("Failed to save settings", error);
@@ -152,12 +166,15 @@ export function GeneralSettings() {
                 Visualização do rodapé
             </div>
             <Card className="p-4 bg-muted/30 border-dashed min-h-[160px] flex items-center justify-center text-sm">
-                {(defaultCTA || defaultLink) ? (
+                {(defaultCTA || defaultLink || optOutFooterId) ? (
                     <div className="w-full space-y-2">
                          <p className="mb-4 text-center text-xs italic text-muted-foreground">...conteúdo da sua mensagem...</p>
                          <div className="space-y-1 rounded-lg border bg-background p-3 shadow-sm">
                              {defaultCTA && <p className="whitespace-pre-wrap text-foreground">{defaultCTA}</p>}
                              {defaultLink && <p className="break-all text-primary underline">{defaultLink}</p>}
+                             <div className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                               {OPT_OUT_FOOTER_OPTIONS.find((option) => option.id === optOutFooterId)?.text}
+                             </div>
                          </div>
                     </div>
                 ) : (
@@ -167,6 +184,35 @@ export function GeneralSettings() {
                 )}
             </Card>
         </div>
+      </div>
+
+      <div className="h-px bg-border/50 my-6" />
+
+      <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <Label htmlFor="opt-out-footer">Rodapé obrigatório de cancelamento</Label>
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Uma destas mensagens será anexada automaticamente ao final de todo envio. Essa proteção não pode ser desativada pela aplicação.
+          </p>
+        </div>
+        <Select value={optOutFooterId} onValueChange={(value) => setOptOutFooterId(value as OptOutFooterId)}>
+          <SelectTrigger id="opt-out-footer" aria-label="Texto obrigatório de cancelamento">
+            <SelectValue placeholder="Selecione o texto do rodapé" />
+          </SelectTrigger>
+          <SelectContent>
+            {OPT_OUT_FOOTER_OPTIONS.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="rounded-lg border border-border bg-background p-3 text-sm text-foreground">
+          {OPT_OUT_FOOTER_OPTIONS.find((option) => option.id === optOutFooterId)?.text}
+        </p>
       </div>
 
       <div className="h-px bg-border/50 my-6" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useContactStore, selectContactsByGroup } from '@/stores/contact-store';
+import { useContactStore, selectEmptyNonDefaultGroups } from '@/stores/contact-store';
 import { useTransmissionStore } from '@/stores/transmission-store';
 import { useScheduler } from "@/hooks/use-scheduler";
 import { useGlobalSheet } from "./global-sheet-provider";
@@ -37,7 +37,7 @@ export function NotificationBell() {
 
     if (!isHydrated) return null;
 
-    const emptyGroups = groups.filter(g => selectContactsByGroup(contacts, g.id).length === 0);
+    const emptyGroups = selectEmptyNonDefaultGroups(groups, contacts);
     const emptyGroupsCount = emptyGroups.length;
     
     const isActive = isSending && totalContacts > 0;

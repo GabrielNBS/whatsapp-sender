@@ -41,7 +41,7 @@ export function AnimatedMessage({ className }: { className?: string }) {
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
-        className="text-primary/20"
+        className="text-primary"
         animate={{ opacity: [0, 1, 0], x: [0, 5, 0] }}
         transition={{ repeat: Infinity, duration: 4 }}
       />

@@ -328,6 +328,7 @@ model Settings {
   workspaceId String   @unique @default("local")
   defaultLink String?
   defaultCTA  String?
+  optOutFooterId String  @default("reply_sair")
   updatedAt   DateTime @updatedAt
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

@@ -1,8 +1,10 @@
 import { requestJson } from '@/services/http/client';
+import type { OptOutFooterId } from '@/domain/opt-out-footer';
 
 export interface GeneralSettingsPayload {
   defaultLink: string;
   defaultCTA: string;
+  optOutFooterId: OptOutFooterId;
 }
 
 export const settingsApi = {

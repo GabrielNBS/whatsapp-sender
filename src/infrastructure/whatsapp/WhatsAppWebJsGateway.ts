@@ -6,7 +6,9 @@ import { resolveWhatsAppAuthPath } from "@/lib/service-paths";
 import { logger } from "@/lib/logger";
 import type { WhatsAppGateway } from '@/server/ports/WhatsAppGateway';
 import type { IncomingWhatsAppMessageHandler } from '@/server/services/IncomingWhatsAppMessageHandler';
+import { appendOptOutFooter, type OptOutFooterId } from '@/domain/opt-out-footer';
 import { WhatsAppConnectionManager } from './WhatsAppConnectionManager';
+import { WhatsAppSessionBusyError, WhatsAppSessionLease } from './WhatsAppSessionLease';
 import {
   MessageAckStatus,
   ConnectionStatus,
@@ -65,6 +67,10 @@ export class WhatsAppService implements WhatsAppGateway {
   private initializationPromise: Promise<void> | null = null;
   private reconnectEnabled = true;
   private waitReadyPromise: Promise<boolean> | null = null;
+  private readonly authPath: string;
+  private sessionLease: WhatsAppSessionLease | null = null;
+  private reconnectAttempt = 0;
+  private lastSessionBusyLog = '';
   
   private metrics: PollingMetrics = {
     pollingCycles: 0,
@@ -87,13 +93,16 @@ export class WhatsAppService implements WhatsAppGateway {
     private analyticsService: IAnalyticsService,
     private messageFormatter: IMessageFormatter,
     private incomingMessageHandler: IncomingWhatsAppMessageHandler,
+    private readonly getOptOutFooterId: () => Promise<OptOutFooterId>,
   ) {
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+
+    this.authPath = resolveWhatsAppAuthPath();
 
     logger.info("[WhatsApp] Inicializando servico WhatsApp...");
     this.client = new Client({
       authStrategy: new LocalAuth({
-        dataPath: resolveWhatsAppAuthPath(),
+        dataPath: this.authPath,
       }),
       puppeteer: {
         headless: true,
@@ -103,7 +112,11 @@ export class WhatsAppService implements WhatsAppGateway {
     });
 
     this.initializeEvents();
-    void this.initializeClient("inicializacao inicial");
+    if (!this.acquireSessionLease()) {
+      this.scheduleReconnect();
+    } else {
+      void this.initializeClient("inicializacao inicial");
+    }
     
     this.startPolling();
   }
@@ -119,6 +132,11 @@ export class WhatsAppService implements WhatsAppGateway {
       return this.initializationPromise;
     }
 
+    if (!this.sessionLease && !this.acquireSessionLease()) {
+      this.scheduleReconnect();
+      return Promise.resolve();
+    }
+
     this.connection.markInitializing();
     logger.info({ reason }, "[WhatsApp] Iniciando cliente WhatsApp");
 
@@ -127,8 +145,14 @@ export class WhatsAppService implements WhatsAppGateway {
     this.initializationPromise = this.client.initialize()
       .catch((err: unknown) => {
         initializationFailed = true;
-        logger.error({ err, reason }, "[WhatsApp] Erro na inicializacao do cliente");
-        this.connection.markDisconnected(this.getConnectionError(err));
+        const connectionError = this.getConnectionError(err);
+        if (this.isSessionBusyError(err)) {
+          logger.warn({ reason }, `[WhatsApp] ${connectionError}`);
+        } else {
+          logger.error({ err, reason }, "[WhatsApp] Erro na inicializacao do cliente");
+        }
+        this.connection.markDisconnected(connectionError);
+        this.releaseSessionLease();
       })
       .finally(() => {
         this.initializationPromise = null;
@@ -138,6 +162,8 @@ export class WhatsAppService implements WhatsAppGateway {
         // sem criar uma segunda instancia concorrente.
         if (initializationFailed && this.reconnectEnabled) {
           this.scheduleReconnect();
+        } else if (!initializationFailed) {
+          this.reconnectAttempt = 0;
         }
       });
 
@@ -156,6 +182,12 @@ export class WhatsAppService implements WhatsAppGateway {
       return;
     }
 
+    const delay = Math.min(
+      TIMING.RECONNECT_DELAY_MS * 2 ** this.reconnectAttempt,
+      TIMING.RECONNECT_MAX_DELAY_MS,
+    );
+    this.reconnectAttempt += 1;
+
     this.reconnectTimeout = setTimeout(() => {
       this.reconnectTimeout = null;
 
@@ -163,9 +195,38 @@ export class WhatsAppService implements WhatsAppGateway {
         return;
       }
 
-      logger.info("[WhatsApp] Tentando reconectar...");
+      logger.info({ delayMs: delay }, "[WhatsApp] Tentando reconectar...");
       void this.initializeClient("reconexao");
-    }, TIMING.RECONNECT_DELAY_MS);
+    }, delay);
+  }
+
+  private acquireSessionLease(): boolean {
+    if (this.sessionLease) return true;
+
+    try {
+      this.sessionLease = WhatsAppSessionLease.acquire(this.authPath);
+      this.lastSessionBusyLog = '';
+      return true;
+    } catch (error: unknown) {
+      const message = this.getConnectionError(error);
+      this.connection.markDisconnected(message);
+
+      if (message !== this.lastSessionBusyLog) {
+        if (error instanceof WhatsAppSessionBusyError) {
+          logger.warn({ lockPath: error.lockPath }, `[WhatsApp] ${message}`);
+        } else {
+          logger.error({ err: error }, `[WhatsApp] ${message}`);
+        }
+        this.lastSessionBusyLog = message;
+      }
+
+      return false;
+    }
+  }
+
+  private releaseSessionLease() {
+    this.sessionLease?.release();
+    this.sessionLease = null;
   }
 
   private initializeEvents() {
@@ -408,11 +469,16 @@ export class WhatsAppService implements WhatsAppGateway {
   }
 
   private getConnectionError(error: unknown): string {
-    if (error instanceof Error && error.message.includes("browser is already running")) {
+    if (this.isSessionBusyError(error)) {
       return "A sessao do WhatsApp ja esta sendo usada por outra instancia da aplicacao. Encerre a outra instancia e recarregue esta pagina.";
     }
 
     return "Nao foi possivel iniciar o WhatsApp Web. Verifique o Chromium e tente novamente.";
+  }
+
+  private isSessionBusyError(error: unknown): boolean {
+    return error instanceof WhatsAppSessionBusyError ||
+      (error instanceof Error && error.message.includes("browser is already running"));
   }
 
   public getStatus() {
@@ -523,7 +589,8 @@ export class WhatsAppService implements WhatsAppGateway {
       }
     }
 
-    const finalMessage = this.messageFormatter.formatMessage(message, number, contactInfo);
+    const formattedMessage = this.messageFormatter.formatMessage(message, number, contactInfo);
+    const finalMessage = appendOptOutFooter(formattedMessage, await this.getOptOutFooterId());
 
     this.debugLog(`Sending to final ID: ${finalId}`);
 
@@ -590,9 +657,12 @@ export class WhatsAppService implements WhatsAppGateway {
     this.clearReconnectTimer();
 
     try {
-      await this.client.logout();
+      if (this.sessionLease) {
+        await this.client.logout();
+      }
     } finally {
       this.connection.markDisconnected();
+      this.releaseSessionLease();
       this.reconnectEnabled = true;
 
       // O evento `disconnected` gerado pelo logout nao agenda outro cliente.

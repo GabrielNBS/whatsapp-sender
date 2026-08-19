@@ -51,6 +51,8 @@ export function QrDisplay() {
   const statusLabel: Record<string, string> = {
     INITIALIZING: 'Preparando conexão',
     CONNECTED: 'WhatsApp conectado',
+    READY: 'WhatsApp conectado',
+    AUTHENTICATED: 'Sincronizando WhatsApp',
     DISCONNECTED: 'WhatsApp desconectado',
     QR_READY: 'Código QR pronto',
   };

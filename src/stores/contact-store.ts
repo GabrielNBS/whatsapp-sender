@@ -49,3 +49,8 @@ export function selectContactsByGroup(contacts: Contact[], groupId: string) {
   return contacts.filter((contact) => contact.groupIds.includes(groupId));
 }
 
+export function selectEmptyNonDefaultGroups(groups: Group[], contacts: Contact[]) {
+  return groups.filter(
+    (group) => group.id !== DEFAULT_GROUP_ID && selectContactsByGroup(contacts, group.id).length === 0,
+  );
+}

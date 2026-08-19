@@ -100,6 +100,7 @@ Os testes de fronteira em `tests/architecture-boundaries.test.ts` impedem depend
 - Todas as APIs exigem a chave pessoal; para requisicoes autenticadas por cookie, operacoes que alteram dados tambem exigem mesma origem.
 - Uma instancia do servico deve controlar uma unica sessao do WhatsApp. Escala horizontal exigira coordenacao externa da fila e das sessoes.
 - Opt-outs recebidos pelo WhatsApp sao capturados enquanto o processo esta ativo. Ainda nao existe uma varredura do historico recebido durante o periodo em que o app esteve fechado.
+- Todo envio da aplicacao recebe obrigatoriamente um rodape de cancelamento no gateway central do WhatsApp. Em Configuracoes > Geral, e possivel escolher uma entre cinco mensagens; nao existe opcao de desativar esse rodape.
 - Agendamentos vencidos sao retomados quando o processo volta, mas permanecem pausados quando estao vencidos ha mais de 15 minutos, como medida de seguranca.
 
 ## Implementacoes futuras
