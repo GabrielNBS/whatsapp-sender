@@ -72,6 +72,10 @@ export function QrDisplay() {
         }
       } catch (error) {
         console.error('Failed to fetch status', error);
+        setQr(null);
+        setStatus('DISCONNECTED');
+        setIsAuthenticated(false);
+        setConnectionError(error instanceof Error ? error.message : 'Não foi possível consultar a conexão do WhatsApp.');
       }
     };
 

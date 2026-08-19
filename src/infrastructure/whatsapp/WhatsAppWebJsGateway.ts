@@ -71,6 +71,13 @@ export class WhatsAppService implements WhatsAppGateway {
   private sessionLease: WhatsAppSessionLease | null = null;
   private reconnectAttempt = 0;
   private lastSessionBusyLog = '';
+  private shutdownPromise: Promise<void> | null = null;
+  private readonly sigintHandler = () => {
+    void this.shutdown('SIGINT').finally(() => process.exit(0));
+  };
+  private readonly sigtermHandler = () => {
+    void this.shutdown('SIGTERM').finally(() => process.exit(0));
+  };
   
   private metrics: PollingMetrics = {
     pollingCycles: 0,
@@ -112,13 +119,27 @@ export class WhatsAppService implements WhatsAppGateway {
     });
 
     this.initializeEvents();
-    if (!this.acquireSessionLease()) {
-      this.scheduleReconnect();
-    } else {
-      void this.initializeClient("inicializacao inicial");
-    }
+    process.once('SIGINT', this.sigintHandler);
+    process.once('SIGTERM', this.sigtermHandler);
+    void this.initializeSession();
     
     this.startPolling();
+  }
+
+  private async initializeSession(): Promise<void> {
+    if (this.acquireSessionLease()) {
+      void this.initializeClient('inicializacao inicial');
+      return;
+    }
+
+    const recovered = await WhatsAppSessionLease.recoverStaleBrowser(this.authPath);
+    if (recovered && this.acquireSessionLease()) {
+      logger.info('[WhatsApp] Chromium órfão recuperado; iniciando nova sessão.');
+      void this.initializeClient('recuperacao de Chromium orfao');
+      return;
+    }
+
+    this.scheduleReconnect();
   }
 
   /**
@@ -227,6 +248,36 @@ export class WhatsAppService implements WhatsAppGateway {
   private releaseSessionLease() {
     this.sessionLease?.release();
     this.sessionLease = null;
+  }
+
+  private async shutdown(signal: NodeJS.Signals): Promise<void> {
+    if (this.shutdownPromise) return this.shutdownPromise;
+
+    this.shutdownPromise = (async () => {
+      this.reconnectEnabled = false;
+      this.clearReconnectTimer();
+      if (this.pollingInterval) {
+        clearTimeout(this.pollingInterval);
+        this.pollingInterval = null;
+      }
+      this.pendingMessages.clear();
+      this.metrics.currentPendingCount = 0;
+
+      try {
+        if (this.sessionLease) {
+          await this.client.destroy();
+        }
+      } catch (error: unknown) {
+        logger.warn({ err: error, signal }, '[WhatsApp] Falha ao encerrar o cliente WhatsApp');
+      } finally {
+        this.connection.markDisconnected();
+        this.releaseSessionLease();
+        process.off('SIGINT', this.sigintHandler);
+        process.off('SIGTERM', this.sigtermHandler);
+      }
+    })();
+
+    return this.shutdownPromise;
   }
 
   private initializeEvents() {
