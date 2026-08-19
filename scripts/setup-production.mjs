@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
+import { createServer } from 'node:net';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const envPath = join(root, '.env');
@@ -106,6 +107,19 @@ function getPort() {
   return port;
 }
 
+async function assertPortAvailable(port) {
+  const probe = createServer();
+
+  try {
+    await new Promise((resolve, reject) => {
+      probe.once('error', reject);
+      probe.listen(port, () => probe.close((error) => error ? reject(error) : resolve()));
+    });
+  } catch (error) {
+    fail(`A porta ${port} ja esta em uso. Encerre a instancia atual antes de executar o setup novamente. ${error instanceof Error ? error.message : ''}`);
+  }
+}
+
 function openBrowser(url) {
   if (process.platform === 'win32') {
     spawn(process.env.ComSpec || 'cmd.exe', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' }).unref();
@@ -134,6 +148,8 @@ async function startAndOpenBrowser() {
   const port = getPort();
   const url = `http://localhost:${port}`;
   const nextCli = join(root, 'node_modules', 'next', 'dist', 'bin', 'next');
+
+  await assertPortAvailable(port);
 
   console.log(`\n[setup] Iniciando aplicacao em ${url}...`);
   const server = spawn(process.execPath, [nextCli, 'start', '-p', String(port)], {

@@ -90,7 +90,7 @@ export function CampaignMessageStep({
                 templateSlot={
                   <div className="flex items-center gap-1">
                     <Select onValueChange={handleTemplateSelect} disabled={isSending}>
-                      <SelectTrigger className="h-9 w-40 gap-2 rounded-lg bg-background text-sm font-semibold">
+                      <SelectTrigger className="h-9 w-40 gap-2 rounded-lg bg-accent-foreground text-secondary text-sm font-semibold">
                         <span className="pointer-events-none text-sm">🪄</span>
                         <SelectValue placeholder="Usar Modelo" />
                       </SelectTrigger>

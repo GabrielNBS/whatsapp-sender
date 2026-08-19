@@ -122,13 +122,23 @@ export class WhatsAppService implements WhatsAppGateway {
     this.connection.markInitializing();
     logger.info({ reason }, "[WhatsApp] Iniciando cliente WhatsApp");
 
+    let initializationFailed = false;
+
     this.initializationPromise = this.client.initialize()
       .catch((err: unknown) => {
+        initializationFailed = true;
         logger.error({ err, reason }, "[WhatsApp] Erro na inicializacao do cliente");
         this.connection.markDisconnected(this.getConnectionError(err));
       })
       .finally(() => {
         this.initializationPromise = null;
+
+        // Um Chromium anterior pode liberar o perfil alguns segundos depois
+        // do servidor. Reutilizamos o mesmo cliente e tentamos novamente,
+        // sem criar uma segunda instancia concorrente.
+        if (initializationFailed && this.reconnectEnabled) {
+          this.scheduleReconnect();
+        }
       });
 
     return this.initializationPromise;
