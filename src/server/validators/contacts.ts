@@ -1,10 +1,16 @@
 import { z } from "zod";
 import { DEFAULT_GROUP_ID } from "@/constants/contacts";
+import { GROUP_COLORS, GROUP_ICONS } from '@/constants/group-appearance';
+
+const groupColorSchema = z.enum(GROUP_COLORS);
+const groupIconSchema = z.enum(GROUP_ICONS);
 
 export const contactGroupSnapshotSchema = z.object({
   id: z.string().min(1, "ID do grupo e obrigatorio").trim(),
   name: z.string().min(1, "Nome do grupo e obrigatorio").max(30).trim(),
   description: z.string().max(120).optional().nullable(),
+  color: groupColorSchema.optional(),
+  icon: groupIconSchema.optional(),
 });
 
 export const contactSnapshotItemSchema = z.object({
@@ -38,6 +44,11 @@ export const updateContactSchema = z.object({
 
 export const createContactGroupSchema = contactGroupSnapshotSchema;
 
+export const updateContactGroupSchema = z.object({
+  color: groupColorSchema,
+  icon: groupIconSchema,
+}).strict();
+
 export const importContactsSchema = z.object({
   group: contactGroupSnapshotSchema.optional(),
   contacts: z.array(contactSnapshotItemSchema).min(1).max(5000),
@@ -45,4 +56,5 @@ export const importContactsSchema = z.object({
 
 export type ContactInput = z.infer<typeof contactSnapshotItemSchema>;
 export type ContactGroupInput = z.infer<typeof contactGroupSnapshotSchema>;
+export type UpdateContactGroupInput = z.infer<typeof updateContactGroupSchema>;
 export type UpdateContactInput = z.infer<typeof updateContactSchema>;

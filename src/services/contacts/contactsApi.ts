@@ -1,4 +1,5 @@
-import type { Contact, ContactConsentStatus, Group } from '@/lib/types';
+import type { Contact, ContactConsentStatus, Group, GroupColor, GroupIcon } from '@/lib/types';
+import type { ContactGroupCommand } from '@/domain/contracts';
 import { requestJson } from '@/services/http/client';
 
 export interface ContactsSnapshot {
@@ -84,7 +85,7 @@ export function clearContacts(): Promise<ClearContactsResult> {
   return requestJson<ClearContactsResult>('/api/contacts', { method: 'DELETE' });
 }
 
-export function createGroup(group: Group): Promise<GroupMutationResult> {
+export function createGroup(group: ContactGroupCommand): Promise<GroupMutationResult> {
   return requestJson<GroupMutationResult>('/api/contact-groups', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -98,7 +99,18 @@ export function deleteGroup(groupId: string): Promise<DeleteGroupResult> {
   });
 }
 
-export function importContacts(group: Group | undefined, contacts: Contact[]): Promise<ImportContactsResult> {
+export function updateGroupAppearance(
+  groupId: string,
+  data: { color: GroupColor; icon: GroupIcon },
+): Promise<GroupMutationResult> {
+  return requestJson<GroupMutationResult>(`/api/contact-groups?id=${encodeURIComponent(groupId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function importContacts(group: ContactGroupCommand | undefined, contacts: Contact[]): Promise<ImportContactsResult> {
   return requestJson<ImportContactsResult>('/api/contacts/import', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

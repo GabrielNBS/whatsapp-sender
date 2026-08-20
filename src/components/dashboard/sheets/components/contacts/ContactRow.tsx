@@ -1,6 +1,5 @@
 import { Contact, Group } from '@/lib/types';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { ContactEngagement } from '@/components/contacts/contact-engagement';
@@ -8,6 +7,7 @@ import { formatPhoneNumber } from '@/lib/utils';
 import { AnalyticsRecord } from '@/hooks/useContactAnalytics';
 import type { ContactConsentStatus } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { GroupTag } from '@/components/groups/GroupTag';
 
 interface ContactRowProps {
   contact: Contact;
@@ -38,16 +38,8 @@ export function ContactRow({
       <TableCell>
         <div className="flex gap-1 flex-wrap">
           {contact.groupIds.map((gid) => {
-            const gName = groups.find((g) => g.id === gid)?.name || 'Geral';
-            return (
-              <Badge
-                key={gid}
-                variant="secondary"
-                className="text-xs bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700"
-              >
-                {gName}
-              </Badge>
-            );
+            const group = groups.find((g) => g.id === gid);
+            return group ? <GroupTag key={gid} group={group} compact /> : null;
           })}
         </div>
       </TableCell>

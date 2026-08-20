@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { DEFAULT_GROUP_ID, DEFAULT_GROUP_NAME } from '@/constants/contacts';
+import { DEFAULT_GROUP_COLOR, DEFAULT_GROUP_ICON } from '@/constants/group-appearance';
 import type { Contact, Group } from '@/lib/types';
+import { normalizeGroup } from '@/services/contacts/normalizeGroup';
 
 interface ContactStore {
   groups: Group[];
@@ -17,13 +19,15 @@ const DEFAULT_GROUP: Group = {
   id: DEFAULT_GROUP_ID,
   name: DEFAULT_GROUP_NAME,
   description: 'Lista padrão',
+  color: DEFAULT_GROUP_COLOR,
+  icon: DEFAULT_GROUP_ICON,
 };
 
 export const useContactStore = create<ContactStore>((set) => ({
   groups: [DEFAULT_GROUP],
   contacts: [],
   replaceContactState: (groups, contacts) => set({
-    groups: groups.length > 0 ? groups : [DEFAULT_GROUP],
+    groups: groups.length > 0 ? groups.map(normalizeGroup) : [DEFAULT_GROUP],
     contacts,
   }),
   upsertContacts: (contacts) => set((state) => {
@@ -37,8 +41,8 @@ export const useContactStore = create<ContactStore>((set) => ({
   clearContactsFromState: () => set({ contacts: [] }),
   upsertGroup: (group) => set((state) => ({
     groups: state.groups.some((current) => current.id === group.id)
-      ? state.groups.map((current) => current.id === group.id ? group : current)
-      : [...state.groups, group],
+      ? state.groups.map((current) => current.id === group.id ? normalizeGroup(group) : current)
+      : [...state.groups, normalizeGroup(group)],
   })),
   removeGroupFromState: (groupId) => set((state) => ({
     groups: state.groups.filter((group) => group.id !== groupId),

@@ -39,6 +39,7 @@ export function ContactsSheetContent() {
 
   const {
     addGroup,
+    updateGroupAppearance,
     deleteGroup,
   } = useGroups(sonnerFeedback);
 
@@ -166,6 +167,7 @@ export function ContactsSheetContent() {
               groups={groups}
               contacts={contacts}
               onAddGroup={addGroup}
+              onUpdateGroupAppearance={updateGroupAppearance}
               onDeleteGroup={deleteGroup}
               managingGroup={managingGroup}
               onManageGroupChange={setManagingGroup}

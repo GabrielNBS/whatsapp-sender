@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { apiHandler } from '@/lib/api-handler';
 import { ValidationError } from '@/lib/api-errors';
 import { ContactService } from '@/server/services/ContactService';
-import { createContactGroupSchema } from '@/server/validators/contacts';
+import { createContactGroupSchema, updateContactGroupSchema } from '@/server/validators/contacts';
 import { getCurrentWorkspaceId } from '@/server/workspace';
 
 export const POST = apiHandler(async (req: NextRequest) => {
@@ -18,3 +18,17 @@ export const DELETE = apiHandler(async (req: NextRequest) => {
   if (!groupId) throw new ValidationError('ID do grupo é obrigatório.');
   return NextResponse.json(await ContactService.deleteGroup(groupId, getCurrentWorkspaceId()));
 }, { routeName: '/api/contact-groups (DELETE)' });
+
+export const PATCH = apiHandler(async (req: NextRequest) => {
+  const groupId = req.nextUrl.searchParams.get('id');
+  if (!groupId) throw new ValidationError('ID do grupo é obrigatório.');
+
+  const validation = updateContactGroupSchema.safeParse(await req.json().catch(() => ({})));
+  if (!validation.success) {
+    throw new ValidationError('A aparência do grupo é inválida.', validation.error.flatten().fieldErrors);
+  }
+
+  return NextResponse.json(
+    await ContactService.updateGroupAppearance(groupId, validation.data, getCurrentWorkspaceId()),
+  );
+}, { routeName: '/api/contact-groups (PATCH)' });

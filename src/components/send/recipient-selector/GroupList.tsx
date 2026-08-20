@@ -1,6 +1,8 @@
-import { Users } from 'lucide-react';
 import type { Group } from '@/lib/types';
 import { CommandGroup, CommandItem } from '@/components/ui/command';
+import { GroupIcon } from '@/components/groups/GroupIcon';
+import { GROUP_COLOR_STYLES } from '@/components/groups/group-appearance';
+import { cn } from '@/lib/utils';
 
 interface GroupListProps {
   groups: Group[];
@@ -30,8 +32,8 @@ export function GroupList({ groups, getSelectionOrder, getContactCount, onSelect
             className="flex items-center justify-between cursor-pointer py-2 px-3 rounded-lg mx-1 my-0.5"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-muted/40 rounded-lg flex items-center justify-center text-muted-foreground/60 group-data-[selected=true]:bg-primary/10 group-data-[selected=true]:text-primary transition-colors">
-                <Users className="w-4 h-4" />
+              <div className={cn('flex h-8 w-8 items-center justify-center rounded-lg transition-colors group-data-[selected=true]:ring-2 group-data-[selected=true]:ring-primary/20', GROUP_COLOR_STYLES[group.color].icon)}>
+                <GroupIcon icon={group.icon} className="h-4 w-4" />
               </div>
               <div className="flex flex-col leading-tight">
                 <span className="font-medium text-sm">{group.name}</span>

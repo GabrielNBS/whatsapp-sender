@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Save } from 'lucide-react';
+import { GroupIcon } from '@/components/groups/GroupIcon';
+import { GROUP_COLOR_STYLES } from '@/components/groups/group-appearance';
+import { cn } from '@/lib/utils';
 
 interface EditContactGroupIdDialogProps {
   contact: Contact | null;
@@ -89,6 +92,9 @@ export function EditContactGroupIdDialog({
                         onChange={() => handleToggleGroup(group.id)}
                         className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
                       />
+                      <span className={cn('flex size-6 items-center justify-center rounded-md', GROUP_COLOR_STYLES[group.color].icon)}>
+                        <GroupIcon icon={group.icon} className="size-3" />
+                      </span>
                       <span>{group.name}</span>
                     </label>
                   );

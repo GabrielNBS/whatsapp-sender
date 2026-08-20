@@ -7,6 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { FileSpreadsheet } from 'lucide-react';
 import { ImportTargetType } from '@/hooks/useContactImport';
+import { GroupIcon } from '@/components/groups/GroupIcon';
+import { GROUP_COLOR_STYLES } from '@/components/groups/group-appearance';
+import { cn } from '@/lib/utils';
 
 interface ImportContactsDialogProps {
   isOpen: boolean;
@@ -80,7 +83,12 @@ export function ImportContactsDialog({
                 <SelectContent className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
                   {groups.map((g) => (
                     <SelectItem key={g.id} value={g.id}>
-                      {g.name}
+                      <span className="flex items-center gap-2">
+                        <span className={cn('flex size-6 items-center justify-center rounded-md', GROUP_COLOR_STYLES[g.color].icon)}>
+                          <GroupIcon icon={g.icon} className="size-3" />
+                        </span>
+                        {g.name}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -6,6 +6,7 @@ import { DEFAULT_GROUP_ID } from '@/constants/contacts';
 import { nanoid } from 'nanoid';
 import type { FeedbackPort } from '@/presentation/feedback';
 import * as contactsApi from '@/services/contacts/contactsApi';
+import type { GroupColor, GroupIcon } from '@/lib/types';
 
 export function useGroups(feedback: FeedbackPort) {
   const { 
@@ -20,7 +21,10 @@ export function useGroups(feedback: FeedbackPort) {
     upsertContacts: state.upsertContacts,
   })));
 
-  const addGroup = useCallback(async (name: string): Promise<boolean> => {
+  const addGroup = useCallback(async (
+    name: string,
+    appearance?: { color: GroupColor; icon: GroupIcon },
+  ): Promise<boolean> => {
     const validation = validateGroup(name, groups);
     
     if (!validation.isValid) {
@@ -29,7 +33,11 @@ export function useGroups(feedback: FeedbackPort) {
     }
 
     try {
-      const result = await contactsApi.createGroup({ id: nanoid(), name: name.trim() });
+      const result = await contactsApi.createGroup({
+        id: nanoid(),
+        name: name.trim(),
+        ...appearance,
+      });
       upsertGroup(result.group);
       feedback.success('Grupo criado com sucesso');
       return true;
@@ -38,6 +46,21 @@ export function useGroups(feedback: FeedbackPort) {
       return false;
     }
   }, [feedback, groups, upsertGroup]);
+
+  const updateGroupAppearance = useCallback(async (
+    groupId: string,
+    appearance: { color: GroupColor; icon: GroupIcon },
+  ): Promise<boolean> => {
+    try {
+      const result = await contactsApi.updateGroupAppearance(groupId, appearance);
+      upsertGroup(result.group);
+      feedback.success('Aparência do grupo atualizada');
+      return true;
+    } catch (error) {
+      feedback.error(error instanceof Error ? error.message : 'Falha ao atualizar o grupo.');
+      return false;
+    }
+  }, [feedback, upsertGroup]);
 
   const deleteGroup = useCallback(async (id: string) => {
     if (id === DEFAULT_GROUP_ID) {
@@ -58,6 +81,7 @@ export function useGroups(feedback: FeedbackPort) {
   return {
     groups,
     addGroup,
+    updateGroupAppearance,
     deleteGroup,
   };
 }

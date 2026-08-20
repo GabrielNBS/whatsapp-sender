@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import { Group, Contact } from '@/lib/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Group, Contact, GroupColor, GroupIcon } from '@/lib/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Users, AlertTriangle } from 'lucide-react';
 import { GroupCard } from './GroupCard';
 import { GroupManagementDialog } from '@/components/contacts/group-management-dialog';
+import { GroupCustomizationDialog } from '@/components/groups/GroupCustomizationDialog';
 
 interface GroupsTabProps {
   groups: Group[];
   contacts: Contact[];
-  onAddGroup: (name: string) => Promise<boolean>;
+  onAddGroup: (name: string, appearance: { color: GroupColor; icon: GroupIcon }) => Promise<boolean>;
+  onUpdateGroupAppearance: (groupId: string, appearance: { color: GroupColor; icon: GroupIcon }) => Promise<boolean>;
   onDeleteGroup: (id: string) => Promise<void>;
   managingGroup: Group | null;
   onManageGroupChange: (group: Group | null) => void;
@@ -21,21 +21,14 @@ export function GroupsTab({
   groups,
   contacts,
   onAddGroup,
+  onUpdateGroupAppearance,
   onDeleteGroup,
   managingGroup,
   onManageGroupChange,
 }: GroupsTabProps) {
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
   const [deletingGroup, setDeletingGroup] = useState<Group | null>(null);
-
-  const handleAddGroup = async () => {
-    const success = await onAddGroup(newGroupName);
-    if (success) {
-      setNewGroupName('');
-      setIsCreateOpen(false);
-    }
-  };
+  const [customizingGroup, setCustomizingGroup] = useState<Group | null>(null);
+  const [isCustomizationOpen, setIsCustomizationOpen] = useState(false);
 
   const handleDeleteGroupClick = (group: Group) => {
     const groupContactsCount = contacts.filter((c) => c.groupIds.includes(group.id)).length;
@@ -56,27 +49,16 @@ export function GroupsTab({
   return (
     <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-4">
       <div className="flex justify-start">
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button variant="secondary" size="sm">
-              <Users className="w-4 h-4 mr-2" /> Criar Grupo
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
-            <DialogHeader>
-              <DialogTitle>Novo Grupo</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <Input
-                placeholder="Nome do Grupo"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                className="bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800"
-              />
-              <Button onClick={handleAddGroup}>Criar</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            setCustomizingGroup(null);
+            setIsCustomizationOpen(true);
+          }}
+        >
+          <Users className="w-4 h-4 mr-2" /> Criar Grupo
+        </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -86,6 +68,10 @@ export function GroupsTab({
             group={group}
             contactCount={contacts.filter((c) => c.groupIds.includes(group.id)).length}
             onManageClick={onManageGroupChange}
+            onCustomizeClick={(group) => {
+              setCustomizingGroup(group);
+              setIsCustomizationOpen(true);
+            }}
             onDeleteClick={handleDeleteGroupClick}
           />
         ))}
@@ -95,6 +81,18 @@ export function GroupsTab({
         group={managingGroup}
         isOpen={!!managingGroup}
         onClose={() => onManageGroupChange(null)}
+      />
+
+      <GroupCustomizationDialog
+        key={`${customizingGroup?.id ?? 'new'}-${isCustomizationOpen}`}
+        group={customizingGroup}
+        open={isCustomizationOpen}
+        onOpenChange={(open) => {
+          setIsCustomizationOpen(open);
+          if (!open) setCustomizingGroup(null);
+        }}
+        onCreate={onAddGroup}
+        onUpdate={onUpdateGroupAppearance}
       />
 
       <AlertDialog

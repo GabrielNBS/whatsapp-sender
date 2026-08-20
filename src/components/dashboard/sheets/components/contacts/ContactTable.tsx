@@ -2,7 +2,6 @@ import { useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { ChartNoAxesColumn, Check, CircleUserRound, Phone, ShieldCheck, Users } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { InlineTableControl, type InlineTableColumn } from '@/components/ui/inline-table-control';
@@ -18,6 +17,9 @@ import { cn, formatPhoneNumber } from '@/lib/utils';
 
 import { ContactPagination } from './ContactPagination';
 import { ContactSearch } from './ContactSearch';
+import { GroupTag } from '@/components/groups/GroupTag';
+import { GroupIcon } from '@/components/groups/GroupIcon';
+import { GROUP_COLOR_STYLES } from '@/components/groups/group-appearance';
 
 const DRAFT_CONTACT_ID = '__new_contact__';
 
@@ -32,8 +34,10 @@ interface ContactTableProps {
   onCancelAdd: () => void;
 }
 
-function getGroupNames(contact: Contact, groups: Group[]) {
-  return contact.groupIds.map((groupId) => groups.find((group) => group.id === groupId)?.name || 'Geral');
+function getGroups(contact: Contact, groups: Group[]) {
+  return contact.groupIds
+    .map((groupId) => groups.find((group) => group.id === groupId))
+    .filter((group): group is Group => Boolean(group));
 }
 
 function InlinePlaceholderFeedback({ message, hasValue }: { message?: string; hasValue: boolean }) {
@@ -98,7 +102,9 @@ function GroupEditor({
               }}
               className="sr-only"
             />
-            {checked && <Check aria-hidden="true" className="size-3" />}
+            <span className={cn('flex size-4 items-center justify-center rounded-md', GROUP_COLOR_STYLES[group.color].icon)}>
+              {checked ? <Check aria-hidden="true" className="size-3" /> : <GroupIcon icon={group.icon} className="size-2.5" />}
+            </span>
             <span>{group.name}</span>
           </label>
         );
@@ -144,20 +150,6 @@ export function ContactTable({
         : null,
     [isAddingContact],
   );
-
-  // Calculado uma única vez por página (contatos + grupos), reaproveitado no
-  // desktop (coluna "Grupos") e no mobile — evita recomputar getGroupNames
-  // duas vezes por contato a cada render.
-  const groupNamesByContactId = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const contact of paginatedContacts) {
-      map.set(contact.id, getGroupNames(contact, groups));
-    }
-    if (draftContact) {
-      map.set(draftContact.id, getGroupNames(draftContact, groups));
-    }
-    return map;
-  }, [paginatedContacts, groups, draftContact]);
 
   // Colunas que NÃO dependem de analytics — não são recriadas quando os
   // dados de engajamento chegam/atualizam.
@@ -262,10 +254,8 @@ export function ContactTable({
         validates: true,
         render: (contact) => (
           <div className="flex flex-wrap gap-1">
-            {(groupNamesByContactId.get(contact.id) ?? getGroupNames(contact, groups)).map((groupName, index) => (
-              <Badge key={`${contact.id}-${groupName}-${index}`} variant="secondary" className="text-xs">
-                {groupName}
-              </Badge>
+            {getGroups(contact, groups).map((group) => (
+              <GroupTag key={`${contact.id}-${group.id}`} group={group} />
             ))}
           </div>
         ),
@@ -301,7 +291,7 @@ export function ContactTable({
         },
       },
     ],
-    [groups, groupNamesByContactId, onConsentChange],
+    [groups, onConsentChange],
   );
 
   // Única coluna que depende de analytics — isolada para que um
@@ -356,10 +346,8 @@ export function ContactTable({
       <>
         <p className="text-xs text-muted-foreground">{formatPhoneNumber(contact.number)}</p>
         <div className="flex flex-wrap items-center gap-1">
-          {(groupNamesByContactId.get(contact.id) ?? getGroupNames(contact, groups)).map((groupName, index) => (
-            <Badge key={`${contact.id}-mobile-${groupName}-${index}`} variant="secondary" className="text-[10px]">
-              {groupName}
-            </Badge>
+          {getGroups(contact, groups).map((group) => (
+            <GroupTag key={`${contact.id}-mobile-${group.id}`} group={group} compact />
           ))}
           <span className="text-[11px] text-muted-foreground">
             {contact.consentStatus === 'OPTED_IN'
@@ -372,7 +360,7 @@ export function ContactTable({
         </div>
       </>
     ),
-    [groupNamesByContactId, groups, analytics],
+    [groups, analytics],
   );
 
   if (contacts.length === 0 && !isAddingContact) {

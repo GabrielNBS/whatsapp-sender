@@ -6,6 +6,7 @@ import { parseContactsCsv } from '@/services/contacts/parseContactsCsv';
 import { dedupeContacts } from '@/services/contacts/dedupeContacts';
 import { DEFAULT_GROUP_ID } from '@/constants/contacts';
 import { nanoid } from 'nanoid';
+import { DEFAULT_GROUP_COLOR, DEFAULT_GROUP_ICON } from '@/constants/group-appearance';
 import type { FeedbackPort } from '@/presentation/feedback';
 import { importContacts } from '@/services/contacts/contactsApi';
 import { MAX_CSV_FILE_SIZE } from '@/constants/domain';
@@ -95,7 +96,13 @@ export function useContactImport(feedback: FeedbackPort) {
     }
 
     const newGroup = importTargetType === 'new'
-      ? { id: targetGroupId, name: importNewGroupName.trim(), description: 'Criado via importação' }
+      ? {
+          id: targetGroupId,
+          name: importNewGroupName.trim(),
+          description: 'Criado via importação',
+          color: DEFAULT_GROUP_COLOR,
+          icon: DEFAULT_GROUP_ICON,
+        }
       : undefined;
 
     // Aplica o grupo de destino aos contatos importados

@@ -10,10 +10,36 @@ export interface LogEntry {
   expiresAt?: number; // Timestamp in ms
 }
 
+export type GroupColor =
+  | 'slate'
+  | 'blue'
+  | 'violet'
+  | 'pink'
+  | 'orange'
+  | 'amber'
+  | 'emerald'
+  | 'cyan';
+
+export type GroupIcon =
+  | 'users'
+  | 'briefcase'
+  | 'heart'
+  | 'star'
+  | 'shopping-bag'
+  | 'megaphone'
+  | 'graduation-cap'
+  | 'house'
+  | 'party-popper'
+  | 'plane'
+  | 'dumbbell'
+  | 'tag';
+
 export interface Group {
   id: string;
   name: string;
   description?: string;
+  color: GroupColor;
+  icon: GroupIcon;
 }
 
 export interface Contact {

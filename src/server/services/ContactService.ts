@@ -2,8 +2,17 @@ import { prisma } from "@/lib/db";
 import { DEFAULT_GROUP_ID, DEFAULT_GROUP_NAME } from "@/constants/contacts";
 import { normalizePhone } from "@/services/contacts/normalizePhone";
 import { normalizeGroupIds } from '@/services/contacts/normalizeGroupIds';
-import type { ContactCommand, ContactGroupCommand, UpdateContactCommand } from '@/domain/contracts';
+import type {
+  ContactCommand,
+  ContactGroupCommand,
+  UpdateContactCommand,
+  UpdateContactGroupCommand,
+} from '@/domain/contracts';
 import type { ContactConsentStatus } from "@/lib/types";
+import {
+  DEFAULT_GROUP_COLOR,
+  DEFAULT_GROUP_ICON,
+} from '@/constants/group-appearance';
 import { getContactConsentService } from "@/server/services/ContactConsentService";
 import { getWorkspaceScopedId } from "../workspace";
 
@@ -24,6 +33,22 @@ function toContactSnapshot(contact: {
     consentAt: contact.consentAt?.toISOString() ?? null,
     optedOutAt: contact.optedOutAt?.toISOString() ?? null,
     groupIds: normalizeGroupIds(contact.groupMemberships.map((membership) => membership.groupId)),
+  };
+}
+
+function toGroupSnapshot(group: {
+  id: string;
+  name: string;
+  description: string | null;
+  color: string;
+  icon: string;
+}) {
+  return {
+    id: group.id,
+    name: group.name,
+    description: group.description ?? undefined,
+    color: group.color,
+    icon: group.icon,
   };
 }
 
@@ -48,11 +73,7 @@ export const ContactService = {
     ]);
 
     return {
-      groups: groups.map((group) => ({
-        id: group.id,
-        name: group.name,
-        description: group.description ?? undefined,
-      })),
+      groups: groups.map(toGroupSnapshot),
       contacts: contacts.map(toContactSnapshot),
     };
   },
@@ -175,9 +196,34 @@ export const ContactService = {
   async createGroup(data: ContactGroupCommand, workspaceId: string) {
     await this.ensureLocalDefaults(workspaceId);
     const group = await prisma.contactGroup.create({
-      data: { id: data.id, workspaceId, name: data.name, description: data.description },
+      data: {
+        id: data.id,
+        workspaceId,
+        name: data.name,
+        description: data.description,
+        color: data.color ?? DEFAULT_GROUP_COLOR,
+        icon: data.icon ?? DEFAULT_GROUP_ICON,
+      },
     });
-    return { group: { id: group.id, name: group.name, description: group.description ?? undefined } };
+    return { group: toGroupSnapshot(group) };
+  },
+
+  async updateGroupAppearance(
+    groupId: string,
+    data: UpdateContactGroupCommand,
+    workspaceId: string,
+  ) {
+    const updated = await prisma.contactGroup.updateMany({
+      where: { id: groupId, workspaceId },
+      data: { color: data.color, icon: data.icon },
+    });
+    if (updated.count === 0) throw new Error('Grupo não encontrado no workspace atual.');
+
+    const group = await prisma.contactGroup.findFirst({
+      where: { id: groupId, workspaceId },
+    });
+    if (!group) throw new Error('Grupo não encontrado no workspace atual.');
+    return { group: toGroupSnapshot(group) };
   },
 
   async deleteGroup(groupId: string, workspaceId: string) {
@@ -215,7 +261,14 @@ export const ContactService = {
     await prisma.$transaction(async (tx) => {
       if (data.group) {
         await tx.contactGroup.create({
-          data: { id: data.group.id, workspaceId, name: data.group.name, description: data.group.description },
+          data: {
+            id: data.group.id,
+            workspaceId,
+            name: data.group.name,
+            description: data.group.description,
+            color: data.group.color ?? DEFAULT_GROUP_COLOR,
+            icon: data.group.icon ?? DEFAULT_GROUP_ICON,
+          },
         });
       }
       const groupIds = Array.from(new Set(data.contacts.flatMap((contact) => normalizeGroupIds(contact.groupIds))));

@@ -7,6 +7,9 @@ import { Plus } from 'lucide-react';
 import { formatPhoneNumber } from '@/lib/utils';
 import { DEFAULT_GROUP_ID } from '@/constants/contacts';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { GroupIcon } from '@/components/groups/GroupIcon';
+import { GROUP_COLOR_STYLES } from '@/components/groups/group-appearance';
+import { cn } from '@/lib/utils';
 
 interface AddContactDialogProps {
   groups: Group[];
@@ -80,7 +83,12 @@ export function AddContactDialog({
               <SelectContent className="max-h-50 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
                 {groups.map((group) => (
                   <SelectItem key={group.id} value={group.id}>
-                    {group.name}
+                    <span className="flex items-center gap-2">
+                      <span className={cn('flex size-6 items-center justify-center rounded-md', GROUP_COLOR_STYLES[group.color].icon)}>
+                        <GroupIcon icon={group.icon} className="size-3" />
+                      </span>
+                      {group.name}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

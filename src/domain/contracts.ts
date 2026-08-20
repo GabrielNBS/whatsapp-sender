@@ -1,4 +1,4 @@
-import type { ContactConsentStatus, TemplateMediaPayload } from '@/lib/types';
+import type { ContactConsentStatus, GroupColor, GroupIcon, TemplateMediaPayload } from '@/lib/types';
 
 export interface CampaignRecipient {
   name: string;
@@ -31,6 +31,13 @@ export interface ContactGroupCommand {
   id: string;
   name: string;
   description?: string | null;
+  color?: GroupColor;
+  icon?: GroupIcon;
+}
+
+export interface UpdateContactGroupCommand {
+  color: GroupColor;
+  icon: GroupIcon;
 }
 
 export interface UpdateContactCommand {
