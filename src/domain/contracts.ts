@@ -34,6 +34,8 @@ export interface ContactGroupCommand {
 }
 
 export interface UpdateContactCommand {
+  name?: string;
+  number?: string;
   groupIds?: string[];
   consentStatus?: ContactConsentStatus;
 }

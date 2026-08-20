@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Group } from '@/lib/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus } from 'lucide-react';
 import { formatPhoneNumber } from '@/lib/utils';
 import { DEFAULT_GROUP_ID } from '@/constants/contacts';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 
 interface AddContactDialogProps {
   groups: Group[];
@@ -41,16 +41,16 @@ export function AddContactDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetTrigger asChild>
         <Button size="sm">
           <Plus className="w-4 h-4 mr-2" /> Adicionar Contato
         </Button>
-      </DialogTrigger>
-      <DialogContent className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
-        <DialogHeader>
-          <DialogTitle>Novo Contato</DialogTitle>
-        </DialogHeader>
+      </SheetTrigger>
+      <SheetContent className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
+        <SheetHeader>
+          <SheetTitle>Novo Contato</SheetTitle>
+        </SheetHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Input
@@ -77,7 +77,7 @@ export function AddContactDialog({
               <SelectTrigger className="bg-zinc-50/50 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800">
                 <SelectValue placeholder="Selecione um grupo" />
               </SelectTrigger>
-              <SelectContent className="max-h-[200px] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
+              <SelectContent className="max-h-50 bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
                 {groups.map((group) => (
                   <SelectItem key={group.id} value={group.id}>
                     {group.name}
@@ -88,8 +88,8 @@ export function AddContactDialog({
           </div>
           <Button onClick={handleSave}>Salvar</Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 export default AddContactDialog;

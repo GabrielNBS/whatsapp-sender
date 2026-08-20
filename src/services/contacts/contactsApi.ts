@@ -32,6 +32,13 @@ export interface ImportContactsResult {
   contacts: Contact[];
 }
 
+export interface UpdateContactPayload {
+  name?: string;
+  number?: string;
+  groupIds?: string[];
+  consentStatus?: ContactConsentStatus;
+}
+
 export function loadContacts(): Promise<ContactsSnapshot> {
   return requestJson<ContactsSnapshot>('/api/contacts');
 }
@@ -45,10 +52,14 @@ export function createContact(contact: Contact): Promise<ContactMutationResult> 
 }
 
 export function updateContactGroups(contactId: string, groupIds: string[]): Promise<ContactMutationResult> {
+  return updateContact(contactId, { groupIds });
+}
+
+export function updateContact(contactId: string, data: UpdateContactPayload): Promise<ContactMutationResult> {
   return requestJson<ContactMutationResult>(`/api/contacts?id=${encodeURIComponent(contactId)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ groupIds }),
+    body: JSON.stringify(data),
   });
 }
 

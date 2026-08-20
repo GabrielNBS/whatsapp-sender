@@ -22,10 +22,18 @@ export const updateContactGroupsSchema = z.object({
 }).strict();
 
 export const updateContactSchema = z.object({
+  name: z.string().min(1, "Nome do contato e obrigatorio").max(100).trim().optional(),
+  number: z.string().min(10, "Numero invalido").max(15).trim().optional(),
   groupIds: z.array(z.string().min(1).trim()).min(1).optional(),
   consentStatus: z.enum(['UNKNOWN', 'OPTED_IN', 'OPTED_OUT']).optional(),
-}).strict().refine((data) => data.groupIds !== undefined || data.consentStatus !== undefined, {
-  message: 'Informe os grupos ou o status de consentimento.',
+}).strict().refine(
+  (data) =>
+    data.name !== undefined ||
+    data.number !== undefined ||
+    data.groupIds !== undefined ||
+    data.consentStatus !== undefined,
+  {
+    message: 'Informe ao menos um campo para atualizar.',
 });
 
 export const createContactGroupSchema = contactGroupSnapshotSchema;

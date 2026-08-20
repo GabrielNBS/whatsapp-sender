@@ -88,7 +88,7 @@ export const formatPhoneNumber = (phone: string) => {
     match = cleaned.substring(2);
   }
   if (match.length === 11) {
-    return match.replace(/(\d{2})(\d{1})(\d{4})(\d{4})/, "($1) $2 $3-$4");
+    return match.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
   }
   if (match.length === 10) {
     return match.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");

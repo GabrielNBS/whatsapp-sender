@@ -102,6 +102,25 @@ export const ContactService = {
     });
     if (!existing) throw new Error('Contato não encontrado no workspace atual.');
 
+    const normalizedPhone = data.number === undefined ? undefined : normalizePhone(data.number);
+    if (normalizedPhone !== undefined) {
+      const duplicate = await prisma.contact.findFirst({
+        where: { workspaceId, phone: normalizedPhone, id: { not: contactId } },
+        select: { id: true },
+      });
+      if (duplicate) throw new Error('Este número de telefone já está cadastrado.');
+    }
+
+    if (data.name !== undefined || normalizedPhone !== undefined) {
+      await prisma.contact.updateMany({
+        where: { id: contactId, workspaceId },
+        data: {
+          ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+          ...(normalizedPhone !== undefined ? { phone: normalizedPhone } : {}),
+        },
+      });
+    }
+
     if (data.groupIds) {
       const groupIds = normalizeGroupIds(data.groupIds);
       const validGroups = await prisma.contactGroup.count({ where: { workspaceId, id: { in: groupIds } } });

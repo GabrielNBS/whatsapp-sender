@@ -68,6 +68,39 @@ export function useContacts(feedback: FeedbackPort) {
     }
   }, [contacts, feedback, groups, upsertContacts]);
 
+  const updateContactDetails = useCallback(async (
+    contactId: string,
+    name: string,
+    number: string,
+    groupIds: string[],
+  ): Promise<boolean> => {
+    const contact = contacts.find((currentContact) => currentContact.id === contactId);
+    if (!contact) {
+      feedback.error('Contato não encontrado');
+      return false;
+    }
+
+    const validation = validateContact(name, number, groupIds, contacts, groups, contactId);
+    if (!validation.isValid) {
+      feedback.error(validation.error || 'Erro ao validar contato');
+      return false;
+    }
+
+    try {
+      const result = await contactsApi.updateContact(contactId, {
+        name: name.trim(),
+        number: normalizePhone(number),
+        groupIds: groupIds.length > 0 ? groupIds : [DEFAULT_GROUP_ID],
+      });
+      upsertContacts([result.contact]);
+      feedback.success('Contato atualizado com sucesso');
+      return true;
+    } catch (error) {
+      feedback.error(error instanceof Error ? error.message : 'Falha ao atualizar contato.');
+      return false;
+    }
+  }, [contacts, feedback, groups, upsertContacts]);
+
   const deleteContact = useCallback(async (id: string) => {
     try {
       const result = await contactsApi.deleteContact(id);
@@ -94,6 +127,7 @@ export function useContacts(feedback: FeedbackPort) {
     contacts,
     groups,
     addContact,
+    updateContactDetails,
     updateContactGroups,
     updateContactConsent,
     deleteContact,
