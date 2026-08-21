@@ -12,6 +12,7 @@ export const updateSettingsSchema = z.object({
   optOutFooterId: z.enum(
     OPT_OUT_FOOTER_OPTIONS.map((option) => option.id) as [OptOutFooterId, ...OptOutFooterId[]],
   ),
+  optOutFooterEnabled: z.boolean().default(true),
 });
 
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;

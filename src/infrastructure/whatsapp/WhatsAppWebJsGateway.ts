@@ -100,7 +100,7 @@ export class WhatsAppService implements WhatsAppGateway {
     private analyticsService: IAnalyticsService,
     private messageFormatter: IMessageFormatter,
     private incomingMessageHandler: IncomingWhatsAppMessageHandler,
-    private readonly getOptOutFooterId: () => Promise<OptOutFooterId>,
+    private readonly getOptOutConfig: () => Promise<{ enabled: boolean; footerId: OptOutFooterId } | OptOutFooterId>,
   ) {
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
 
@@ -641,7 +641,10 @@ export class WhatsAppService implements WhatsAppGateway {
     }
 
     const formattedMessage = this.messageFormatter.formatMessage(message, number, contactInfo);
-    const finalMessage = appendOptOutFooter(formattedMessage, await this.getOptOutFooterId());
+    const optOutConfig = await this.getOptOutConfig();
+    const finalMessage = typeof optOutConfig === 'object' && optOutConfig !== null && 'enabled' in optOutConfig
+      ? appendOptOutFooter(formattedMessage, optOutConfig.footerId, optOutConfig.enabled)
+      : appendOptOutFooter(formattedMessage, optOutConfig);
 
     this.debugLog(`Sending to final ID: ${finalId}`);
 

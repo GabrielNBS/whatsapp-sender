@@ -40,10 +40,18 @@ export function getOptOutFooterText(footerId: unknown): string {
   return option.text;
 }
 
-export function appendOptOutFooter(message: string, footerId: unknown): string {
+export function appendOptOutFooter(
+  message: string,
+  footerId: unknown,
+  enabled: boolean = true,
+): string {
+  if (!enabled) {
+    return message;
+  }
   const footer = getOptOutFooterText(footerId);
   const trimmedMessage = message.trimEnd();
 
   if (trimmedMessage.endsWith(footer)) return trimmedMessage;
   return `${trimmedMessage}\n\n${footer}`;
 }
+

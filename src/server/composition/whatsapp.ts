@@ -18,7 +18,7 @@ function createWhatsAppService() {
     new AnalyticsService(prisma, workspaceId),
     new MessageFormatter(),
     new ConsentIncomingWhatsAppMessageHandler(getContactConsentService(), workspaceId),
-    () => settingsService.getOptOutFooterId(workspaceId),
+    () => settingsService.getOptOutConfig(workspaceId),
   );
 }
 

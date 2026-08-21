@@ -29,6 +29,7 @@ export function GeneralSettings() {
   const [defaultLink, setDefaultLink] = useState("");
   const [defaultCTA, setDefaultCTA] = useState("");
   const [optOutFooterId, setOptOutFooterId] = useState<OptOutFooterId>(DEFAULT_OPT_OUT_FOOTER_ID);
+  const [optOutFooterEnabled, setOptOutFooterEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [linkError, setLinkError] = useState("");
@@ -44,6 +45,7 @@ export function GeneralSettings() {
       setDefaultLink(data.defaultLink || "");
       setDefaultCTA(data.defaultCTA || "");
       setOptOutFooterId(data.optOutFooterId || DEFAULT_OPT_OUT_FOOTER_ID);
+      setOptOutFooterEnabled(data.optOutFooterEnabled ?? true);
     } catch (error) {
       console.error("Failed to fetch settings", error);
       toast.error("Erro ao carregar configurações gerais");
@@ -82,7 +84,7 @@ export function GeneralSettings() {
 
     setIsSaving(true);
     try {
-      await settingsApi.update({ defaultLink, defaultCTA, optOutFooterId });
+      await settingsApi.update({ defaultLink, defaultCTA, optOutFooterId, optOutFooterEnabled });
       toast.success("Configurações salvas com sucesso");
     } catch (error) {
       console.error("Failed to save settings", error);
@@ -166,15 +168,17 @@ export function GeneralSettings() {
                 Visualização do rodapé
             </div>
             <Card className="p-4 bg-muted/30 border-dashed min-h-[160px] flex items-center justify-center text-sm">
-                {(defaultCTA || defaultLink || optOutFooterId) ? (
+                {(defaultCTA || defaultLink || (optOutFooterEnabled && optOutFooterId)) ? (
                     <div className="w-full space-y-2">
                          <p className="mb-4 text-center text-xs italic text-muted-foreground">...conteúdo da sua mensagem...</p>
                          <div className="space-y-1 rounded-lg border bg-background p-3 shadow-sm">
                              {defaultCTA && <p className="whitespace-pre-wrap text-foreground">{defaultCTA}</p>}
                              {defaultLink && <p className="break-all text-primary underline">{defaultLink}</p>}
-                             <div className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-                               {OPT_OUT_FOOTER_OPTIONS.find((option) => option.id === optOutFooterId)?.text}
-                             </div>
+                             {optOutFooterEnabled && (
+                               <div className="mt-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                                 {OPT_OUT_FOOTER_OPTIONS.find((option) => option.id === optOutFooterId)?.text}
+                               </div>
+                             )}
                          </div>
                     </div>
                 ) : (
@@ -189,30 +193,54 @@ export function GeneralSettings() {
       <div className="h-px bg-border/50 my-6" />
 
       <div className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            <Label htmlFor="opt-out-footer">Rodapé obrigatório de cancelamento</Label>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <Label htmlFor="opt-out-footer-toggle" className="font-medium cursor-pointer">
+                Mensagem de consentimento / cancelamento
+              </Label>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Anexa uma instrução de cancelamento (opt-out) ao final das mensagens enviadas para permitir descadastro.
+            </p>
           </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Uma destas mensagens será anexada automaticamente ao final de todo envio. Essa proteção não pode ser desativada pela aplicação.
-          </p>
+          <Switch
+            id="opt-out-footer-toggle"
+            checked={optOutFooterEnabled}
+            onCheckedChange={setOptOutFooterEnabled}
+            aria-label="Ativar ou desativar mensagem de consentimento"
+          />
         </div>
-        <Select value={optOutFooterId} onValueChange={(value) => setOptOutFooterId(value as OptOutFooterId)}>
-          <SelectTrigger id="opt-out-footer" aria-label="Texto obrigatório de cancelamento">
-            <SelectValue placeholder="Selecione o texto do rodapé" />
-          </SelectTrigger>
-          <SelectContent>
-            {OPT_OUT_FOOTER_OPTIONS.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="rounded-lg border border-border bg-background p-3 text-sm text-foreground">
-          {OPT_OUT_FOOTER_OPTIONS.find((option) => option.id === optOutFooterId)?.text}
-        </p>
+
+        {optOutFooterEnabled ? (
+          <div className="space-y-3 pt-1">
+            <div className="space-y-2">
+              <Label htmlFor="opt-out-footer" className="text-xs text-muted-foreground">
+                Modelo da mensagem de cancelamento
+              </Label>
+              <Select value={optOutFooterId} onValueChange={(value) => setOptOutFooterId(value as OptOutFooterId)}>
+                <SelectTrigger id="opt-out-footer" aria-label="Texto de cancelamento">
+                  <SelectValue placeholder="Selecione o texto do rodapé" />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPT_OUT_FOOTER_OPTIONS.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="rounded-lg border border-border bg-background p-3 text-sm text-foreground">
+              {OPT_OUT_FOOTER_OPTIONS.find((option) => option.id === optOutFooterId)?.text}
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground italic rounded-lg border border-dashed border-border/80 bg-background/50 p-3">
+            O rodapé de consentimento está desativado. Nenhuma mensagem de cancelamento será anexada aos envios.
+          </p>
+        )}
       </div>
 
       <div className="h-px bg-border/50 my-6" />
