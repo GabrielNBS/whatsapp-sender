@@ -11,6 +11,7 @@ export interface SettingsUpdate {
   defaultLink: string;
   defaultCTA: string;
   optOutFooterId: OptOutFooterId;
+  optOutFooterEnabled?: boolean;
 }
 
 export class SettingsService {
@@ -22,28 +23,44 @@ export class SettingsService {
       defaultLink: '',
       defaultCTA: '',
       optOutFooterId: DEFAULT_OPT_OUT_FOOTER_ID,
+      optOutFooterEnabled: true,
     };
   }
 
   async getOptOutFooterId(workspaceId: string): Promise<OptOutFooterId> {
+    const config = await this.getOptOutConfig(workspaceId);
+    return config.footerId;
+  }
+
+  async getOptOutConfig(workspaceId: string): Promise<{ enabled: boolean; footerId: OptOutFooterId }> {
     const settings = await this.database.settings.findUnique({
       where: { workspaceId },
-      select: { optOutFooterId: true },
+      select: { optOutFooterId: true, optOutFooterEnabled: true },
     });
-    return isOptOutFooterId(settings?.optOutFooterId)
-      ? settings.optOutFooterId
-      : DEFAULT_OPT_OUT_FOOTER_ID;
+    return {
+      enabled: settings?.optOutFooterEnabled ?? true,
+      footerId: isOptOutFooterId(settings?.optOutFooterId)
+        ? settings.optOutFooterId
+        : DEFAULT_OPT_OUT_FOOTER_ID,
+    };
   }
 
   async update(data: SettingsUpdate, workspaceId: string) {
+    const payload = {
+      defaultLink: data.defaultLink,
+      defaultCTA: data.defaultCTA,
+      optOutFooterId: data.optOutFooterId,
+      optOutFooterEnabled: data.optOutFooterEnabled ?? true,
+    };
     return this.database.settings.upsert({
       where: { workspaceId },
-      update: data,
+      update: payload,
       create: {
         id: getWorkspaceScopedId(workspaceId, DEFAULT_CONFIG_ID),
         workspaceId,
-        ...data,
+        ...payload,
       },
     });
   }
 }
+

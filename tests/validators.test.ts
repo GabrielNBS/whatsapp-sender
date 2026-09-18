@@ -3,6 +3,7 @@ import { startCampaignSchema } from '@/server/validators/campaigns';
 import { sendMessageSchema } from '@/server/validators/messages';
 import { updateRecipientSchema } from '@/server/validators/reports';
 import { createScheduleSchema } from '@/server/validators/schedule';
+import { updateSettingsSchema } from '@/server/validators/settings';
 import { MAX_RECIPIENTS_LIMIT } from '@/constants/domain';
 
 describe('API payload contracts', () => {
@@ -53,5 +54,28 @@ describe('API payload contracts', () => {
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it('validates settings payload and handles optOutFooterEnabled flag', () => {
+    const disabledResult = updateSettingsSchema.safeParse({
+      defaultLink: 'https://example.com',
+      defaultCTA: 'Visite nosso site',
+      optOutFooterId: 'reply_sair',
+      optOutFooterEnabled: false,
+    });
+    expect(disabledResult.success).toBe(true);
+    if (disabledResult.success) {
+      expect(disabledResult.data.optOutFooterEnabled).toBe(false);
+    }
+
+    const defaultResult = updateSettingsSchema.safeParse({
+      defaultLink: '',
+      defaultCTA: '',
+      optOutFooterId: 'reply_sair',
+    });
+    expect(defaultResult.success).toBe(true);
+    if (defaultResult.success) {
+      expect(defaultResult.data.optOutFooterEnabled).toBe(true);
+    }
   });
 });
