@@ -67,11 +67,41 @@ export function mapPrismaError(error: unknown): ApiError {
       case "P2003": {
         return new ConflictError("A operacao falhou porque este registro esta associado a outros dados.");
       }
+      case "P1008":
+      case "P1000":
+      case "P1001":
+      case "P1002":
+      case "P1003":
+      case "P1017":
+      case "P2024": {
+        return new ServiceUnavailableError(
+          "O banco de dados demorou para responder ou esta temporariamente ocupado. Tente novamente."
+        );
+      }
+      case "P2034":
+      case "P2028": {
+        return new ApiError(
+          503,
+          "TRANSACTION_CONFLICT",
+          "Conflito de concorrencia no banco de dados. Tente novamente."
+        );
+      }
+      case "P2000": {
+        return new ValidationError("O valor informado para um dos campos excede o tamanho maximo permitido.");
+      }
+      case "P2005":
+      case "P2006":
+      case "P2007": {
+        return new ValidationError("O valor fornecido para um dos campos e invalido.");
+      }
       default:
+        if (error.code.startsWith("P1")) {
+          return new ServiceUnavailableError("Falha de conexao com o banco de dados. Tente novamente.");
+        }
         return new ApiError(
           400,
           `DATABASE_ERROR_${error.code}`,
-          "A operacao nao pode ser concluida por uma restricao de dados."
+          "A operacao nao pode ser concluida devido a uma falha no banco de dados."
         );
     }
   }
