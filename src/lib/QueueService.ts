@@ -81,6 +81,10 @@ class QueueService {
         select: { id: true },
       });
       const openCampaignIds = openCampaigns.map((campaign) => campaign.id);
+      if (openCampaignIds.length === 0) {
+        return this.getIdleStatus();
+      }
+
       const activeBatchWhere = {
         workspaceId: this.workspaceId,
         batchId: { in: openCampaignIds },
@@ -111,7 +115,7 @@ class QueueService {
       this.activeCampaignId = activeBatch.batchId;
     }
 
-    const campaign = await prisma.campaign.findUnique({
+    const campaign = await prisma.campaign.findFirst({
       where: { id: this.activeCampaignId, workspaceId: this.workspaceId },
     });
 

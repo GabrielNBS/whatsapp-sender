@@ -152,7 +152,7 @@ export function useSendPolling(feedback: FeedbackPort) {
         failedContacts: [],
       });
     } catch (error) {
-      console.error('[useSendPolling] Polling error:', error);
+      console.warn('[useSendPolling] Polling warning:', error);
     } finally {
       inFlightRef.current = false;
     }
