@@ -57,6 +57,7 @@ export function useDashboardCampaign(feedback: FeedbackPort, confirmAction: Conf
   const debugForceScreen = useDebugSimulationStore((state) => state.forceScreen);
 
   const {
+    canSubmit,
     recipientConfigs,
     message,
     selectedFile,
@@ -275,6 +276,7 @@ export function useDashboardCampaign(feedback: FeedbackPort, confirmAction: Conf
     activeSchedules,
     batchName,
     campaignProgress,
+    canSubmit,
     canNavigateTo,
     connectionPromptOpen: connectionPromptVisible,
     contacts,

@@ -182,7 +182,7 @@ export function useSendForm({
       if (!scheduleDate) return false;
       const scheduledTime = new Date(scheduleDate).getTime();
       const minTime = nowTimestamp + 2 * 60 * 1000; // 2 minutes from now
-      if (scheduledTime < minTime) return false;
+      if (!Number.isFinite(scheduledTime) || scheduledTime < minTime) return false;
     }
     
     return true;

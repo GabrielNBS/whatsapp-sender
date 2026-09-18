@@ -92,6 +92,7 @@ function SendPageInner() {
 
                                 {currentStep === 2 && (
                                     <CampaignMessageStep
+                                        canSubmit={campaign.canSubmit}
                                         handleSendAction={campaign.handleSendAction}
                                         handleTemplateSelect={campaign.handleTemplateSelect}
                                         isScheduleMode={campaign.isScheduleMode}

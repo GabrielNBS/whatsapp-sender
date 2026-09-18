@@ -114,19 +114,18 @@ export function MessageEditor({
 
   return (
     <div className={cn(
-      "flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-opacity",
+      "flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-[border-color,box-shadow,opacity] focus-within:border-primary/45 focus-within:shadow-[0_0_0_3px_color-mix(in_oklch,var(--ring)_10%,transparent)]",
       disabled && "opacity-60 pointer-events-none"
     )}>
-      {/* Toolbar - Pill-shaped buttons as per reference */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/30 px-3 py-3 md:px-4">
+      <div className="flex items-center gap-2 border-b border-border/70 bg-muted/25 px-2.5 py-2 sm:px-3">
         
         {templateSlot && (
-          <div className="mr-auto max-w-full pr-2">
+          <div className="mr-auto shrink-0">
             {templateSlot}
           </div>
         )}
         
-        <div className="no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-lg border border-border bg-background p-1">
+        <div className="no-scrollbar flex min-w-0 gap-1 overflow-x-auto rounded-lg border border-border bg-background p-1">
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -217,22 +216,23 @@ export function MessageEditor({
         </div>
       </div>
 
-      {/* Editor Area */}
-      <div className="flex-1 relative group min-h-0">
+      <div className="group relative min-h-0 flex-1">
         <label className="sr-only" htmlFor="campaign-message">Mensagem da campanha</label>
         <Textarea
           id="campaign-message"
           ref={textareaRef}
           value={message}
           onChange={(e) => onMessageChange(e.target.value)}
-          className="h-full w-full resize-none rounded-none border-0 bg-transparent p-5 text-base leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:p-6"
-          placeholder="Escreva sua mensagem aqui..."
+          className="h-full w-full resize-none rounded-none border-0 bg-transparent p-4 pb-10 text-base leading-relaxed placeholder:text-muted-foreground/80 focus-visible:ring-0 sm:p-5 sm:pb-10"
+          placeholder="Escreva sua mensagem…"
           disabled={disabled}
         />
+        <span className="pointer-events-none absolute bottom-3 right-4 rounded-md bg-background/80 px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground opacity-70 backdrop-blur-sm transition-opacity group-focus-within:opacity-100" aria-hidden="true">
+          {message.length} {message.length === 1 ? 'caractere' : 'caracteres'}
+        </span>
       </div>
 
-      {/* Media Attachment Area */}
-      <div className="border-t border-border/50 bg-muted/10 p-3 sm:p-4">
+      <div className="border-t border-border/50 bg-muted/10 p-2.5 sm:px-3">
         {selectedFile ? (
           <div className="flex items-center gap-3 bg-background border border-border rounded-xl p-2 pr-4 shadow-sm w-fit">
             <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0 border border-border">
@@ -244,7 +244,7 @@ export function MessageEditor({
                 unoptimized
               />
             </div>
-            <div className="min-w-0 max-w-[200px]">
+            <div className="min-w-0 max-w-50">
               <p className="text-xs font-bold text-foreground truncate">
                 {selectedFile.filename}
               </p>
@@ -274,7 +274,7 @@ export function MessageEditor({
             <Button
               variant="outline"
               size="sm"
-              className="rounded-lg border-dashed bg-background px-4 text-sm font-semibold text-muted-foreground hover:border-primary/50 hover:text-primary"
+              className="h-9 rounded-lg border-dashed bg-background px-3 text-sm font-semibold text-muted-foreground hover:border-primary/50 hover:text-primary"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
             >
