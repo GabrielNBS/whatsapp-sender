@@ -72,6 +72,7 @@ export class WhatsAppService implements WhatsAppGateway {
   private reconnectAttempt = 0;
   private lastSessionBusyLog = '';
   private shutdownPromise: Promise<void> | null = null;
+  private mediaCompatibilityPatchPromise: Promise<boolean> | null = null;
   private readonly sigintHandler = () => {
     void this.shutdown('SIGINT').finally(() => process.exit(0));
   };
@@ -288,7 +289,9 @@ export class WhatsAppService implements WhatsAppGateway {
 
     this.client.on("ready", () => {
       logger.info("[WhatsApp] Cliente WhatsApp conectado e pronto!");
-      this.connection.markReady();
+      void this.installMediaMessageCompatibilityPatch().finally(() => {
+        this.connection.markReady();
+      });
     });
 
     this.client.on("authenticated", () => {
@@ -532,6 +535,112 @@ export class WhatsAppService implements WhatsAppGateway {
       (error instanceof Error && error.message.includes("browser is already running"));
   }
 
+  /**
+   * WhatsApp Web exposes a private `__x_id` field on MediaData. The currently
+   * installed whatsapp-web.js spreads it into the outgoing message, replacing
+   * the MsgKey and making every media send fail during initialization.
+   *
+   * This runs in the browser context because WhatsApp Web reinjects WWebJS when
+   * its page is recreated, so modifying node_modules would not be sufficient.
+   */
+  private async installMediaMessageCompatibilityPatch(): Promise<boolean> {
+    if (this.mediaCompatibilityPatchPromise) {
+      return this.mediaCompatibilityPatchPromise;
+    }
+
+    const page = this.client.pupPage;
+    if (!page) {
+      logger.warn("[WhatsApp] Pagina do cliente indisponivel para instalar correcao de midia.");
+      return false;
+    }
+
+    this.mediaCompatibilityPatchPromise = page.evaluate(() => {
+      type MediaData = {
+        __x_id?: unknown;
+        toJSON?: (...toJSONArgs: unknown[]) => unknown;
+      };
+      type WWebJs = {
+        processMediaData?: (...args: unknown[]) => Promise<MediaData | unknown>;
+        sendMessage?: (
+          chat: unknown,
+          content: unknown,
+          options?: { media?: unknown; caption?: unknown },
+        ) => Promise<unknown>;
+        __mediaMessageIdCompatibilityPatchInstalled?: boolean;
+      };
+      const wwebjs = (window as typeof window & { WWebJS?: WWebJs }).WWebJS;
+
+      if (!wwebjs?.processMediaData || !wwebjs.sendMessage) return false;
+      if (wwebjs.__mediaMessageIdCompatibilityPatchInstalled) return true;
+
+      const originalProcessMediaData = wwebjs.processMediaData.bind(wwebjs);
+      const originalSendMessage = wwebjs.sendMessage.bind(wwebjs);
+      const mediaCaptions = new WeakMap<object, unknown>();
+
+      wwebjs.sendMessage = async (chat, content, options = {}) => {
+        const media = options.media;
+        if (media && typeof media === "object") {
+          mediaCaptions.set(media, options.caption);
+        }
+
+        try {
+          return await originalSendMessage(chat, content, options);
+        } finally {
+          if (media && typeof media === "object") {
+            mediaCaptions.delete(media);
+          }
+        }
+      };
+
+      wwebjs.processMediaData = async (...args: unknown[]) => {
+        const media = args[0];
+        const caption = media && typeof media === "object"
+          ? mediaCaptions.get(media)
+          : undefined;
+        const mediaData = await originalProcessMediaData(...args);
+        if (!mediaData || typeof mediaData !== "object") return mediaData;
+
+        // sendMessage spreads both the model and model.toJSON() into the Msg.
+        delete (mediaData as { __x_id?: unknown }).__x_id;
+
+        const originalToJSON = (mediaData as { toJSON?: unknown }).toJSON;
+        if (typeof originalToJSON === "function") {
+          (mediaData as { toJSON: (...toJSONArgs: unknown[]) => unknown }).toJSON =
+            (...toJSONArgs: unknown[]) => {
+              const json = originalToJSON.apply(mediaData, toJSONArgs);
+              if (json && typeof json === "object") {
+                delete (json as { __x_id?: unknown }).__x_id;
+                if (typeof caption === "string") {
+                  (json as { caption?: string }).caption = caption;
+                }
+              }
+              return json;
+            };
+        }
+
+        return mediaData;
+      };
+
+      wwebjs.__mediaMessageIdCompatibilityPatchInstalled = true;
+      return true;
+    });
+
+    try {
+      const installed = await this.mediaCompatibilityPatchPromise;
+      if (installed) {
+        logger.info("[WhatsApp] Correcao de compatibilidade para envio de midia instalada.");
+      } else {
+        logger.warn("[WhatsApp] Nao foi possivel localizar processMediaData para aplicar correcao de midia.");
+      }
+      return installed;
+    } catch (error) {
+      logger.warn({ err: error }, "[WhatsApp] Falha ao instalar correcao de compatibilidade para midia.");
+      return false;
+    } finally {
+      this.mediaCompatibilityPatchPromise = null;
+    }
+  }
+
   public getStatus() {
     return this.connection.getSnapshot();
   }
@@ -585,6 +694,10 @@ export class WhatsAppService implements WhatsAppGateway {
           `Cliente WhatsApp não está pronto. Status atual: ${this.connection.getConnectionStatus()}`,
         );
       }
+    }
+
+    if (mediaData) {
+      await this.installMediaMessageCompatibilityPatch();
     }
 
     const number = to.replace(/\D/g, "");
